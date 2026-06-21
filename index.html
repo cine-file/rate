@@ -787,6 +787,8 @@ function showScreen(id){
   });
   // show/hide nav (hide on home and pin)
   document.getElementById("main-nav").style.display = (id==="home"||id==="pin") ? "none" : "flex";
+  // load settings content when navigating there
+  if(id==="settings") openSettings();
 }
 
 function goHome(){ showScreen("home"); }
@@ -935,6 +937,7 @@ function saveConfig(){
   };
   saveStoredConfig(c);
   applyStoredConfig();
+  settingsLoaded = false; // allow reload next time to pick up saved values
   const msg = document.getElementById("config-msg");
   msg.textContent="✓ Keys saved to this device."; msg.className="settings-msg";
   setTimeout(()=>msg.textContent="",3000);
@@ -1634,13 +1637,15 @@ document.addEventListener("DOMContentLoaded",()=>{
 });
 
 // Pre-populate settings config fields when entering settings
-document.getElementById("screen-settings").addEventListener("transitionend",loadConfigFields);
-const settingsObserver=new MutationObserver(()=>{
-  if(document.getElementById("screen-settings").classList.contains("active")){
-    loadConfigFields(); renderSettingsUsers();
+// Load settings fields only when first entering settings, not on every mutation
+let settingsLoaded = false;
+function openSettings(){
+  if(!settingsLoaded){
+    loadConfigFields();
+    settingsLoaded = true;
   }
-});
-settingsObserver.observe(document.getElementById("screen-settings"),{attributeFilter:["class"]});
+  renderSettingsUsers();
+}
 </script>
 </body>
 </html>
