@@ -283,6 +283,32 @@ table.card-table{width:100%;border-collapse:collapse;margin-bottom:4px;}
 .config-note{margin-top:10px;font-size:12px;color:#3d6a3d;line-height:1.6;}
 .config-note code{background:#040604;padding:2px 6px;border-radius:2px;font-size:11px;color:#6aaa6a;}
 
+  /* ── QUICK RATING SCREEN ── */
+  #screen-quick{align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 0%,#0d200d 0%,#060908 65%);}
+  .quick-box{max-width:480px;width:100%;padding:40px 28px;text-align:center;}
+  .quick-movie-title{font-family:'Bebas Neue',sans-serif;font-size:36px;color:#e8f8e8;margin-bottom:4px;line-height:1;}
+  .quick-movie-sub{font-size:13px;color:#3d6a3d;margin-bottom:36px;font-style:italic;}
+  .quick-score-display{font-family:'Bebas Neue',sans-serif;font-size:96px;color:#ffffff;line-height:1;margin-bottom:4px;text-shadow:0 0 40px rgba(80,200,80,0.3);}
+  .quick-score-grade{font-family:'Bebas Neue',sans-serif;font-size:32px;color:#5aaa5a;margin-bottom:8px;}
+  .quick-score-lbl{font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:0.25em;text-transform:uppercase;color:#3d6a3d;margin-bottom:32px;}
+  .quick-slider-wrap{padding:0 8px;margin-bottom:12px;}
+  .quick-slider{-webkit-appearance:none;appearance:none;width:100%;height:6px;background:linear-gradient(to right,#267226 0%,#267226 var(--pct,50%),#1a3a1a var(--pct,50%),#1a3a1a 100%);border-radius:3px;outline:none;cursor:pointer;}
+  .quick-slider::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;border-radius:50%;background:#4aaa4a;border:3px solid #e8f8e8;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.4);}
+  .quick-slider::-moz-range-thumb{width:28px;height:28px;border-radius:50%;background:#4aaa4a;border:3px solid #e8f8e8;cursor:pointer;}
+  .quick-ticks{display:flex;justify-content:space-between;padding:0 2px;margin-bottom:32px;}
+  .quick-tick{font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#2a5a2a;}
+  .quick-note-wrap{margin-bottom:28px;text-align:left;}
+  .quick-note-lbl{display:block;font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:0.22em;text-transform:uppercase;color:#3d6a3d;margin-bottom:7px;}
+  .quick-toggle{display:flex;align-items:center;gap:10px;margin-top:20px;cursor:pointer;justify-content:center;}
+  .quick-toggle input[type=checkbox]{width:18px;height:18px;accent-color:#4aaa4a;cursor:pointer;flex-shrink:0;}
+  .quick-toggle-label{font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:0.12em;text-transform:uppercase;color:#4a7a4a;}
+  .quick-toggle:hover .quick-toggle-label{color:#80d080;}
+  .view-all-btn{margin-top:12px;padding:8px 20px;background:transparent;border:1px solid #1e3a1e;border-radius:2px;color:#4a7a4a;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:0.15em;text-transform:uppercase;transition:all 0.15s;display:block;width:100%;}
+  .view-all-btn:hover{border-color:#3a6a3a;color:#7ab07a;}
+  .all-ratings-wrap{display:none;}
+  .all-ratings-wrap.open{display:block;}
+  .all-ratings-count{font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:#3d6a3d;margin-bottom:12px;}
+
 @media(max-width:600px){
   .mpaa-card{padding:28px 22px;}
   .card-title{font-size:34px;}
@@ -404,11 +430,51 @@ const SITE_NAME  = "Cine-file";
       </div>
       <div class="dropdown" id="dropdown"></div>
     </div>
+    <label class="quick-toggle">
+      <input type="checkbox" id="quick-mode-toggle" onchange="toggleQuickMode(this.checked)"/>
+      <span class="quick-toggle-label">⚡ Quick Rating — rate out of 10 without categories</span>
+    </label>
     <div class="setup-notice" id="setup-notice" style="display:none">
       <strong>⚙ API Keys Not Yet Configured</strong><br><br>
       Go to Settings to add your TMDB and OMDB keys, or try the demo below.<br><br>
       <button class="demo-btn" onclick="loadDemo()">Try Demo with "Good Will Hunting" →</button>
     </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     QUICK RATING
+══════════════════════════════════════ -->
+<div id="screen-quick" class="screen">
+  <div class="quick-box">
+    <button class="back-btn" style="margin-bottom:24px" onclick="showScreen('search')">← Back to Search</button>
+    <div class="quick-movie-title" id="quick-title"></div>
+    <div class="quick-movie-sub" id="quick-sub"></div>
+
+    <div class="quick-score-display" id="quick-score-display">5.0</div>
+    <div class="quick-score-grade" id="quick-score-grade">F</div>
+    <div class="quick-score-lbl">out of 10</div>
+
+    <div class="quick-slider-wrap">
+      <input type="range" class="quick-slider" id="quick-slider"
+        min="0" max="20" value="10" step="1"
+        oninput="updateQuickScore(this.value)"/>
+    </div>
+    <div class="quick-ticks">
+      <span class="quick-tick">0</span>
+      <span class="quick-tick">2</span>
+      <span class="quick-tick">4</span>
+      <span class="quick-tick">6</span>
+      <span class="quick-tick">8</span>
+      <span class="quick-tick">10</span>
+    </div>
+
+    <div class="quick-note-wrap">
+      <label class="quick-note-lbl">Notes (optional)</label>
+      <textarea id="quick-note" class="note-inp" style="min-height:68px" placeholder="Any thoughts on the film..."></textarea>
+    </div>
+
+    <button class="btn-pri" style="width:100%;padding:14px" onclick="submitQuickRating()">Generate Rating Card →</button>
   </div>
 </div>
 
@@ -524,7 +590,7 @@ const SITE_NAME  = "Cine-file";
   </div>
 
   <div class="result-actions">
-    <button class="act-btn" onclick="showScreen('score')">← Edit Scores</button>
+    <button class="act-btn" id="edit-scores-btn" onclick="goEditScores()">← Edit Scores</button>
     <button class="act-btn" onclick="goHome()">Rate Another</button>
     <button class="act-btn act-share" id="save-img-btn" onclick="saveAsImage()">Save as Image</button>
   </div>
@@ -791,6 +857,36 @@ function doGet(e) {
      JAVASCRIPT
 ══════════════════════════════════════ -->
 <script>
+// ── QUICK RATING MODE ────────────────────────────────────────────────
+let quickMode = false;
+
+function toggleQuickMode(checked){
+  quickMode = checked;
+}
+
+function goEditScores(){
+  if(quickMode) showScreen('quick');
+  else showScreen('score');
+}
+
+function updateQuickScore(val){
+  const score = (parseInt(val)/2).toFixed(1);
+  document.getElementById('quick-score-display').textContent = score;
+  document.getElementById('quick-score-grade').textContent = grade(parseFloat(score)*10);
+  const pct = (val/20*100).toFixed(1);
+  document.getElementById('quick-slider').style.setProperty('--pct', pct+'%');
+}
+
+function submitQuickRating(){
+  const val = document.getElementById('quick-slider').value;
+  chosenScore10 = parseFloat((parseInt(val)/2).toFixed(1));
+  scores = {}; notes = {};
+  ratingDate = new Date().toISOString().slice(0,10);
+  // Store note so generateCard can access it
+  document.getElementById('overall-note').value = document.getElementById('quick-note').value || '';
+  generateCard();
+}
+
 // ── CATEGORY DEFINITIONS ─────────────────────────────────────
 const FILM_CATS = [
   {id:"plot",          label:"Plot & Concept",       w:0.20, prompt:"Did the story itself interest you? Was it original, did it make sense, was the ending satisfying?"},
@@ -914,7 +1010,12 @@ function showScreen(id){
   if(id==="settings") openSettings();
 }
 
-function goHome(){ showScreen("home"); }
+function goHome(){
+  quickMode = false;
+  const toggle = document.getElementById('quick-mode-toggle');
+  if(toggle) toggle.checked = false;
+  showScreen("home");
+}
 
 function switchUser(){
   setSavedUser(null);
@@ -1222,7 +1323,20 @@ function loadMovie(movie){
   document.getElementById("overall-note").value="";
   document.getElementById("total-num").textContent="0.00";
   document.getElementById("total-grade").textContent="—";
-  showScreen("score");
+  if(quickMode){
+    // Set up quick rating screen
+    document.getElementById('quick-title').textContent = movie.title;
+    document.getElementById('quick-sub').textContent =
+      [movie.year, movie.director && `Dir. ${movie.director}`,
+       (movie.rt&&movie.rt!=='—') && `RT: ${movie.rt}`,
+       movie.imdb && `IMDb: ${movie.imdb}`].filter(Boolean).join(' · ');
+    document.getElementById('quick-slider').value = 10;
+    document.getElementById('quick-note').value = '';
+    updateQuickScore(10);
+    showScreen('quick');
+  } else {
+    showScreen("score");
+  }
 }
 
 function updateTotal(){
@@ -1322,18 +1436,30 @@ function generateCard(){
     ${currentMovie.poster?`<img class="card-poster" src="https://image.tmdb.org/t/p/w185${currentMovie.poster}" alt="${escHtml(currentMovie.title)}">`:""}
   `;
 
-  document.getElementById("card-table-body").innerHTML=CATS.map(c=>`
-    <tr>
-      <td class="ct-name">${c.label}</td>
-      <td class="tc ct-dim">${Math.round(c.w*100)}%</td>
-      <td class="tc ct-score">${scores[c.id]||"—"}</td>
-      <td class="tc ct-grade">${scores[c.id]?grade(scores[c.id]):"—"}</td>
-      <td class="ct-note">${escHtml(notes[c.id]||"")}</td>
-    </tr>`).join("");
+  // Show/hide category table based on mode
+  const cardTableWrap = document.querySelector('.card-table');
+  const cardTableHead = document.querySelector('.card-table thead');
+  if(quickMode){
+    if(cardTableWrap) cardTableWrap.style.display='none';
+    document.getElementById("card-table-body").innerHTML='';
+  } else {
+    if(cardTableWrap) cardTableWrap.style.display='';
+    document.getElementById("card-table-body").innerHTML=CATS.map(c=>`
+      <tr>
+        <td class="ct-name">${c.label}</td>
+        <td class="tc ct-dim">${Math.round(c.w*100)}%</td>
+        <td class="tc ct-score">${scores[c.id]||"—"}</td>
+        <td class="tc ct-grade">${scores[c.id]?grade(scores[c.id]):"—"}</td>
+        <td class="ct-note">${escHtml(notes[c.id]||"")}</td>
+      </tr>`).join("");
+  }
 
   const notesBlock=document.getElementById("card-notes");
   if(overallNote){document.getElementById("card-notes-body").textContent=overallNote;notesBlock.style.display="block";}
   else notesBlock.style.display="none";
+  // Hide the divider rule above category table in quick mode
+  const rules=document.querySelectorAll('.mpaa-rule');
+  if(rules.length>=3) rules[2].style.display = quickMode ? 'none' : '';
 
   document.getElementById("card-date").textContent=today;
   document.getElementById("card-genres").textContent=(currentMovie.genres||[]).join(" · ");
@@ -1357,14 +1483,14 @@ function pushToSheets(raw100, g, overallNote, today){
     rt:      currentMovie.rt||"",
     imdb:    currentMovie.imdb||"",
     score10: chosenScore10.toFixed(1),
-    score100:raw100,
+    score100: quickMode ? (chosenScore10*10).toFixed(1) : raw100,
     grade:   g,
-    plot:         scores.plot||"",         plotGrade:    grade(scores.plot||0),     plotNotes:    notes.plot||"",
-    entertainment:scores.entertainment||"",entGrade:     grade(scores.entertainment||0),entNotes: notes.entertainment||"",
-    acting:       scores.acting||"",       actingGrade:  grade(scores.acting||0),   actingNotes:  notes.acting||"",
-    visuals:      scores.visuals||"",      visualsGrade: grade(scores.visuals||0),  visualsNotes: notes.visuals||"",
-    pacing:       scores.pacing||"",       pacingGrade:  grade(scores.pacing||0),   pacingNotes:  notes.pacing||"",
-    emotional:    scores.emotional||"",    emotionalGrade:grade(scores.emotional||0),emotionalNotes:notes.emotional||"",
+    plot:         quickMode?"":scores.plot||"",         plotGrade:    quickMode?"":grade(scores.plot||0),     plotNotes:    quickMode?"":notes.plot||"",
+    entertainment:quickMode?"":scores.entertainment||"",entGrade:     quickMode?"":grade(scores.entertainment||0),entNotes: quickMode?"":notes.entertainment||"",
+    acting:       quickMode?"":scores.acting||"",       actingGrade:  quickMode?"":grade(scores.acting||0),   actingNotes:  quickMode?"":notes.acting||"",
+    visuals:      quickMode?"":scores.visuals||"",      visualsGrade: quickMode?"":grade(scores.visuals||0),  visualsNotes: quickMode?"":notes.visuals||"",
+    pacing:       quickMode?"":scores.pacing||"",       pacingGrade:  quickMode?"":grade(scores.pacing||0),   pacingNotes:  quickMode?"":notes.pacing||"",
+    emotional:    quickMode?"":scores.emotional||"",    emotionalGrade:quickMode?"":grade(scores.emotional||0),emotionalNotes:quickMode?"":notes.emotional||"",
     notes: overallNote,
   };
   fetch(CONFIG.GAS_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"application/json"},body:JSON.stringify(row)})
@@ -1527,7 +1653,7 @@ function renderStats(ratings, summary, container){
       </div>
     </div>
 
-    <!-- Top 5 -->
+    <!-- Top 5 + View All -->
     <div class="stats-section">
       <div class="stats-section-title">Your Top 5 Films</div>
       <div class="film-list">
@@ -1538,6 +1664,19 @@ function renderStats(ratings, summary, container){
             <div class="film-row-year">${r["Year"]||""}</div>
             <div class="film-row-score">${parseFloat(r["Score /10"]||0).toFixed(1)}</div>
           </div>`).join("")}
+      </div>
+      <button class="view-all-btn" onclick="toggleAllRatings(this)">View All ${ratings.length} Ratings ↓</button>
+      <div class="all-ratings-wrap" id="all-ratings-wrap">
+        <div class="all-ratings-count">${ratings.length} films rated · sorted best to worst</div>
+        <div class="film-list">
+          ${sorted.map((r,i)=>`
+            <div class="film-row">
+              <div class="film-row-rank">#${i+1}</div>
+              <div class="film-row-title">${escHtml(r["Title"]||"")}</div>
+              <div class="film-row-year">${r["Year"]||""}</div>
+              <div class="film-row-score">${parseFloat(r["Score /10"]||0).toFixed(1)}</div>
+            </div>`).join("")}
+        </div>
       </div>
     </div>
 
@@ -1595,6 +1734,16 @@ function renderStats(ratings, summary, container){
           }).join("")}
       </div>
     </div>` : ""}`;
+}
+
+// ── TOGGLE ALL RATINGS ───────────────────────────────────────────
+function toggleAllRatings(btn){
+  const wrap = document.getElementById('all-ratings-wrap');
+  const isOpen = wrap.classList.toggle('open');
+  btn.textContent = isOpen
+    ? 'Hide ↑'
+    : btn.textContent.replace('Hide ↑','') || 'View All Ratings ↓';
+  if(isOpen) wrap.scrollIntoView({behavior:'smooth', block:'start'});
 }
 
 // ── SAVE AS IMAGE ─────────────────────────────────────────────
