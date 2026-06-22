@@ -1513,21 +1513,34 @@ function renderStats(ratings, summary, container){
 }
 
 // ── SAVE AS IMAGE ─────────────────────────────────────────────
-function saveAsImage(){
+async function saveAsImage(){
   const btn=document.getElementById("save-img-btn");
   btn.textContent="Generating..."; btn.disabled=true;
   try{
     const raw=CATS.reduce((s,c)=>s+(scores[c.id]||0)*c.w,0);
     const g=grade(raw);
-    // Match card width exactly — card max-width is 720px, we render at 2x
     const CARD_W=720, SCALE=2, OUTER_PAD=80;
     const W=CARD_W+OUTER_PAD*2;
     const cw=W*SCALE;
     const cv=document.createElement("canvas");
     cv.width=cw; cv.height=cw*2;
     const ctx=cv.getContext("2d");
-    // helpers — all coords in logical px, scaled internally
     const S=SCALE;
+
+    // ── load poster image if available ──
+    let posterImg=null;
+    if(currentMovie.poster){
+      try{
+        posterImg=await new Promise((res,rej)=>{
+          const img=new Image();
+          img.crossOrigin="anonymous";
+          img.onload=()=>res(img);
+          img.onerror=()=>res(null);
+          img.src=`https://image.tmdb.org/t/p/w185${currentMovie.poster}`;
+        });
+      }catch(e){ posterImg=null; }
+    }
+
     function fs(size,weight,family){ctx.font=`${weight||"normal"} ${size*S}px ${family||"Arial"}`;}
     function fw(text,x,y,maxW){ctx.fillText(text,x*S,y*S,maxW?maxW*S:undefined);}
     function fillRect(x,y,w,h,fill){ctx.fillStyle=fill;ctx.fillRect(x*S,y*S,w*S,h*S);}
@@ -1535,6 +1548,12 @@ function saveAsImage(){
     function hline(y,x1,x2,color,lw){
       ctx.strokeStyle=color;ctx.lineWidth=lw*S;
       ctx.beginPath();ctx.moveTo(x1*S,y*S);ctx.lineTo(x2*S,y*S);ctx.stroke();
+    }
+    function roundRect(x,y,w,h,r,fill){
+      ctx.fillStyle=fill;
+      ctx.beginPath();
+      ctx.roundRect(x*S,y*S,w*S,h*S,r*S);
+      ctx.fill();
     }
     function wrapText(text,x,y,maxW,lineH){
       const words=String(text).split(" ");let line="",ly=y;
@@ -1547,18 +1566,37 @@ function saveAsImage(){
       return ly;
     }
 
-    // Card inner padding matches CSS: 42px top/bottom, 50px left/right
-    const CP=50; // card horizontal inner padding
-    const CX=OUTER_PAD; // card left edge
-    const CIX=CX+CP; // content left edge inside card
-    const CW=CARD_W-CP*2; // content width
+    // draw RT logo badge
+    function drawRTLogo(x,y,size){
+      ctx.fillStyle="#FA320A";
+      ctx.beginPath();
+      ctx.arc((x+size/2)*S,(y+size/2)*S,(size/2)*S,0,Math.PI*2);
+      ctx.fill();
+      ctx.fillStyle="#ffffff";
+      fs(size*0.45,"900","Arial Black, Arial");
+      ctx.textAlign="center";
+      ctx.fillText("RT",(x+size/2)*S,(y+size*0.68)*S);
+    }
+
+    // draw IMDb logo badge
+    function drawIMDbLogo(x,y,w,h){
+      roundRect(x,y,w,h,4,"#F5C518");
+      ctx.fillStyle="#000000";
+      fs(h*0.55,"900","Arial Black, Arial");
+      ctx.textAlign="center";
+      ctx.fillText("IMDb",(x+w/2)*S,(y+h*0.76)*S);
+    }
+
+    const CP=50;
+    const CX=OUTER_PAD;
+    const CIX=CX+CP;
+    const CW=CARD_W-CP*2;
 
     let Y=0;
-    // dark bg
     fillRect(0,0,W,cw*2/S,"#040604");
     Y=60;
     const cardStartY=Y;
-    Y+=42; // card top inner padding
+    Y+=42;
 
     // ── STAMP ──
     ctx.textAlign="center"; ctx.fillStyle="#ffffff";
@@ -1568,8 +1606,6 @@ function saveAsImage(){
     fw("CINE-FILE",W/2,Y); Y+=22;
     fs(10,"400","Arial");
     fw("AND HAS RECEIVED THE FOLLOWING RATING",W/2,Y); Y+=22;
-
-    // rule
     hline(Y,CIX,CIX+CW,"#224422",1); Y+=20;
 
     // ── MOVIE TITLE ──
@@ -1578,58 +1614,83 @@ function saveAsImage(){
     ctx.fillStyle="#ffffff";
     fw(currentMovie.title.toUpperCase(),W/2,Y+titleSize*0.8);
     Y+=titleSize+10;
-
-    // subtitle
     fs(11,"400","Arial");
     ctx.fillStyle="#ffffff";
     const sub=[currentMovie.year,currentMovie.director?`Directed by ${currentMovie.director}`:""].filter(Boolean).join("  ·  ");
     fw(sub.toUpperCase(),W/2,Y); Y+=24;
-
-    // rule
     hline(Y,CIX,CIX+CW,"#224422",1); Y+=20;
 
-    // ── SCORE BOXES — match card exactly ──
-    // Card uses min-width:100px sbox with gap:14px
-    // Big /10 box: min-width 120px. Others ~100px.
-    const boxes=[];
-    boxes.push({val:chosenScore10!==null?chosenScore10.toFixed(1):"—",lbl:"OUT OF 10",w:120});
-    boxes.push({val:raw.toFixed(1),lbl:"RAW /100",w:100,smallFont:true});
-    boxes.push({val:g,lbl:"GRADE",w:100});
-    if(currentMovie.rt&&currentMovie.rt!=="—"&&currentMovie.rt!=="")
-      boxes.push({val:currentMovie.rt,lbl:"RT AUDIENCE",w:100,smallFont:true});
-    if(currentMovie.imdb&&currentMovie.imdb!=="")
-      boxes.push({val:currentMovie.imdb,lbl:"IMDb",w:100,smallFont:true});
+    // ── SCORE BOXES + POSTER ──
+    const hasRT=currentMovie.rt&&currentMovie.rt!=="—"&&currentMovie.rt!=="";
+    const hasIMDb=currentMovie.imdb&&currentMovie.imdb!=="";
+    const hasPoster=!!posterImg;
 
-    const bGap=14, bH=90;
-    const totalBW=boxes.reduce((s,b)=>s+b.w,0)+(boxes.length-1)*bGap;
+    // build box list
+    const boxes=[];
+    boxes.push({type:"val",val:chosenScore10!==null?chosenScore10.toFixed(1):"—",lbl:"OUT OF 10",w:120});
+    boxes.push({type:"val",val:raw.toFixed(1),lbl:"RAW /100",w:100,small:true});
+    boxes.push({type:"val",val:g,lbl:"GRADE",w:100});
+    if(hasRT)  boxes.push({type:"rt",  val:currentMovie.rt, lbl:"RT AUDIENCE",w:110});
+    if(hasIMDb)boxes.push({type:"imdb",val:currentMovie.imdb,lbl:"IMDb RATING",w:110});
+
+    const bGap=14, bH=100;
+    const posterW=hasPoster?70:0;
+    const posterGap=hasPoster?14:0;
+    const totalBW=boxes.reduce((s,b)=>s+b.w,0)+(boxes.length-1)*bGap+posterW+posterGap;
     let bx=(W-totalBW)/2;
+
     boxes.forEach(b=>{
       fillRect(bx,Y,b.w,bH,"#0b1f0b");
       strokeRect(bx,Y,b.w,bH,"#224422",3);
-      ctx.textAlign="center"; ctx.fillStyle="#ffffff";
-      const numSize=b.smallFont?30:44;
-      fs(numSize,"900","Arial Black, Arial");
-      fw(b.val,bx+b.w/2,Y+52+(numSize<40?4:0));
-      fs(8,"400","Arial");
-      fw(b.lbl,bx+b.w/2,Y+70);
+      ctx.fillStyle="#ffffff"; ctx.textAlign="center";
+
+      if(b.type==="rt"){
+        // RT logo + score
+        const logoSize=28;
+        const logoX=bx+(b.w-logoSize)/2;
+        drawRTLogo(logoX,Y+8,logoSize);
+        fs(b.small?26:30,"900","Arial Black, Arial");
+        fw(b.val,bx+b.w/2,Y+62);
+        fs(8,"400","Arial"); fw(b.lbl,bx+b.w/2,Y+78);
+      } else if(b.type==="imdb"){
+        // IMDb logo + score
+        const lw=64,lh=22;
+        drawIMDbLogo(bx+(b.w-lw)/2,Y+8,lw,lh);
+        fs(26,"900","Arial Black, Arial");
+        fw(b.val,bx+b.w/2,Y+62);
+        fs(8,"400","Arial"); fw(b.lbl,bx+b.w/2,Y+78);
+      } else {
+        // plain value box
+        const numSize=b.small?30:44;
+        fs(numSize,"900","Arial Black, Arial");
+        fw(b.val,bx+b.w/2,Y+54+(numSize<40?4:0));
+        fs(8,"400","Arial"); fw(b.lbl,bx+b.w/2,Y+76);
+      }
       bx+=b.w+bGap;
     });
-    Y+=bH+18;
 
-    // rule
+    // poster
+    if(hasPoster){
+      bx+=posterGap-bGap; // undo last gap, add poster gap
+      const pH=Math.round(posterW*1.5);
+      const pY=Y+(bH-pH)/2;
+      ctx.drawImage(posterImg,bx*S,pY*S,posterW*S,pH*S);
+      // border around poster
+      ctx.strokeStyle="#224422"; ctx.lineWidth=2*S;
+      ctx.strokeRect(bx*S,pY*S,posterW*S,pH*S);
+    }
+
+    Y+=bH+18;
     hline(Y,CIX,CIX+CW,"#224422",1); Y+=18;
 
-    // ── CATEGORY TABLE — match card columns ──
-    // Card: Category | Weight(center) | Score(center) | Grade(center) | Notes
+    // ── CATEGORY TABLE ──
     const col={
-      cat:CIX, catW:170,
-      wt:CIX+175, wtW:50,
-      sc:CIX+230, scW:50,
-      gr:CIX+285, grW:50,
-      note:CIX+340, noteW:CW-340
+      cat:CIX,catW:170,
+      wt:CIX+175,wtW:50,
+      sc:CIX+230,scW:50,
+      gr:CIX+285,grW:50,
+      note:CIX+340,noteW:CW-340
     };
-
-    // header row
     ctx.fillStyle="#ffffff"; fs(9,"400","Arial");
     ctx.textAlign="left";  fw("CATEGORY",col.cat,Y);
     ctx.textAlign="center";fw("WT",col.wt+col.wtW/2,Y);
@@ -1639,7 +1700,6 @@ function saveAsImage(){
     Y+=8;
     hline(Y,CIX,CIX+CW,"#224422",0.5); Y+=12;
 
-    // rows
     CATS.forEach(c=>{
       const s=scores[c.id]||0;
       const rowH=32;
@@ -1652,10 +1712,7 @@ function saveAsImage(){
       ctx.fillStyle="#ffffff"; fw(s?grade(s):"—",col.gr+col.grW/2,Y+rowH*0.65);
       ctx.fillStyle="#ffffff"; ctx.textAlign="left"; fs(10,"400","Arial");
       const n=notes[c.id]||"";
-      if(n){
-        ctx.font=`italic ${10*S}px Arial`;
-        fw(n.slice(0,48)+(n.length>48?"…":""),col.note,Y+rowH*0.6,col.noteW);
-      }
+      if(n){ctx.font=`italic ${10*S}px Arial`;fw(n.slice(0,48)+(n.length>48?"…":""),col.note,Y+rowH*0.6,col.noteW);}
       Y+=rowH;
       hline(Y,CIX,CIX+CW,"#142814",0.5); Y+=4;
     });
@@ -1666,10 +1723,6 @@ function saveAsImage(){
     const overallNote=document.getElementById("overall-note")?.value||"";
     if(overallNote){
       const nPad=16;
-      // measure first
-      ctx.font=`italic ${11*S}px Arial`;
-      const tempY=Y+nPad+20;
-      // draw box bg first then text on top
       const estLines=Math.ceil(overallNote.length/55);
       const nH=nPad*2+16+estLines*18+8;
       fillRect(CIX,Y,CW,nH,"#0b1f0b");
@@ -1691,38 +1744,39 @@ function saveAsImage(){
     fw((currentMovie.genres||[]).join(" · ").toUpperCase(),CIX+CW,Y);
     Y+=36;
 
-    // ── COMPOSITE — dark bg + green card + content ──
-    const cardH=Y-cardStartY+42; // match bottom padding
+    // ── COMPOSITE ──
+    const cardH=Y-cardStartY+42;
     const finalH=Y+60;
     const final=document.createElement("canvas");
     final.width=cw; final.height=finalH*S;
     const fc=final.getContext("2d");
 
-    // background
+    // dark outer background
     fc.fillStyle="#040604"; fc.fillRect(0,0,final.width,final.height);
-    // glow
+    // green glow
     const fg=fc.createRadialGradient(cw/2,final.height*0.35,0,cw/2,final.height*0.35,cw*0.65);
-    fg.addColorStop(0,"rgba(20,80,20,0.28)"); fg.addColorStop(1,"rgba(0,0,0,0)");
+    fg.addColorStop(0,"rgba(20,80,20,0.3)"); fg.addColorStop(1,"rgba(0,0,0,0)");
     fc.fillStyle=fg; fc.fillRect(0,0,final.width,final.height);
-    // green card
+    // green card background
     fc.fillStyle="#173317";
     fc.fillRect(CX*S,cardStartY*S,CARD_W*S,cardH*S);
     fc.strokeStyle="#267226"; fc.lineWidth=5*S;
     fc.strokeRect(CX*S,cardStartY*S,CARD_W*S,cardH*S);
-    // paint content on top
+    // content on top
     fc.drawImage(cv,0,0);
-    fc.drawImage(cv,0,0);
-    fc.font=`400 ${10*SCALE}px Arial`; fc.fillStyle="rgba(255,255,255,0.2)";
-    fc.textAlign="center"; fc.fillText("CINE-FILE",final.width/2,final.height-20*SCALE);
+    // watermark
+    fc.font=`400 ${10*S}px Arial`; fc.fillStyle="rgba(255,255,255,0.2)";
+    fc.textAlign="center"; fc.fillText("CINE-FILE",final.width/2,final.height-20*S);
+
     const dataUrl=final.toDataURL("image/jpeg",0.94);
     const safeName=(currentMovie.title||"rating").replace(/[^a-z0-9]/gi,"-").toLowerCase();
     const isIOS=/iP(hone|ad|od)/i.test(navigator.userAgent);
     if(isIOS){
       const w=window.open("","_blank");
-      w.document.write(`<html><body style="margin:0;background:#000">
+      w.document.write(`<html><body style="margin:0;background:#040604">
         <img src="${dataUrl}" style="max-width:100%;display:block">
         <p style="color:#aaa;font-family:sans-serif;text-align:center;padding:12px;font-size:13px">
-          Tap &amp; hold → Save to Photos</p></body></html>`);
+          Tap &amp; hold the image → Save to Photos</p></body></html>`);
       w.document.close();
     }else{
       const a=document.createElement("a");
