@@ -612,14 +612,27 @@ function doPost(e) {
       "Pacing","Pacing Grade","Pacing Notes",
       "Emotional","Emotional Grade","Emotional Notes","Overall Notes"]);
   }
-  tab.appendRow([d.date,d.title,d.year,d.director,d.rt,d.imdb,
+  // Check if this movie was already rated — overwrite if so
+  var newRow = [d.date,d.title,d.year,d.director,d.rt,d.imdb,
     d.score10,d.score100,d.grade,
     d.plot,d.plotGrade,d.plotNotes,
     d.entertainment,d.entGrade,d.entNotes,
     d.acting,d.actingGrade,d.actingNotes,
     d.visuals,d.visualsGrade,d.visualsNotes,
     d.pacing,d.pacingGrade,d.pacingNotes,
-    d.emotional,d.emotionalGrade,d.emotionalNotes,d.notes]);
+    d.emotional,d.emotionalGrade,d.emotionalNotes,d.notes];
+  var tabData = tab.getDataRange().getValues();
+  var existingRow = -1;
+  for (var i = 1; i < tabData.length; i++) {
+    if (String(tabData[i][1]).toLowerCase() === String(d.title).toLowerCase()) {
+      existingRow = i + 1; break;
+    }
+  }
+  if (existingRow > -1) {
+    tab.getRange(existingRow, 1, 1, newRow.length).setValues([newRow]);
+  } else {
+    tab.appendRow(newRow);
+  }
 
   // ── Summary tab ──
   var sum  = ss.getSheetByName("Summary") || ss.insertSheet("Summary");
@@ -1134,7 +1147,8 @@ async function checkAlreadyRated(movie){
     loadMovie(movie); return;
   }
   try{
-    const res = await fetch(`${CONFIG.GAS_URL}?action=getRatings&user=${encodeURIComponent(currentUser.name)}`);
+    // Always fetch fresh — add timestamp to bust cache
+    const res = await fetch(`${CONFIG.GAS_URL}?action=getRatings&user=${encodeURIComponent(currentUser.name)}&t=${Date.now()}`);
     const ratings = await res.json().catch(()=>[]);
     const existing = (ratings||[]).find(r=>(r["Title"]||"").toLowerCase()===movie.title.toLowerCase());
     if(existing){
@@ -1582,15 +1596,7 @@ async function saveAsImage(){
   const btn=document.getElementById("save-img-btn");
   btn.textContent="Generating..."; btn.disabled=true;
 
-  // Open window immediately (before any async work) so Safari doesn't block it as a popup
   const isIOS=/iP(hone|ad|od)/i.test(navigator.userAgent);
-  let iosWin=null;
-  if(isIOS){
-    iosWin=window.open("","_blank");
-    if(iosWin) iosWin.document.write(`<html><body style="margin:0;background:#040604;display:flex;align-items:center;justify-content:center;min-height:100vh">
-      <p style="color:#6aaa6a;font-family:sans-serif;text-align:center;font-size:16px">Generating your rating card...</p>
-      </body></html>`);
-  }
 
   try{
     const raw=CATS.reduce((s,c)=>s+(scores[c.id]||0)*c.w,0);
@@ -1853,20 +1859,8 @@ async function saveAsImage(){
     const dataUrl=final.toDataURL("image/jpeg",0.94);
     const safeName=(currentMovie.title||"rating").replace(/[^a-z0-9]/gi,"-").toLowerCase();
     if(isIOS){
-      if(iosWin){
-        iosWin.document.write(`<html><body style="margin:0;background:#040604">
-          <img src="${dataUrl}" style="max-width:100%;display:block">
-          <p style="color:#aaa;font-family:sans-serif;text-align:center;padding:14px;font-size:14px">
-            Tap &amp; hold the image → <strong style="color:#80d080">Save to Photos</strong></p>
-          </body></html>`);
-        iosWin.document.close();
-      } else {
-        // fallback if window was blocked — show inline
-        const img=document.createElement("img");
-        img.src=dataUrl; img.style.cssText="max-width:100%;display:block;margin:16px auto";
-        document.getElementById("sheet-msg").innerHTML="";
-        document.getElementById("sheet-msg").appendChild(img);
-      }
+      // Show image inline on page — most reliable on iOS Safari
+      showImageOverlay(dataUrl);
     }else{
       const a=document.createElement("a");
       a.download=`cine-file-${safeName}.jpg`; a.href=dataUrl;
@@ -1874,10 +1868,32 @@ async function saveAsImage(){
     }
   }catch(e){
     console.error("Image error:",e);
-    if(iosWin) iosWin.close();
     alert("Could not generate image: "+e.message);
   }
   btn.textContent="Save as Image"; btn.disabled=false;
+}
+
+function showImageOverlay(dataUrl){
+  // Remove any existing overlay
+  const existing=document.getElementById("img-overlay");
+  if(existing) existing.remove();
+
+  const overlay=document.createElement("div");
+  overlay.id="img-overlay";
+  overlay.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:9999;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;align-items:center;padding:20px;";
+
+  overlay.innerHTML=`
+    <div style="max-width:600px;width:100%;text-align:center;">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:0.3em;text-transform:uppercase;color:#4a9a4a;margin-bottom:12px;">Your Rating Card</div>
+      <img src="${dataUrl}" style="width:100%;border-radius:3px;display:block;margin-bottom:16px;">
+      <div style="background:#0b1f0b;border:1px solid #224422;border-radius:3px;padding:14px;margin-bottom:16px;">
+        <div style="color:#80d080;font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:0.15em;text-transform:uppercase;margin-bottom:6px;">📱 Save to Photos</div>
+        <div style="color:#6a9a6a;font-size:13px;font-family:'Barlow',sans-serif;line-height:1.6;">Tap and hold the image above, then tap <strong style="color:#a0d0a0">"Save to Photos"</strong></div>
+      </div>
+      <button onclick="document.getElementById('img-overlay').remove()" style="padding:12px 32px;background:#142414;border:1px solid #2e6a2e;border-radius:2px;color:#a0e0a0;font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:0.15em;text-transform:uppercase;cursor:pointer;">← Back to Rating</button>
+    </div>`;
+
+  document.body.appendChild(overlay);
 }
 
 // ── ADMIN PIN MODAL ──────────────────────────────────────────
