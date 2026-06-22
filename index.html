@@ -582,13 +582,26 @@ const SITE_NAME  = "Cine-file";
       <div class="settings-section-title">Apps Script (Google Sheets)</div>
       <div class="config-note">
         Go to <code>script.google.com</code> → New Project → paste the script below → Deploy as Web App (Anyone) → copy URL above.<br><br>
-        <pre style="background:#040604;padding:14px;border-radius:2px;font-size:11px;color:#6aaa6a;overflow-x:auto;line-height:1.7">function doPost(e) {
-  var ss = SpreadsheetApp.openById("YOUR_SHEET_ID");
-  var d  = JSON.parse(e.postData.contents);
-  var user = d.user || "Unknown";
+        <pre style="background:#040604;padding:14px;border-radius:2px;font-size:11px;color:#6aaa6a;overflow-x:auto;line-height:1.7">var SHEET_ID = "YOUR_SHEET_ID"; // ← replace this
 
-  // ── Personal tab ──
-  var tab = ss.getSheetByName(user) || ss.insertSheet(user);
+function doPost(e) {
+  var ss   = SpreadsheetApp.openById(SHEET_ID);
+  var d    = JSON.parse(e.postData.contents);
+  var action = d.action || "saveRating";
+
+  // ── Save Users ──
+  if (action === "saveUsers") {
+    var uTab = ss.getSheetByName("Users") || ss.insertSheet("Users");
+    uTab.clearContents();
+    uTab.appendRow(["name","pin"]);
+    (d.users||[]).forEach(function(u){ uTab.appendRow([u.name, u.pin]); });
+    return ContentService.createTextOutput(JSON.stringify({ok:true}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // ── Save Rating ──
+  var user = d.user || "Unknown";
+  var tab  = ss.getSheetByName(user) || ss.insertSheet(user);
   if (tab.getLastRow() === 0) {
     tab.appendRow(["Date","Title","Year","Director","RT Audience",
       "IMDb","Score /10","Raw /100","Grade",
@@ -597,8 +610,7 @@ const SITE_NAME  = "Cine-file";
       "Acting","Acting Grade","Acting Notes",
       "Visuals","Visuals Grade","Visuals Notes",
       "Pacing","Pacing Grade","Pacing Notes",
-      "Emotional","Emotional Grade","Emotional Notes",
-      "Overall Notes"]);
+      "Emotional","Emotional Grade","Emotional Notes","Overall Notes"]);
   }
   tab.appendRow([d.date,d.title,d.year,d.director,d.rt,d.imdb,
     d.score10,d.score100,d.grade,
@@ -607,17 +619,14 @@ const SITE_NAME  = "Cine-file";
     d.acting,d.actingGrade,d.actingNotes,
     d.visuals,d.visualsGrade,d.visualsNotes,
     d.pacing,d.pacingGrade,d.pacingNotes,
-    d.emotional,d.emotionalGrade,d.emotionalNotes,
-    d.notes]);
+    d.emotional,d.emotionalGrade,d.emotionalNotes,d.notes]);
 
   // ── Summary tab ──
-  var sum = ss.getSheetByName("Summary") || ss.insertSheet("Summary");
+  var sum  = ss.getSheetByName("Summary") || ss.insertSheet("Summary");
   if (sum.getLastRow() === 0)
     sum.appendRow(["Title","Year","Director","RT Audience","IMDb"]);
-
-  // Find or create row for this title
   var data = sum.getDataRange().getValues();
-  var titleCol = 0, rowIdx = -1;
+  var rowIdx = -1;
   for (var i = 1; i < data.length; i++) {
     if (data[i][0] === d.title) { rowIdx = i + 1; break; }
   }
@@ -626,8 +635,6 @@ const SITE_NAME  = "Cine-file";
     rowIdx = sum.getLastRow();
     data = sum.getDataRange().getValues();
   }
-
-  // Find or create column for this user
   var headers = data[0];
   var userCol = headers.indexOf(user);
   if (userCol === -1) {
@@ -636,16 +643,57 @@ const SITE_NAME  = "Cine-file";
   }
   sum.getRange(rowIdx, userCol + 1).setValue(d.score10);
 
-  return ContentService.createTextOutput(
-    JSON.stringify({ok:true})).setMimeType(ContentService.MimeType.JSON);
+  return ContentService.createTextOutput(JSON.stringify({ok:true}))
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
 function doGet(e) {
-  var ss   = SpreadsheetApp.openById("YOUR_SHEET_ID");
+  var ss     = SpreadsheetApp.openById(SHEET_ID);
+  var action = e.parameter.action || "getRatings";
+
+  // ── Get Users ──
+  if (action === "getUsers") {
+    var uTab = ss.getSheetByName("Users");
+    if (!uTab) return out([]);
+    var rows = uTab.getDataRange().getValues();
+    var users = [];
+    for (var i = 1; i < rows.length; i++) {
+      if (rows[i][0]) users.push({name: rows[i][0], pin: rows[i][1]});
+    }
+    return ContentService.createTextOutput(JSON.stringify({users:users}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // ── Get Summary (group stats) ──
+  if (action === "getSummary") {
+    var sum = ss.getSheetByName("Summary");
+    if (!sum) return ContentService.createTextOutput(JSON.stringify({rows:[]}))
+      .setMimeType(ContentService.MimeType.JSON);
+    var data    = sum.getDataRange().getValues();
+    var headers = data[0];
+    var rows    = [];
+    for (var i = 1; i < data.length; i++) {
+      var row = {Title:data[i][0],Year:data[i][1],scores:[],userScores:{}};
+      for (var j = 5; j < headers.length; j++) {
+        if (headers[j] && data[i][j] !== "") {
+          var s = parseFloat(data[i][j]);
+          if (!isNaN(s)) {
+            row.scores.push(s);
+            row.userScores[headers[j]] = s;
+          }
+        }
+      }
+      rows.push(row);
+    }
+    return ContentService.createTextOutput(JSON.stringify({rows:rows}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // ── Get Personal Ratings ──
   var user = e.parameter.user;
   var tab  = ss.getSheetByName(user);
-  if (!tab) return ContentService.createTextOutput(
-    JSON.stringify([])).setMimeType(ContentService.MimeType.JSON);
+  if (!tab) return ContentService.createTextOutput(JSON.stringify([]))
+    .setMimeType(ContentService.MimeType.JSON);
   var rows = tab.getDataRange().getValues();
   var keys = rows[0];
   var out  = [];
@@ -654,8 +702,8 @@ function doGet(e) {
     keys.forEach(function(k,j){ obj[k] = rows[i][j]; });
     out.push(obj);
   }
-  return ContentService.createTextOutput(
-    JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON);
+  return ContentService.createTextOutput(JSON.stringify(out))
+    .setMimeType(ContentService.MimeType.JSON);
 }</pre>
         Replace <code>YOUR_SHEET_ID</code> with your Sheet's ID from the URL.
       </div>
@@ -753,16 +801,47 @@ let currentUser   = null; // {name, pin}
 let pendingMode   = null; // "film" or "restaurant"
 
 // ── PERSISTENCE ──────────────────────────────────────────────
-function getUsers(){
+// ── USER STORAGE — synced via Sheets, cached in localStorage ──
+let _usersCache = null;
+
+function getCachedUsers(){
+  if(_usersCache) return _usersCache;
   try{ return JSON.parse(localStorage.getItem("cf_users")||"[]"); }
   catch(e){ return []; }
 }
-function saveUsers(u){ localStorage.setItem("cf_users",JSON.stringify(u)); }
+function setCachedUsers(u){
+  _usersCache = u;
+  localStorage.setItem("cf_users", JSON.stringify(u));
+}
+function getUsers(){ return getCachedUsers(); }
+function saveUsers(u){
+  setCachedUsers(u);
+  // Sync to Sheets in background
+  if(CONFIG.GAS_URL){
+    fetch(CONFIG.GAS_URL, {
+      method:"POST", mode:"no-cors",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({action:"saveUsers", users:u})
+    }).catch(e=>console.error("User sync failed:",e));
+  }
+}
 function getSavedUser(){
   try{ return JSON.parse(localStorage.getItem("cf_current_user")||"null"); }
   catch(e){ return null; }
 }
 function setSavedUser(u){ localStorage.setItem("cf_current_user",JSON.stringify(u)); }
+
+// Fetch users from Sheets and cache locally
+async function syncUsersFromSheets(){
+  if(!CONFIG.GAS_URL) return;
+  try{
+    const res = await fetch(CONFIG.GAS_URL+"?action=getUsers");
+    const data = await res.json();
+    if(data && Array.isArray(data.users) && data.users.length > 0){
+      setCachedUsers(data.users);
+    }
+  }catch(e){ console.error("Could not sync users:",e); }
+}
 function getStoredConfig(){
   try{ return JSON.parse(localStorage.getItem("cf_config")||"{}"); }
   catch(e){ return {}; }
@@ -1000,8 +1079,14 @@ async function pickMovie(id){
     if(CONFIG.OMDB_KEY){
       try{
         const o=await (await fetch(`${OMDB}/?apikey=${CONFIG.OMDB_KEY}&t=${encodeURIComponent(d.title)}&y=${(d.release_date||"").slice(0,4)}&tomatoes=true`)).json();
-        rt   = o.tomatoUserMeter ? o.tomatoUserMeter+"%" : null;
-        imdb = (o.imdbRating&&o.imdbRating!=="N/A") ? o.imdbRating : null;
+        // Try Ratings array first (most reliable), then fallback fields
+        const rtEntry = (o.Ratings||[]).find(r=>r.Source==="Rotten Tomatoes");
+        const rtCritics = rtEntry ? rtEntry.Value : null;
+        const rtAudience = o.tomatoUserMeter ? o.tomatoUserMeter+"%" : (o.tomatoUserRating ? o.tomatoUserRating+"%" : null);
+        // Prefer audience score, fall back to critics if no audience available
+        rt = rtAudience && rtAudience !== "N/A%" ? rtAudience : (rtCritics && rtCritics !== "N/A%" ? rtCritics+"*" : null);
+        imdb = (o.imdbRating&&o.imdbRating!=="N/A"&&o.imdbRating!=="") ? o.imdbRating : null;
+        if(rt&&rt.includes("N/A")) rt=null;
       }catch(e){}
     }
     loadMovie({
@@ -1215,15 +1300,45 @@ async function loadRankReveal(){
   reveal.style.display="none";
   if(!CONFIG.GAS_URL||!currentUser) return;
   try{
-    const res=await fetch(`${CONFIG.GAS_URL}?user=${encodeURIComponent(currentUser.name)}`);
-    const ratings=await res.json();
+    // Fetch personal ratings + summary tab in parallel
+    const [personalRes, summaryRes] = await Promise.all([
+      fetch(`${CONFIG.GAS_URL}?action=getRatings&user=${encodeURIComponent(currentUser.name)}`),
+      fetch(`${CONFIG.GAS_URL}?action=getSummary`)
+    ]);
+    const ratings = await personalRes.json().catch(()=>[]);
+    const summary = await summaryRes.json().catch(()=>null);
+
     if(!ratings||!ratings.length) return;
+
+    // Personal rank stats
     const scores10=ratings.map(r=>parseFloat(r["Score /10"]||0)).filter(s=>s>0).sort((a,b)=>b-a);
     const myScore =chosenScore10;
     const rank    =scores10.filter(s=>s>myScore).length+1;
     const total   =scores10.length;
     const g       =grade(CATS.reduce((s,c)=>s+(scores[c.id]||0)*c.w,0));
     const gradeCount=ratings.filter(r=>grade(parseFloat(r["Raw /100"]||0))===g).length;
+
+    // Group average for this film from summary tab
+    let groupHtml = "";
+    if(summary && summary.rows){
+      const filmRow = summary.rows.find(r=>r.Title===currentMovie.title);
+      if(filmRow && filmRow.scores && filmRow.scores.length > 0){
+        const groupAvg = (filmRow.scores.reduce((a,b)=>a+b,0)/filmRow.scores.length).toFixed(1);
+        const groupCount = filmRow.scores.length;
+        const diff = (myScore - parseFloat(groupAvg)).toFixed(1);
+        const diffStr = diff > 0 ? `+${diff}` : `${diff}`;
+        const diffColor = diff > 0 ? "#80d080" : diff < 0 ? "#d08080" : "#8a9a8a";
+        groupHtml = `
+          <div class="rank-stat">
+            <div class="rank-stat-num">${groupAvg}</div>
+            <div class="rank-stat-lbl">Group avg (${groupCount} ${groupCount===1?"rating":"ratings"})</div>
+          </div>
+          <div class="rank-stat">
+            <div class="rank-stat-num" style="color:${diffColor}">${diffStr}</div>
+            <div class="rank-stat-lbl">vs group avg</div>
+          </div>`;
+      }
+    }
 
     stats.innerHTML=`
       <div class="rank-stat">
@@ -1237,7 +1352,8 @@ async function loadRankReveal(){
       <div class="rank-stat">
         <div class="rank-stat-num">${gradeCount}</div>
         <div class="rank-stat-lbl">${g}'s you've given</div>
-      </div>`;
+      </div>
+      ${groupHtml}`;
     reveal.style.display="block";
   }catch(e){ console.error(e); }
 }
@@ -1252,19 +1368,23 @@ async function goStats(){
   }
   content.innerHTML=`<div class="stats-loading">Loading your ratings...</div>`;
   try{
-    const res=await fetch(`${CONFIG.GAS_URL}?user=${encodeURIComponent(currentUser.name)}`);
-    const ratings=await res.json();
+    const [personalRes, summaryRes] = await Promise.all([
+      fetch(`${CONFIG.GAS_URL}?action=getRatings&user=${encodeURIComponent(currentUser.name)}`),
+      fetch(`${CONFIG.GAS_URL}?action=getSummary`)
+    ]);
+    const ratings = await personalRes.json();
+    const summary = await summaryRes.json().catch(()=>null);
     if(!ratings||!ratings.length){
       content.innerHTML=`<div class="stats-empty">No ratings yet for ${currentUser.name}. Rate your first film!</div>`;
       return;
     }
-    renderStats(ratings, content);
+    renderStats(ratings, summary, content);
   }catch(e){
     content.innerHTML=`<div class="stats-empty">Could not load ratings. Check your GAS URL in Settings.</div>`;
   }
 }
 
-function renderStats(ratings, container){
+function renderStats(ratings, summary, container){
   const scores10=ratings.map(r=>parseFloat(r["Score /10"]||0)).filter(s=>s>0);
   const avg=(scores10.reduce((a,b)=>a+b,0)/scores10.length)||0;
 
@@ -1362,7 +1482,34 @@ function renderStats(ratings, container){
             <div class="cat-bar-val">${val}</div>
           </div>`).join("")}
       </div>
-    </div>`;
+    </div>
+
+    <!-- Group Stats -->
+    ${summary && summary.rows && summary.rows.length ? `
+    <div class="stats-section">
+      <div class="stats-section-title">Group Rankings</div>
+      <div class="film-list">
+        ${[...summary.rows]
+          .filter(r=>r.scores&&r.scores.length>0)
+          .sort((a,b)=>{
+            const aAvg=a.scores.reduce((x,y)=>x+y,0)/a.scores.length;
+            const bAvg=b.scores.reduce((x,y)=>x+y,0)/b.scores.length;
+            return bAvg-aAvg;
+          })
+          .slice(0,10)
+          .map((r,i)=>{
+            const avg=(r.scores.reduce((x,y)=>x+y,0)/r.scores.length).toFixed(1);
+            const myEntry=r.userScores&&r.userScores[currentUser.name];
+            const myStr=myEntry?parseFloat(myEntry).toFixed(1):"—";
+            return `<div class="film-row">
+              <div class="film-row-rank">#${i+1}</div>
+              <div class="film-row-title">${escHtml(r.Title||"")}</div>
+              <div class="film-row-year" style="color:#5a9a5a">Avg: ${avg}</div>
+              <div class="film-row-score" style="font-size:14px;color:#5aaa5a">You: ${myStr}</div>
+            </div>`;
+          }).join("")}
+      </div>
+    </div>` : ""}`;
 }
 
 // ── SAVE AS IMAGE ─────────────────────────────────────────────
@@ -1627,8 +1774,10 @@ function checkAdminPin(){
 }
 
 // ── INIT ─────────────────────────────────────────────────────
-document.addEventListener("DOMContentLoaded",()=>{
+document.addEventListener("DOMContentLoaded",async ()=>{
   applyStoredConfig();
+  // Sync users from Sheets so all devices see the same list
+  await syncUsersFromSheets();
   const saved=getSavedUser();
   if(saved&&getUsers().find(u=>u.name===saved.name&&u.pin===saved.pin)){
     currentUser=saved; updateNavUser();
