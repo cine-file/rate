@@ -744,6 +744,31 @@ function doGet(e) {
 </div>
 
 <!-- ══════════════════════════════════════
+     ALREADY RATED MODAL
+══════════════════════════════════════ -->
+<div id="already-rated-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:999;align-items:center;justify-content:center;">
+  <div style="background:#0b120b;border:1px solid #2a5a2a;border-radius:3px;padding:40px 32px;max-width:400px;width:90%;text-align:center;">
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:0.28em;text-transform:uppercase;color:#4a9a4a;margin-bottom:12px;">Already Rated</div>
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:#e8f8e8;margin-bottom:6px;" id="ar-title"></div>
+    <div style="font-size:13px;color:#4a7a4a;margin-bottom:24px;font-style:italic;" id="ar-date"></div>
+    <div style="display:flex;gap:16px;justify-content:center;margin-bottom:20px;">
+      <div style="background:#0b1f0b;border:3px solid #224422;border-radius:3px;padding:14px 20px;text-align:center;min-width:90px;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:40px;color:#fff;line-height:1;" id="ar-score"></div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:8px;letter-spacing:0.2em;text-transform:uppercase;color:#4a9a4a;margin-top:4px;">Your Score</div>
+      </div>
+      <div style="background:#0b1f0b;border:3px solid #224422;border-radius:3px;padding:14px 20px;text-align:center;min-width:90px;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:40px;color:#80d080;line-height:1;" id="ar-grade"></div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:8px;letter-spacing:0.2em;text-transform:uppercase;color:#4a9a4a;margin-top:4px;">Grade</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+      <button onclick="closeAlreadyRated()" style="padding:11px 24px;background:transparent;border:1px solid #1e3a1e;border-radius:2px;color:#4a7a4a;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:0.12em;text-transform:uppercase;">← Back to Search</button>
+      <button onclick="proceedToRate()" style="padding:11px 24px;background:#142414;border:1px solid #2e6a2e;border-radius:2px;color:#a0e0a0;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:0.12em;text-transform:uppercase;">Re-rate This Film</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
      JAVASCRIPT
 ══════════════════════════════════════ -->
 <script>
@@ -1089,14 +1114,54 @@ async function pickMovie(id){
         if(rt&&rt.includes("N/A")) rt=null;
       }catch(e){}
     }
-    loadMovie({
+    const movie={
       id:d.id, title:d.title, year:(d.release_date||"").slice(0,4),
       director:director?.name||"", rt, imdb,
       poster:d.poster_path||"",
       genres:(d.genres||[]).map(g=>g.name),
-    });
+    };
+    // Check if this movie has already been rated by current user
+    await checkAlreadyRated(movie);
   }catch(e){console.error(e);}
   document.getElementById("spinner").classList.remove("visible");
+}
+
+let _pendingMovie = null;
+
+async function checkAlreadyRated(movie){
+  _pendingMovie = movie;
+  if(!CONFIG.GAS_URL || !currentUser){
+    loadMovie(movie); return;
+  }
+  try{
+    const res = await fetch(`${CONFIG.GAS_URL}?action=getRatings&user=${encodeURIComponent(currentUser.name)}`);
+    const ratings = await res.json().catch(()=>[]);
+    const existing = (ratings||[]).find(r=>(r["Title"]||"").toLowerCase()===movie.title.toLowerCase());
+    if(existing){
+      // Show already-rated modal
+      document.getElementById("ar-title").textContent = movie.title;
+      const sc = parseFloat(existing["Score /10"]||0);
+      const raw100 = parseFloat(existing["Raw /100"]||0);
+      document.getElementById("ar-score").textContent = sc.toFixed(1);
+      document.getElementById("ar-grade").textContent = raw100 ? grade(raw100) : existing["Grade"]||"—";
+      document.getElementById("ar-date").textContent = existing["Date"] ? `Rated on ${existing["Date"]}` : "";
+      document.getElementById("already-rated-modal").style.display="flex";
+    } else {
+      loadMovie(movie);
+    }
+  }catch(e){
+    loadMovie(movie);
+  }
+}
+
+function closeAlreadyRated(){
+  document.getElementById("already-rated-modal").style.display="none";
+  _pendingMovie=null;
+}
+
+function proceedToRate(){
+  document.getElementById("already-rated-modal").style.display="none";
+  if(_pendingMovie) loadMovie(_pendingMovie);
 }
 
 function loadDemo(){
@@ -1516,6 +1581,17 @@ function renderStats(ratings, summary, container){
 async function saveAsImage(){
   const btn=document.getElementById("save-img-btn");
   btn.textContent="Generating..."; btn.disabled=true;
+
+  // Open window immediately (before any async work) so Safari doesn't block it as a popup
+  const isIOS=/iP(hone|ad|od)/i.test(navigator.userAgent);
+  let iosWin=null;
+  if(isIOS){
+    iosWin=window.open("","_blank");
+    if(iosWin) iosWin.document.write(`<html><body style="margin:0;background:#040604;display:flex;align-items:center;justify-content:center;min-height:100vh">
+      <p style="color:#6aaa6a;font-family:sans-serif;text-align:center;font-size:16px">Generating your rating card...</p>
+      </body></html>`);
+  }
+
   try{
     const raw=CATS.reduce((s,c)=>s+(scores[c.id]||0)*c.w,0);
     const g=grade(raw);
@@ -1531,11 +1607,12 @@ async function saveAsImage(){
     let posterImg=null;
     if(currentMovie.poster){
       try{
-        posterImg=await new Promise((res,rej)=>{
+        posterImg=await new Promise((res)=>{
           const img=new Image();
           img.crossOrigin="anonymous";
           img.onload=()=>res(img);
           img.onerror=()=>res(null);
+          setTimeout(()=>res(null),5000); // timeout after 5s
           img.src=`https://image.tmdb.org/t/p/w185${currentMovie.poster}`;
         });
       }catch(e){ posterImg=null; }
@@ -1775,20 +1852,31 @@ async function saveAsImage(){
 
     const dataUrl=final.toDataURL("image/jpeg",0.94);
     const safeName=(currentMovie.title||"rating").replace(/[^a-z0-9]/gi,"-").toLowerCase();
-    const isIOS=/iP(hone|ad|od)/i.test(navigator.userAgent);
     if(isIOS){
-      const w=window.open("","_blank");
-      w.document.write(`<html><body style="margin:0;background:#040604">
-        <img src="${dataUrl}" style="max-width:100%;display:block">
-        <p style="color:#aaa;font-family:sans-serif;text-align:center;padding:12px;font-size:13px">
-          Tap &amp; hold the image → Save to Photos</p></body></html>`);
-      w.document.close();
+      if(iosWin){
+        iosWin.document.write(`<html><body style="margin:0;background:#040604">
+          <img src="${dataUrl}" style="max-width:100%;display:block">
+          <p style="color:#aaa;font-family:sans-serif;text-align:center;padding:14px;font-size:14px">
+            Tap &amp; hold the image → <strong style="color:#80d080">Save to Photos</strong></p>
+          </body></html>`);
+        iosWin.document.close();
+      } else {
+        // fallback if window was blocked — show inline
+        const img=document.createElement("img");
+        img.src=dataUrl; img.style.cssText="max-width:100%;display:block;margin:16px auto";
+        document.getElementById("sheet-msg").innerHTML="";
+        document.getElementById("sheet-msg").appendChild(img);
+      }
     }else{
       const a=document.createElement("a");
       a.download=`cine-file-${safeName}.jpg`; a.href=dataUrl;
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
     }
-  }catch(e){console.error("Image error:",e);alert("Could not generate image: "+e.message);}
+  }catch(e){
+    console.error("Image error:",e);
+    if(iosWin) iosWin.close();
+    alert("Could not generate image: "+e.message);
+  }
   btn.textContent="Save as Image"; btn.disabled=false;
 }
 
