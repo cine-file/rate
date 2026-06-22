@@ -594,7 +594,13 @@ function doPost(e) {
     var uTab = ss.getSheetByName("Users") || ss.insertSheet("Users");
     uTab.clearContents();
     uTab.appendRow(["name","pin"]);
-    (d.users||[]).forEach(function(u){ uTab.appendRow([u.name, u.pin]); });
+    // Format PIN column as text so leading zeros are preserved
+    var pinCol = uTab.getRange(1, 2, 1, 1);
+    pinCol.setNumberFormat("@");
+    (d.users||[]).forEach(function(u){
+      var row = uTab.getLastRow() + 1;
+      uTab.appendRow([u.name, "'"+String(u.pin)]);
+    });
     return ContentService.createTextOutput(JSON.stringify({ok:true}))
       .setMimeType(ContentService.MimeType.JSON);
   }
@@ -671,7 +677,7 @@ function doGet(e) {
     var rows = uTab.getDataRange().getValues();
     var users = [];
     for (var i = 1; i < rows.length; i++) {
-      if (rows[i][0]) users.push({name: rows[i][0], pin: rows[i][1]});
+      if (rows[i][0]) users.push({name: String(rows[i][0]), pin: String(rows[i][1]).replace(/^'/,'').padStart(4,'0')});
     }
     return ContentService.createTextOutput(JSON.stringify({users:users}))
       .setMimeType(ContentService.MimeType.JSON);
@@ -923,7 +929,7 @@ function startRating(mode){
   CATS = mode === "restaurant" ? RESTAURANT_CATS : FILM_CATS;
   // Check if user is already logged in
   const saved = getSavedUser();
-  if(saved && getUsers().find(u=>u.name===saved.name&&u.pin===saved.pin)){
+  if(saved && getUsers().find(u=>u.name===saved.name&&String(u.pin)===String(saved.pin))){
     currentUser = saved;
     updateNavUser();
     showScreen("search");
@@ -982,7 +988,7 @@ function checkPin(){
   const users = getUsers();
   const user  = users.find(u=>u.name===pinSelected);
   if(!user) return;
-  if(pinEntered === user.pin || pinEntered === MASTER_PIN){
+  if(pinEntered === String(user.pin).padStart(4,'0') || pinEntered === MASTER_PIN){
     currentUser = user;
     setSavedUser(user);
     updateNavUser();
@@ -1022,7 +1028,7 @@ function addUser(){
   if(pin===MASTER_PIN){ msg.textContent="That PIN is reserved. Choose another."; msg.className="settings-msg err"; return; }
   const users = getUsers();
   if(users.find(u=>u.name.toLowerCase()===name.toLowerCase())){ msg.textContent="A user with that name already exists."; msg.className="settings-msg err"; return; }
-  users.push({name, pin});
+  users.push({name, pin: String(pin)});
   saveUsers(users);
   document.getElementById("new-user-name").value="";
   document.getElementById("new-user-pin").value="";
@@ -1942,7 +1948,7 @@ document.addEventListener("DOMContentLoaded",async ()=>{
   // Sync users from Sheets so all devices see the same list
   await syncUsersFromSheets();
   const saved=getSavedUser();
-  if(saved&&getUsers().find(u=>u.name===saved.name&&u.pin===saved.pin)){
+  if(saved&&getUsers().find(u=>u.name===saved.name&&String(u.pin)===String(saved.pin))){
     currentUser=saved; updateNavUser();
   }
   showScreen("home");
