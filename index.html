@@ -1593,7 +1593,7 @@ async function saveAsImage(){
     const CW=CARD_W-CP*2;
 
     let Y=0;
-    fillRect(0,0,W,cw*2/S,"#040604");
+    // leave content canvas transparent — bg drawn on final composite only
     Y=60;
     const cardStartY=Y;
     Y+=42;
@@ -1669,15 +1669,15 @@ async function saveAsImage(){
       bx+=b.w+bGap;
     });
 
-    // poster
-    if(hasPoster){
-      bx+=posterGap-bGap; // undo last gap, add poster gap
+    // poster — positioned after last box
+    if(hasPoster && posterImg){
       const pH=Math.round(posterW*1.5);
       const pY=Y+(bH-pH)/2;
-      ctx.drawImage(posterImg,bx*S,pY*S,posterW*S,pH*S);
-      // border around poster
-      ctx.strokeStyle="#224422"; ctx.lineWidth=2*S;
-      ctx.strokeRect(bx*S,pY*S,posterW*S,pH*S);
+      try{
+        ctx.drawImage(posterImg,bx*S,pY*S,posterW*S,pH*S);
+        ctx.strokeStyle="#224422"; ctx.lineWidth=2*S;
+        ctx.strokeRect(bx*S,pY*S,posterW*S,pH*S);
+      }catch(e){ /* skip poster if CORS blocks it */ }
     }
 
     Y+=bH+18;
@@ -1753,16 +1753,21 @@ async function saveAsImage(){
 
     // dark outer background
     fc.fillStyle="#040604"; fc.fillRect(0,0,final.width,final.height);
-    // green glow
-    const fg=fc.createRadialGradient(cw/2,final.height*0.35,0,cw/2,final.height*0.35,cw*0.65);
-    fg.addColorStop(0,"rgba(20,80,20,0.3)"); fg.addColorStop(1,"rgba(0,0,0,0)");
+    // green glow behind card
+    const fg=fc.createRadialGradient(cw/2,final.height*0.4,0,cw/2,final.height*0.4,cw*0.7);
+    fg.addColorStop(0,"rgba(23,51,23,1)"); fg.addColorStop(0.6,"rgba(10,25,10,0.6)"); fg.addColorStop(1,"rgba(4,6,4,0)");
     fc.fillStyle=fg; fc.fillRect(0,0,final.width,final.height);
-    // green card background
+    // solid green card
     fc.fillStyle="#173317";
     fc.fillRect(CX*S,cardStartY*S,CARD_W*S,cardH*S);
+    // card border
     fc.strokeStyle="#267226"; fc.lineWidth=5*S;
     fc.strokeRect(CX*S,cardStartY*S,CARD_W*S,cardH*S);
-    // content on top
+    // inner subtle vignette on card
+    const vig=fc.createRadialGradient(cw/2,(cardStartY+cardH/2)*S,0,cw/2,(cardStartY+cardH/2)*S,CARD_W*S*0.7);
+    vig.addColorStop(0,"rgba(0,0,0,0)"); vig.addColorStop(1,"rgba(0,0,0,0.25)");
+    fc.fillStyle=vig; fc.fillRect(CX*S,cardStartY*S,CARD_W*S,cardH*S);
+    // content on top (transparent canvas paints over green card)
     fc.drawImage(cv,0,0);
     // watermark
     fc.font=`400 ${10*S}px Arial`; fc.fillStyle="rgba(255,255,255,0.2)";
