@@ -1096,6 +1096,7 @@ function checkPin(){
     document.getElementById("pin-error").textContent = "";
     showScreen("search");
     if(!CONFIG.TMDB_KEY) document.getElementById("setup-notice").style.display="block";
+    prefetchRatings(); // warm the cache in background after login
   } else {
     document.getElementById("pin-error").textContent = "Incorrect PIN. Try again.";
     pinEntered = "";
@@ -1247,30 +1248,73 @@ async function pickMovie(id){
 }
 
 let _pendingMovie = null;
+let _ratingsCache = null;      // in-memory cache of user's ratings
+let _ratingsCacheTime = 0;     // when cache was last filled
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+// Pre-fetch and cache ratings in background after login
+async function prefetchRatings(){
+  if(!CONFIG.GAS_URL || !currentUser) return;
+  try{
+    const res = await fetch(`${CONFIG.GAS_URL}?action=getRatings&user=${encodeURIComponent(currentUser.name)}&t=${Date.now()}`);
+    const data = await res.json().catch(()=>[]);
+    if(Array.isArray(data)){
+      _ratingsCache = data;
+      _ratingsCacheTime = Date.now();
+    }
+  }catch(e){ console.log("Prefetch failed:", e); }
+}
 
 async function checkAlreadyRated(movie){
   _pendingMovie = movie;
   if(!CONFIG.GAS_URL || !currentUser){
     loadMovie(movie); return;
   }
-  try{
-    // Always fetch fresh — add timestamp to bust cache
-    const res = await fetch(`${CONFIG.GAS_URL}?action=getRatings&user=${encodeURIComponent(currentUser.name)}&t=${Date.now()}`);
-    const ratings = await res.json().catch(()=>[]);
-    const existing = (ratings||[]).find(r=>(r["Title"]||"").toLowerCase()===movie.title.toLowerCase());
-    if(existing){
-      // Show already-rated modal
-      document.getElementById("ar-title").textContent = movie.title;
-      const sc = parseFloat(existing["Score /10"]||0);
-      const raw100 = parseFloat(existing["Raw /100"]||0);
-      document.getElementById("ar-score").textContent = sc.toFixed(1);
-      document.getElementById("ar-grade").textContent = raw100 ? grade(raw100) : existing["Grade"]||"—";
-      document.getElementById("ar-date").textContent = existing["Date"] ? `Rated on ${existing["Date"]}` : "";
-      document.getElementById("already-rated-modal").style.display="flex";
-    } else {
-      loadMovie(movie);
+
+  let ratings = null;
+
+  // Use cache if fresh
+  if(_ratingsCache && (Date.now() - _ratingsCacheTime) < CACHE_TTL){
+    ratings = _ratingsCache;
+  } else {
+    // Show a brief loading state on the spinner
+    document.getElementById("spinner").classList.add("visible");
+    try{
+      const controller = new AbortController();
+      const timeout = setTimeout(()=>controller.abort(), 8000); // 8s timeout
+      const res = await fetch(
+        `${CONFIG.GAS_URL}?action=getRatings&user=${encodeURIComponent(currentUser.name)}&t=${Date.now()}`,
+        {signal: controller.signal}
+      );
+      clearTimeout(timeout);
+      const data = await res.json().catch(()=>[]);
+      if(Array.isArray(data)){
+        ratings = data;
+        _ratingsCache = data;
+        _ratingsCacheTime = Date.now();
+      }
+    }catch(e){
+      console.log("Already-rated check failed:", e);
     }
-  }catch(e){
+    document.getElementById("spinner").classList.remove("visible");
+  }
+
+  if(!ratings){
+    // Fetch failed — go straight to rating, don't block the user
+    loadMovie(movie);
+    return;
+  }
+
+  const existing = ratings.find(r=>(r["Title"]||"").toLowerCase()===movie.title.toLowerCase());
+  if(existing){
+    document.getElementById("ar-title").textContent = movie.title;
+    const sc = parseFloat(existing["Score /10"]||0);
+    const raw100 = parseFloat(existing["Raw /100"]||0);
+    document.getElementById("ar-score").textContent = sc.toFixed(1);
+    document.getElementById("ar-grade").textContent = raw100 ? grade(raw100) : existing["Grade"]||"—";
+    document.getElementById("ar-date").textContent = existing["Date"] ? `Rated on ${existing["Date"]}` : "";
+    document.getElementById("already-rated-modal").style.display="flex";
+  } else {
     loadMovie(movie);
   }
 }
@@ -1473,6 +1517,7 @@ function generateCard(){
 
 // ── GOOGLE SHEETS ─────────────────────────────────────────────
 function pushToSheets(raw100, g, overallNote, today){
+  _ratingsCache = null; // clear cache so next already-rated check fetches fresh
   if(!CONFIG.GAS_URL) return;
   const row={
     user:    currentUser?.name||"Unknown",
@@ -2099,6 +2144,7 @@ document.addEventListener("DOMContentLoaded",async ()=>{
   const saved=getSavedUser();
   if(saved&&getUsers().find(u=>u.name===saved.name&&String(u.pin)===String(saved.pin))){
     currentUser=saved; updateNavUser();
+    prefetchRatings(); // warm cache on startup
   }
   showScreen("home");
 });
