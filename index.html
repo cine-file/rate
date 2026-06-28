@@ -1273,21 +1273,22 @@ async function checkAlreadyRated(movie){
 
   let ratings = null;
 
-  // Use cache if fresh
+  // Use cache if fresh — never block the user waiting for a network call
   if(_ratingsCache && (Date.now() - _ratingsCacheTime) < CACHE_TTL){
     ratings = _ratingsCache;
   } else {
-    // Show a brief loading state on the spinner
+    // Race the fetch against a 4-second timeout
+    // Either way, never leave the user staring at a spinner
     document.getElementById("spinner").classList.add("visible");
     try{
-      const controller = new AbortController();
-      const timeout = setTimeout(()=>controller.abort(), 8000); // 8s timeout
-      const res = await fetch(
-        `${CONFIG.GAS_URL}?action=getRatings&user=${encodeURIComponent(currentUser.name)}&t=${Date.now()}`,
-        {signal: controller.signal}
-      );
-      clearTimeout(timeout);
-      const data = await res.json().catch(()=>[]);
+      const fetchPromise = fetch(
+        `${CONFIG.GAS_URL}?action=getRatings&user=${encodeURIComponent(currentUser.name)}&t=${Date.now()}`
+      ).then(r=>r.json()).catch(()=>null);
+
+      const timeoutPromise = new Promise(res=>setTimeout(()=>res(null), 4000));
+
+      const data = await Promise.race([fetchPromise, timeoutPromise]);
+
       if(Array.isArray(data)){
         ratings = data;
         _ratingsCache = data;
@@ -1300,12 +1301,12 @@ async function checkAlreadyRated(movie){
   }
 
   if(!ratings){
-    // Fetch failed — go straight to rating, don't block the user
+    // Could not check — just load the movie, don't block
     loadMovie(movie);
     return;
   }
 
-  const existing = ratings.find(r=>(r["Title"]||"").toLowerCase()===movie.title.toLowerCase());
+  const existing = ratings.find(r=>String(r["Title"]||"").toLowerCase()===movie.title.toLowerCase());
   if(existing){
     document.getElementById("ar-title").textContent = movie.title;
     const sc = parseFloat(existing["Score /10"]||0);
