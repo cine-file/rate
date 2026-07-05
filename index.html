@@ -1679,13 +1679,15 @@ function updatePinDots(){
 async function fetchServerToken(username, pin){
   if(!CONFIG.GAS_URL) return;
   try{
-    const res = await fetch(CONFIG.GAS_URL, {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({action:'login', username:username, pin:String(pin).padStart(4,'0')})
+    // Use GET to avoid CORS preflight
+    const params = new URLSearchParams({
+      action: 'login',
+      username: username,
+      pin: String(pin).padStart(4,'0')
     });
+    const res = await fetch(`${CONFIG.GAS_URL}?${params.toString()}`);
     const text = await res.text();
-    if(!text || text.trim().startsWith('<')) return;
+    if(!text||text.trim().startsWith('<')||text.trim().startsWith('<!')) return;
     const data = JSON.parse(text);
     if(data && data.token){
       localStorage.setItem('cf_session_token', data.token);
@@ -3407,14 +3409,9 @@ async function lgPushToSheets(raw100, g, overallNote, today){
     notes: overallNote,
     placeId: lgCurrentPlace.placeId||'',
   };
-  try{
-    await lgCall(row);
-    const el = document.getElementById('lg-sheet-msg');
-    el.textContent='✓ Added to Le Guide Sheets'; el.style.color='#80d080';
-  }catch(e){
-    const el = document.getElementById('lg-sheet-msg');
-    el.textContent='⚠ Sheets sync failed'; el.style.color='#c07070';
-  }
+  lgPost(row);
+  const el = document.getElementById('lg-sheet-msg');
+  el.textContent='✓ Saved to Le Guide'; el.style.color='#80d080';
   _lgRatingsCache = null;
 }
 
@@ -3652,27 +3649,39 @@ function lgToggleAll(btn){
 
 // ── SHARED API CALL ───────────────────────────────────────────
 function getLgToken(){
-  // Get session token from localStorage - stored by the login system
+  try{ return localStorage.getItem('cf_session_token')||''; }
+  catch(e){ return ''; }
+}
+
+async function lgGet(params){
+  if(!CONFIG.GAS_URL) return null;
   try{
-    const t = localStorage.getItem('cf_session_token');
-    return t || '';
-  }catch(e){ return ''; }
+    params.token = getLgToken();
+    const qs = new URLSearchParams(params).toString();
+    const res = await fetch(`${CONFIG.GAS_URL}?${qs}`);
+    const text = await res.text();
+    if(!text||text.trim().startsWith('<')||text.trim().startsWith('<!')) return null;
+    return JSON.parse(text);
+  }catch(e){ console.error('lgGet failed:',e); return null; }
+}
+
+function lgPost(body){
+  if(!CONFIG.GAS_URL) return;
+  body.token = getLgToken();
+  fetch(CONFIG.GAS_URL,{
+    method:'POST', mode:'no-cors',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(body)
+  }).catch(e=>console.error('lgPost failed:',e));
 }
 
 async function lgCall(body){
-  if(!CONFIG.GAS_URL) return null;
-  try{
-    const res = await fetch(CONFIG.GAS_URL, {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({...body, token: getLgToken()})
-    });
-    const text = await res.text();
-    if(!text||text.trim().startsWith('<')) return null;
-    return JSON.parse(text);
-  }catch(e){
-    console.error('lgCall failed:', e);
-    return null;
+  const reads=['searchRestaurants','getRestaurantRatings','getRestaurantSummary'];
+  if(reads.includes(body.action)){
+    return lgGet(body);
+  } else {
+    lgPost(body);
+    return {ok:true};
   }
 }
 
