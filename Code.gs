@@ -90,12 +90,10 @@ function hashPinWithValue_(value, salt) {
 
 function verifyPin_(pin, storedHash, storedSalt) {
   if (!storedHash || !storedSalt) return false;
-  var current = hashPin_(pin, storedSalt).hash;
-  if (current === storedHash) return true;
+  if (hashPin_(pin, storedSalt).hash === storedHash) return true;
 
   // Compatibility with the earlier secure backend, which used salt + ":" + pin.
-  var previous = hashPinWithValue_(storedSalt + ':' + pin, storedSalt).hash;
-  return previous === storedHash;
+  return hashPinWithValue_(storedSalt + ':' + pin, storedSalt).hash === storedHash;
 }
 
 // ── USERS ─────────────────────────────────────────────────────
@@ -104,7 +102,7 @@ function getUsersSheet_() {
   var tab = ss.getSheetByName('Users');
   if (!tab) {
     tab = ss.insertSheet('Users');
-    tab.appendRow(['name','hash','salt']);
+    tab.appendRow(['name','pinHash','pinSalt']);
   }
   return tab;
 }
@@ -117,8 +115,8 @@ function getUsers_() {
     if (rows[i][0]) {
       out.push({
         name: rows[i][0],
-        hash: rows[i][1],
-        salt: rows[i][2],
+        pinHash: rows[i][1],
+        pinSalt: rows[i][2],
         legacyPin: rows[i][2] ? '' : String(rows[i][1] || '').replace(/^'/, '').trim()
       });
     }
@@ -220,10 +218,10 @@ function doLogin_(d) {
   var pin = String(d.pin || '').padStart(4, '0');
   var valid = user.legacyPin
     ? String(user.legacyPin).padStart(4, '0') === pin
-    : verifyPin_(pin, user.hash, user.salt);
+    : verifyPin_(pin, user.pinHash, user.pinSalt);
   if (!valid)
     return jsonOut_({ success: false, error: 'Incorrect PIN' });
-  if (user.legacyPin || !isCurrentPinHash_(pin, user.hash, user.salt)) migrateUserPin_(username, pin);
+  if (user.legacyPin || !isCurrentPinHash_(pin, user.pinHash, user.pinSalt)) migrateUserPin_(username, pin);
   var token = createSession_(username);
   return jsonOut_({ success: true, token: token, username: username, user: { name: username } });
 }
@@ -303,7 +301,7 @@ function doDeleteUser_(d) {
 function doSaveUsers_(d) {
   var tab = getUsersSheet_();
   tab.clearContents();
-  tab.appendRow(['name','hash','salt']);
+  tab.appendRow(['name','pinHash','pinSalt']);
   (d.users || []).forEach(function(u) {
     var pin    = String(u.pin || '').padStart(4, '0');
     var hashed = hashPin_(pin);
