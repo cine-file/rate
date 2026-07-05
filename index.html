@@ -669,12 +669,10 @@ table.card-table{width:100%;border-collapse:collapse;margin-bottom:4px;}
 ══════════════════════════════════════ -->
 <script>
 const CONFIG = {
-  TMDB_KEY: "9edc42c5a3fdd824b9f69ba7353b2725",
-  OMDB_KEY: "d8357964",
-  GAS_URL:  "https://script.google.com/macros/s/AKfycbzXTffnVTML1LDXcO75NMkG8N3pFSbCOwfrOJdf3Tm7HRGA6SWxQu-OhiCcmvvD_1j5GA/exec",
+  // Public backend endpoint. All sensitive actions are validated in Apps Script.
+  GAS_URL: "https://script.google.com/macros/s/AKfycbzXTffnVTML1LDXcO75NMkG8N3pFSbCOwfrOJdf3Tm7HRGA6SWxQu-OhiCcmvvD_1j5GA/exec",
 };
-const MASTER_PIN = "2028";
-const SITE_NAME  = "Cine-file";
+const SITE_NAME = "Cine-file";
 </script>
 
 <!-- ══════════════════════════════════════
@@ -1207,174 +1205,17 @@ const SITE_NAME  = "Cine-file";
     </div>
 
     <div class="settings-section">
-      <div class="settings-section-title">API Configuration</div>
+      <div class="settings-section-title">Backend Configuration</div>
       <div class="config-field">
-        <label class="config-lbl">TMDB API Key <span style="color:#2a5a2a">(movie search & posters)</span></label>
-        <input class="config-inp" id="cfg-tmdb" placeholder="Paste your TMDB key..."/>
+        <label class="config-lbl">Apps Script Web App URL</label>
+        <input class="config-inp" id="cfg-gas" placeholder="https://script.google.com/macros/s/.../exec"/>
       </div>
-      <div class="config-field">
-        <label class="config-lbl">OMDB API Key <span style="color:#2a5a2a">(RT audience & IMDb scores)</span></label>
-        <input class="config-inp" id="cfg-omdb" placeholder="Paste your OMDB key..."/>
-      </div>
-      <div class="config-field">
-        <label class="config-lbl">Google Apps Script URL <span style="color:#2a5a2a">(Sheets sync)</span></label>
-        <input class="config-inp" id="cfg-gas" placeholder="https://script.google.com/macros/s/..."/>
-      </div>
-      <button class="config-save-btn" onclick="saveConfig()">Save Keys</button>
+      <button class="config-save-btn" onclick="saveConfig()">Save Backend URL</button>
       <div class="settings-msg" id="config-msg"></div>
       <div class="config-note" style="margin-top:16px">
-        Get free keys: TMDB → <code>themoviedb.org/settings/api</code> · OMDB → <code>omdbapi.com/apikey.aspx</code><br>
-        Keys are saved to this device only. See the Apps Script setup guide in the README.
-      </div>
-    </div>
-
-    <div class="settings-section">
-      <div class="settings-section-title">Apps Script (Google Sheets)</div>
-      <div class="config-note">
-        Go to <code>script.google.com</code> → New Project → paste the script below → Deploy as Web App (Anyone) → copy URL above.<br><br>
-        <pre style="background:#040604;padding:14px;border-radius:2px;font-size:11px;color:#6aaa6a;overflow-x:auto;line-height:1.7">var SHEET_ID = "YOUR_SHEET_ID"; // ← replace this
-
-function doPost(e) {
-  var ss   = SpreadsheetApp.openById(SHEET_ID);
-  var d    = JSON.parse(e.postData.contents);
-  var action = d.action || "saveRating";
-
-  // ── Save Users ──
-  if (action === "saveUsers") {
-    var uTab = ss.getSheetByName("Users") || ss.insertSheet("Users");
-    uTab.clearContents();
-    uTab.appendRow(["name","pin"]);
-    // Format PIN column as text so leading zeros are preserved
-    var pinCol = uTab.getRange(1, 2, 1, 1);
-    pinCol.setNumberFormat("@");
-    (d.users||[]).forEach(function(u){
-      var row = uTab.getLastRow() + 1;
-      uTab.appendRow([u.name, "'"+String(u.pin)]);
-    });
-    return ContentService.createTextOutput(JSON.stringify({ok:true}))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-
-  // ── Save Rating ──
-  var user = d.user || "Unknown";
-  var tab  = ss.getSheetByName(user) || ss.insertSheet(user);
-  if (tab.getLastRow() === 0) {
-    tab.appendRow(["Date","Title","Year","Director","RT Audience",
-      "IMDb","Score /10","Raw /100","Grade",
-      "Plot","Plot Grade","Plot Notes",
-      "Entertainment","Ent Grade","Ent Notes",
-      "Acting","Acting Grade","Acting Notes",
-      "Visuals","Visuals Grade","Visuals Notes",
-      "Pacing","Pacing Grade","Pacing Notes",
-      "Emotional","Emotional Grade","Emotional Notes","Overall Notes"]);
-  }
-  // Check if this movie was already rated — overwrite if so
-  var newRow = [d.date,d.title,d.year,d.director,d.rt,d.imdb,
-    d.score10,d.score100,d.grade,
-    d.plot,d.plotGrade,d.plotNotes,
-    d.entertainment,d.entGrade,d.entNotes,
-    d.acting,d.actingGrade,d.actingNotes,
-    d.visuals,d.visualsGrade,d.visualsNotes,
-    d.pacing,d.pacingGrade,d.pacingNotes,
-    d.emotional,d.emotionalGrade,d.emotionalNotes,d.notes];
-  var tabData = tab.getDataRange().getValues();
-  var existingRow = -1;
-  for (var i = 1; i < tabData.length; i++) {
-    if (String(tabData[i][1]).toLowerCase() === String(d.title).toLowerCase()) {
-      existingRow = i + 1; break;
-    }
-  }
-  if (existingRow > -1) {
-    tab.getRange(existingRow, 1, 1, newRow.length).setValues([newRow]);
-  } else {
-    tab.appendRow(newRow);
-  }
-
-  // ── Summary tab ──
-  var sum  = ss.getSheetByName("Summary") || ss.insertSheet("Summary");
-  if (sum.getLastRow() === 0)
-    sum.appendRow(["Title","Year","Director","RT Audience","IMDb"]);
-  var data = sum.getDataRange().getValues();
-  var rowIdx = -1;
-  for (var i = 1; i < data.length; i++) {
-    if (data[i][0] === d.title) { rowIdx = i + 1; break; }
-  }
-  if (rowIdx === -1) {
-    sum.appendRow([d.title,d.year,d.director,d.rt,d.imdb]);
-    rowIdx = sum.getLastRow();
-    data = sum.getDataRange().getValues();
-  }
-  var headers = data[0];
-  var userCol = headers.indexOf(user);
-  if (userCol === -1) {
-    userCol = headers.length;
-    sum.getRange(1, userCol + 1).setValue(user);
-  }
-  sum.getRange(rowIdx, userCol + 1).setValue(d.score10);
-
-  return ContentService.createTextOutput(JSON.stringify({ok:true}))
-    .setMimeType(ContentService.MimeType.JSON);
-}
-
-function doGet(e) {
-  var ss     = SpreadsheetApp.openById(SHEET_ID);
-  var action = e.parameter.action || "getRatings";
-
-  // ── Get Users ──
-  if (action === "getUsers") {
-    var uTab = ss.getSheetByName("Users");
-    if (!uTab) return out([]);
-    var rows = uTab.getDataRange().getValues();
-    var users = [];
-    for (var i = 1; i < rows.length; i++) {
-      if (rows[i][0]) users.push({name: String(rows[i][0]), pin: String(rows[i][1]).replace(/^'/,'').padStart(4,'0')});
-    }
-    return ContentService.createTextOutput(JSON.stringify({users:users}))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-
-  // ── Get Summary (group stats) ──
-  if (action === "getSummary") {
-    var sum = ss.getSheetByName("Summary");
-    if (!sum) return ContentService.createTextOutput(JSON.stringify({rows:[]}))
-      .setMimeType(ContentService.MimeType.JSON);
-    var data    = sum.getDataRange().getValues();
-    var headers = data[0];
-    var rows    = [];
-    for (var i = 1; i < data.length; i++) {
-      var row = {Title:data[i][0],Year:data[i][1],scores:[],userScores:{}};
-      for (var j = 5; j < headers.length; j++) {
-        if (headers[j] && data[i][j] !== "") {
-          var s = parseFloat(data[i][j]);
-          if (!isNaN(s)) {
-            row.scores.push(s);
-            row.userScores[headers[j]] = s;
-          }
-        }
-      }
-      rows.push(row);
-    }
-    return ContentService.createTextOutput(JSON.stringify({rows:rows}))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-
-  // ── Get Personal Ratings ──
-  var user = e.parameter.user;
-  var tab  = ss.getSheetByName(user);
-  if (!tab) return ContentService.createTextOutput(JSON.stringify([]))
-    .setMimeType(ContentService.MimeType.JSON);
-  var rows = tab.getDataRange().getValues();
-  var keys = rows[0];
-  var out  = [];
-  for (var i = 1; i < rows.length; i++) {
-    var obj = {};
-    keys.forEach(function(k,j){ obj[k] = rows[i][j]; });
-    out.push(obj);
-  }
-  return ContentService.createTextOutput(JSON.stringify(out))
-    .setMimeType(ContentService.MimeType.JSON);
-}</pre>
-        Replace <code>YOUR_SHEET_ID</code> with your Sheet's ID from the URL.
+        Private values are stored in Apps Script Project Settings, not this public website.
+        Required properties: <code>SHEET_ID</code>, <code>ADMIN_PIN</code>, <code>TMDB_API_KEY</code>, and <code>GOOGLE_PLACES_KEY</code>.
+        Optional: <code>OMDB_API_KEY</code>.
       </div>
     </div>
   </div>
@@ -1521,68 +1362,83 @@ let scores        = {};
 let notes         = {};
 let chosenScore10 = null;
 let ratingDate    = "";
-let currentUser   = null; // {name, pin}
+let currentUser   = null; // {name}
 let pendingMode   = null; // "film" or "restaurant"
 
 // ── PERSISTENCE ──────────────────────────────────────────────
-// ── USER STORAGE — synced via Sheets, cached in localStorage ──
-let _usersCache = null;
+// ── USER / SESSION STORAGE ───────────────────────────────────
+let _usersCache = [];
+let sessionToken = null;
+let adminToken = null;
 
-function getCachedUsers(){
-  if(_usersCache) return _usersCache;
-  try{ return JSON.parse(localStorage.getItem("cf_users")||"[]"); }
-  catch(e){ return []; }
+async function apiCall(action, payload = {}){
+  if(!CONFIG.GAS_URL) throw new Error("Apps Script backend URL is not configured.");
+  const res = await fetch(CONFIG.GAS_URL, {
+    method: "POST",
+    headers: {"Content-Type": "text/plain;charset=utf-8"},
+    body: JSON.stringify({action, ...payload})
+  });
+  const text = await res.text();
+  if(!text || text.trim().startsWith("<")) throw new Error("Backend returned an HTML/error page.");
+  const data = JSON.parse(text);
+  if(data.error) throw new Error(data.error);
+  if(data.ok === false) throw new Error(data.error || "Backend request failed.");
+  return data.result !== undefined ? data.result : data;
 }
-function setCachedUsers(u){
-  _usersCache = u;
-  localStorage.setItem("cf_users", JSON.stringify(u));
-}
-function getUsers(){ return getCachedUsers(); }
-function saveUsers(u){
-  setCachedUsers(u);
-  // Sync to Sheets in background
-  if(CONFIG.GAS_URL){
-    fetch(CONFIG.GAS_URL, {
-      method:"POST", mode:"no-cors",
-      headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({action:"saveUsers", users:u})
-    }).catch(e=>console.error("User sync failed:",e));
-  }
-}
-function getSavedUser(){
-  try{ return JSON.parse(localStorage.getItem("cf_current_user")||"null"); }
+
+function getUsers(){ return _usersCache || []; }
+function setCachedUsers(users){ _usersCache = Array.isArray(users) ? users : []; }
+function getStoredSession(){
+  try{ return JSON.parse(localStorage.getItem("cf_session")||"null"); }
   catch(e){ return null; }
 }
-function setSavedUser(u){ localStorage.setItem("cf_current_user",JSON.stringify(u)); }
-
-// Fetch users from Sheets and cache locally
+function setStoredSession(token, user){
+  if(token && user) localStorage.setItem("cf_session", JSON.stringify({token, user}));
+  else localStorage.removeItem("cf_session");
+}
+function getSavedUser(){
+  const saved = getStoredSession();
+  return saved && saved.user ? saved.user : null;
+}
+function setSavedUser(user){
+  if(user) setStoredSession(sessionToken, user);
+  else setStoredSession(null, null);
+}
+function getSessionToken(){ return sessionToken || getStoredSession()?.token || ""; }
 async function syncUsersFromSheets(){
   if(!CONFIG.GAS_URL) return;
   try{
-    const timeoutPromise = new Promise((_,rej)=>setTimeout(()=>rej(new Error("timeout")),6000));
-    const fetchPromise = fetch(CONFIG.GAS_URL+"?action=getUsers")
-      .then(r=>r.text())
-      .then(text=>{
-        // Guard against HTML error pages from Apps Script
-        if(!text || text.trim().startsWith("<")) return null;
-        return JSON.parse(text);
-      });
-    const data = await Promise.race([fetchPromise, timeoutPromise]);
-    if(data && Array.isArray(data.users) && data.users.length > 0){
-      setCachedUsers(data.users);
-    }
-  }catch(e){ console.log("Could not sync users — using cached:", e.message); }
+    const data = await apiCall("getUsers");
+    setCachedUsers(data.users || data || []);
+  }catch(e){
+    console.log("Could not sync users:", e.message);
+    setCachedUsers([]);
+  }
+}
+async function restoreSession(){
+  const saved = getStoredSession();
+  if(!saved || !saved.token || !CONFIG.GAS_URL) return false;
+  try{
+    const data = await apiCall("getSession", {token: saved.token});
+    sessionToken = saved.token;
+    currentUser = data.user || data;
+    setStoredSession(sessionToken, currentUser);
+    updateNavUser();
+    prefetchRatings();
+    return true;
+  }catch(e){
+    setStoredSession(null, null);
+    return false;
+  }
 }
 function getStoredConfig(){
   try{ return JSON.parse(localStorage.getItem("cf_config")||"{}"); }
   catch(e){ return {}; }
 }
-function saveStoredConfig(c){ localStorage.setItem("cf_config",JSON.stringify(c)); }
+function saveStoredConfig(c){ localStorage.setItem("cf_config", JSON.stringify(c)); }
 function applyStoredConfig(){
   const c = getStoredConfig();
-  if(c.TMDB_KEY) CONFIG.TMDB_KEY = c.TMDB_KEY;
-  if(c.OMDB_KEY) CONFIG.OMDB_KEY = c.OMDB_KEY;
-  if(c.GAS_URL)  CONFIG.GAS_URL  = c.GAS_URL;
+  if(c.GAS_URL) CONFIG.GAS_URL = c.GAS_URL;
 }
 
 // ── NAV / SCREEN ─────────────────────────────────────────────
@@ -1610,6 +1466,7 @@ function goHome(){
 
 function switchUser(){
   setSavedUser(null);
+  sessionToken = null;
   currentUser = null;
   showScreen("pin");
   renderPinScreen();
@@ -1619,13 +1476,9 @@ function switchUser(){
 function startRating(mode){
   pendingMode = mode;
   CATS = mode === "restaurant" ? RESTAURANT_CATS : FILM_CATS;
-  // Check if user is already logged in
-  const saved = getSavedUser();
-  if(saved && getUsers().find(u=>u.name===saved.name&&String(u.pin)===String(saved.pin))){
-    currentUser = saved;
+  if(currentUser && getSessionToken()){
     updateNavUser();
-    showScreen("search");
-    if(!CONFIG.TMDB_KEY) document.getElementById("setup-notice").style.display="block";
+    showScreen(mode === "restaurant" ? "lg-search" : "search");
   } else {
     showScreen("pin");
     renderPinScreen();
@@ -1648,7 +1501,7 @@ function renderPinScreen(){
     return;
   }
   list.innerHTML = users.map(u=>`
-    <button class="user-btn" onclick="selectPinUser('${escHtml(u.name)}')">${escHtml(u.name)}</button>`).join("");
+    <button class="user-btn" onclick='selectPinUser(${JSON.stringify(u.name)})'>${escHtml(u.name)}</button>`).join("");
 }
 
 function selectPinUser(name){
@@ -1676,40 +1529,20 @@ function updatePinDots(){
   }
 }
 
-async function fetchServerToken(username, pin){
-  if(!CONFIG.GAS_URL) return;
-  try{
-    // Use GET to avoid CORS preflight
-    const params = new URLSearchParams({
-      action: 'login',
-      username: username,
-      pin: String(pin).padStart(4,'0')
-    });
-    const res = await fetch(`${CONFIG.GAS_URL}?${params.toString()}`);
-    const text = await res.text();
-    if(!text||text.trim().startsWith('<')||text.trim().startsWith('<!')) return;
-    const data = JSON.parse(text);
-    if(data && data.token){
-      localStorage.setItem('cf_session_token', data.token);
-    }
-  }catch(e){ console.log('Server token fetch failed:', e.message); }
-}
-
 async function checkPin(){
-  const users = getUsers();
-  const user  = users.find(u=>u.name===pinSelected);
+  const user = getUsers().find(u=>u.name===pinSelected);
   if(!user) return;
-  if(pinEntered === String(user.pin).padStart(4,'0') || pinEntered === MASTER_PIN){
-    currentUser = user;
-    setSavedUser(user);
-    updateNavUser();
+  try{
     document.getElementById("pin-error").textContent = "";
-    await fetchServerToken(user.name, pinEntered);
-    showScreen("search");
-    if(!CONFIG.TMDB_KEY) document.getElementById("setup-notice").style.display="block";
+    const data = await apiCall("login", {username: pinSelected, name: pinSelected, pin: pinEntered});
+    sessionToken = data.token;
+    currentUser = data.user || {name: data.username || pinSelected};
+    setSavedUser(currentUser);
+    updateNavUser();
+    showScreen(pendingMode === "restaurant" ? "lg-search" : "search");
     prefetchRatings();
-  } else {
-    document.getElementById("pin-error").textContent = "Incorrect PIN. Try again.";
+  }catch(e){
+    document.getElementById("pin-error").textContent = e.message || "Incorrect PIN. Try again.";
     pinEntered = "";
     updatePinDots();
   }
@@ -1732,56 +1565,72 @@ function renderSettingsUsers(){
     : `<div style="color:#3d6a3d;font-size:13px;font-style:italic">No users yet.</div>`;
 }
 
-function addUser(){
+async function addUser(){
   const name = document.getElementById("new-user-name").value.trim();
   const pin  = document.getElementById("new-user-pin").value.trim();
   const msg  = document.getElementById("settings-msg");
+  if(!adminToken){ msg.textContent="Admin session expired. Reopen Settings."; msg.className="settings-msg err"; return; }
   if(!name){ msg.textContent="Please enter a name."; msg.className="settings-msg err"; return; }
   if(!/^\d{4}$/.test(pin)){ msg.textContent="PIN must be exactly 4 digits."; msg.className="settings-msg err"; return; }
-  if(pin===MASTER_PIN){ msg.textContent="That PIN is reserved. Choose another."; msg.className="settings-msg err"; return; }
-  const users = getUsers();
-  if(users.find(u=>u.name.toLowerCase()===name.toLowerCase())){ msg.textContent="A user with that name already exists."; msg.className="settings-msg err"; return; }
-  users.push({name, pin: String(pin)});
-  saveUsers(users);
-  document.getElementById("new-user-name").value="";
-  document.getElementById("new-user-pin").value="";
-  msg.textContent=`✓ ${name} added.`; msg.className="settings-msg";
-  renderSettingsUsers();
+  try{
+    await apiCall("addUser", {adminToken, name, pin});
+    await syncUsersFromSheets();
+    document.getElementById("new-user-name").value="";
+    document.getElementById("new-user-pin").value="";
+    msg.textContent=`✓ ${name} added.`; msg.className="settings-msg";
+    renderSettingsUsers();
+  }catch(e){
+    msg.textContent=e.message || "Could not add user."; msg.className="settings-msg err";
+  }
 }
 
-function deleteUser(i){
+async function deleteUser(i){
   const users = getUsers();
-  const removed = users.splice(i,1)[0];
-  saveUsers(users);
-  document.getElementById("settings-msg").textContent=`Removed ${removed.name}.`;
-  document.getElementById("settings-msg").className="settings-msg";
-  renderSettingsUsers();
+  const removed = users[i];
+  if(!removed || !adminToken) return;
+  try{
+    await apiCall("deleteUser", {adminToken, name: removed.name});
+    await syncUsersFromSheets();
+    document.getElementById("settings-msg").textContent=`Removed ${removed.name}.`;
+    document.getElementById("settings-msg").className="settings-msg";
+    renderSettingsUsers();
+  }catch(e){
+    document.getElementById("settings-msg").textContent=e.message || "Could not remove user.";
+    document.getElementById("settings-msg").className="settings-msg err";
+  }
 }
 
 // ── SETTINGS — CONFIG ─────────────────────────────────────────
-function loadConfigFields(){
+async function loadConfigFields(){
   const c = getStoredConfig();
-  document.getElementById("cfg-tmdb").value = c.TMDB_KEY||"";
-  document.getElementById("cfg-omdb").value = c.OMDB_KEY||"";
-  document.getElementById("cfg-gas").value  = c.GAS_URL||"";
+  document.getElementById("cfg-gas").value = c.GAS_URL || CONFIG.GAS_URL || "";
+  const msg = document.getElementById("config-msg");
+  if(!CONFIG.GAS_URL){ msg.textContent="Backend URL is not configured."; msg.className="settings-msg err"; return; }
+  try{
+    const status = await apiCall("getDeploymentStatus", {token: adminToken || getSessionToken()});
+    const missing = [];
+    if(!status.hasSheetId) missing.push("SHEET_ID");
+    if(!status.hasAdminPin) missing.push("ADMIN_PIN");
+    if(!status.hasTmdbKey) missing.push("TMDB_API_KEY");
+    if(!status.hasPlacesKey) missing.push("GOOGLE_PLACES_KEY");
+    msg.textContent = missing.length ? `Missing script properties: ${missing.join(", ")}` : "Backend is configured.";
+    msg.className = missing.length ? "settings-msg err" : "settings-msg";
+  }catch(e){
+    msg.textContent = e.message || "Could not reach backend.";
+    msg.className = "settings-msg err";
+  }
 }
 function saveConfig(){
-  const c = {
-    TMDB_KEY: document.getElementById("cfg-tmdb").value.trim(),
-    OMDB_KEY: document.getElementById("cfg-omdb").value.trim(),
-    GAS_URL:  document.getElementById("cfg-gas").value.trim(),
-  };
+  const c = {GAS_URL: document.getElementById("cfg-gas").value.trim()};
   saveStoredConfig(c);
   applyStoredConfig();
-  settingsLoaded = false; // allow reload next time to pick up saved values
+  settingsLoaded = false;
   const msg = document.getElementById("config-msg");
-  msg.textContent="✓ Keys saved to this device."; msg.className="settings-msg";
-  setTimeout(()=>msg.textContent="",3000);
+  msg.textContent="Backend URL saved to this device."; msg.className="settings-msg";
+  syncUsersFromSheets();
 }
 
 // ── SEARCH ───────────────────────────────────────────────────
-const TMDB="https://api.themoviedb.org/3";
-const OMDB="https://www.omdbapi.com";
 let searchTimer=null;
 
 document.getElementById("search-input").addEventListener("input",function(){
@@ -1796,16 +1645,22 @@ document.getElementById("search-input").addEventListener("blur",()=>{
 });
 
 async function doSearch(q){
-  if(!CONFIG.TMDB_KEY){
+  if(!CONFIG.GAS_URL){
     document.getElementById("setup-notice").style.display="block";
     document.getElementById("spinner").classList.remove("visible");
     return;
   }
   try{
-    const res=await fetch(`${TMDB}/search/movie?api_key=${CONFIG.TMDB_KEY}&query=${encodeURIComponent(q)}&include_adult=false`);
-    const data=await res.json();
-    renderDropdown((data.results||[]).slice(0,7));
-  }catch(e){console.error(e);}
+    const data = await apiCall("searchMovies", {token: getSessionToken(), query: q});
+    document.getElementById("setup-notice").style.display="none";
+    renderDropdown((data.results || data || []).slice(0,7));
+  }catch(e){
+    console.error(e);
+    const notice = document.getElementById("setup-notice");
+    notice.style.display="block";
+    notice.innerHTML = `<strong>Movie search failed</strong><br><br>${escHtml(e.message || "Could not reach the backend.")}<br><br><button class="demo-btn" onclick="loadDemo()">Try Demo with "Good Will Hunting" →</button>`;
+    closeDropdown();
+  }
   document.getElementById("spinner").classList.remove("visible");
 }
 
@@ -1830,31 +1685,9 @@ async function pickMovie(id){
   closeDropdown();
   document.getElementById("spinner").classList.add("visible");
   try{
-    const d=await (await fetch(`${TMDB}/movie/${id}?api_key=${CONFIG.TMDB_KEY}&append_to_response=credits`)).json();
-    const director=(d.credits?.crew||[]).find(c=>c.job==="Director");
-    let rt=null,imdb=null;
-    if(CONFIG.OMDB_KEY){
-      try{
-        const o=await (await fetch(`${OMDB}/?apikey=${CONFIG.OMDB_KEY}&t=${encodeURIComponent(d.title)}&y=${(d.release_date||"").slice(0,4)}&tomatoes=true`)).json();
-        // Try Ratings array first (most reliable), then fallback fields
-        const rtEntry = (o.Ratings||[]).find(r=>r.Source==="Rotten Tomatoes");
-        const rtCritics = rtEntry ? rtEntry.Value : null;
-        const rtAudience = o.tomatoUserMeter ? o.tomatoUserMeter+"%" : (o.tomatoUserRating ? o.tomatoUserRating+"%" : null);
-        // Prefer audience score, fall back to critics if no audience available
-        rt = rtAudience && rtAudience !== "N/A%" ? rtAudience : (rtCritics && rtCritics !== "N/A%" ? rtCritics+"*" : null);
-        imdb = (o.imdbRating&&o.imdbRating!=="N/A"&&o.imdbRating!=="") ? o.imdbRating : null;
-        if(rt&&rt.includes("N/A")) rt=null;
-      }catch(e){}
-    }
-    const movie={
-      id:d.id, title:d.title, year:(d.release_date||"").slice(0,4),
-      director:director?.name||"", rt, imdb,
-      poster:d.poster_path||"",
-      genres:(d.genres||[]).map(g=>g.name),
-    };
-    // Check if this movie has already been rated by current user
+    const movie = await apiCall("getMovieDetails", {token: getSessionToken(), id});
     await checkAlreadyRated(movie);
-  }catch(e){console.error(e);}
+  }catch(e){ console.error(e); }
   document.getElementById("spinner").classList.remove("visible");
 }
 
@@ -1865,10 +1698,9 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 // Pre-fetch and cache ratings in background after login
 async function prefetchRatings(){
-  if(!CONFIG.GAS_URL || !currentUser) return;
+  if(!getSessionToken() || !currentUser) return;
   try{
-    const res = await fetch(`${CONFIG.GAS_URL}?action=getRatings&user=${encodeURIComponent(currentUser.name)}&t=${Date.now()}`);
-    const data = await res.json().catch(()=>[]);
+    const data = await apiCall("getRatings", {token: getSessionToken()});
     if(Array.isArray(data)){
       _ratingsCache = data;
       _ratingsCacheTime = Date.now();
@@ -1892,12 +1724,7 @@ async function checkAlreadyRated(movie){
     // Either way, never leave the user staring at a spinner
     document.getElementById("spinner").classList.add("visible");
     try{
-      const fetchPromise = fetch(
-        `${CONFIG.GAS_URL}?action=getRatings&user=${encodeURIComponent(currentUser.name)}&t=${Date.now()}`
-      ).then(r=>r.text()).then(text=>{
-        if(!text||text.trim().startsWith("<")) return null;
-        return JSON.parse(text);
-      }).catch(()=>null);
+      const fetchPromise = apiCall("getRatings", {token: getSessionToken()}).catch(()=>null);
 
       const timeoutPromise = new Promise(res=>setTimeout(()=>res(null), 4000));
 
@@ -2132,10 +1959,9 @@ function generateCard(){
 
 // ── GOOGLE SHEETS ─────────────────────────────────────────────
 function pushToSheets(raw100, g, overallNote, today){
-  _ratingsCache = null; // clear cache so next already-rated check fetches fresh
-  if(!CONFIG.GAS_URL) return;
+  _ratingsCache = null;
+  if(!CONFIG.GAS_URL || !getSessionToken()) return;
   const row={
-    user:    currentUser?.name||"Unknown",
     date:    today,
     title:   currentMovie.title,
     year:    currentMovie.year||"",
@@ -2153,14 +1979,14 @@ function pushToSheets(raw100, g, overallNote, today){
     emotional:    quickMode?"":scores.emotional||"",    emotionalGrade:quickMode?"":grade(scores.emotional||0),emotionalNotes:quickMode?"":notes.emotional||"",
     notes: overallNote,
   };
-  fetch(CONFIG.GAS_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"application/json"},body:JSON.stringify(row)})
+  apiCall("saveRating", {token: getSessionToken(), payload: row})
     .then(()=>{
       const el=document.getElementById("sheet-msg");
       el.textContent="✓ Added to Google Sheets"; el.className="sheet-msg";
     })
-    .catch(()=>{
+    .catch((e)=>{
       const el=document.getElementById("sheet-msg");
-      el.textContent="⚠ Sheets sync failed"; el.className="sheet-msg err";
+      el.textContent=e.message || "Sheets sync failed"; el.className="sheet-msg err";
     });
 }
 
@@ -2172,12 +1998,10 @@ async function loadRankReveal(){
   if(!CONFIG.GAS_URL||!currentUser) return;
   try{
     // Fetch personal ratings + summary tab in parallel
-    const [personalRes, summaryRes] = await Promise.all([
-      fetch(`${CONFIG.GAS_URL}?action=getRatings&user=${encodeURIComponent(currentUser.name)}`),
-      fetch(`${CONFIG.GAS_URL}?action=getSummary`)
+    const [ratings, summary] = await Promise.all([
+      apiCall("getRatings", {token: getSessionToken()}),
+      apiCall("getSummary", {token: getSessionToken()})
     ]);
-    const ratings = await personalRes.json().catch(()=>[]);
-    const summary = await summaryRes.json().catch(()=>null);
 
     if(!ratings||!ratings.length) return;
 
@@ -2265,18 +2089,16 @@ function scoreLabel(){ return _scoreMode==='raw' ? '/100' : '/10'; }
 async function goStats(){
   showScreen("stats");
   const content=document.getElementById("stats-content");
-  if(!CONFIG.GAS_URL||!currentUser){
+  if(!CONFIG.GAS_URL||!currentUser||!getSessionToken()){
     content.innerHTML=`<div class="stats-empty">Connect Google Sheets and log in to see your stats.<br><br><button class="btn-pri" onclick="promptAdminPin()">Go to Settings →</button></div>`;
     return;
   }
   content.innerHTML=`<div class="stats-loading">Loading your ratings...</div>`;
   try{
-    const [personalRes, summaryRes] = await Promise.all([
-      fetch(`${CONFIG.GAS_URL}?action=getRatings&user=${encodeURIComponent(currentUser.name)}`),
-      fetch(`${CONFIG.GAS_URL}?action=getSummary`)
+    const [ratings, summary] = await Promise.all([
+      apiCall("getRatings", {token: getSessionToken()}),
+      apiCall("getSummary", {token: getSessionToken()})
     ]);
-    const ratings = await personalRes.json().catch(()=>[]);
-    const summary = await summaryRes.json().catch(()=>null);
     if(!ratings||!ratings.length){
       content.innerHTML=`<div class="stats-empty">No ratings yet for ${currentUser.name}. Rate your first film!</div>`;
       return;
@@ -3095,18 +2917,13 @@ function setLgMode(on){
   }
 }
 
-// ── START RATING (override for restaurant) ────────────────────
-const _origStartRating = typeof startRating === 'function' ? startRating : null;
-
 function startRating(mode){
   pendingMode = mode;
   if(mode === 'restaurant'){
     CATS = RESTAURANT_CATS;
     setLgMode(true);
-    // Check login
-    const saved = getSavedUser();
-    if(saved && getUsers().find(u=>u.name===saved.name&&String(u.pin)===String(saved.pin))){
-      currentUser = saved; updateNavUser();
+    if(currentUser && getSessionToken()){
+      updateNavUser();
       showScreen('lg-search');
     } else {
       showScreen('pin');
@@ -3114,14 +2931,11 @@ function startRating(mode){
     }
     return;
   }
-  // Film mode
   CATS = FILM_CATS;
   setLgMode(false);
-  const saved = getSavedUser();
-  if(saved && getUsers().find(u=>u.name===saved.name&&String(u.pin)===String(saved.pin))){
-    currentUser = saved; updateNavUser();
+  if(currentUser && getSessionToken()){
+    updateNavUser();
     showScreen('search');
-    if(!CONFIG.TMDB_KEY) document.getElementById('setup-notice').style.display='block';
   } else {
     showScreen('pin');
     renderPinScreen();
@@ -3405,7 +3219,7 @@ async function lgPushToSheets(raw100, g, overallNote, today){
     notes: overallNote,
     placeId: lgCurrentPlace.placeId||'',
   };
-  lgPost(row);
+  await lgCall(row);
   const el = document.getElementById('lg-sheet-msg');
   el.textContent='✓ Saved to Le Guide'; el.style.color='#80d080';
   _lgRatingsCache = null;
@@ -3448,7 +3262,7 @@ let _lgPendingPlace = null;
 
 async function lgCheckAlreadyRated(place){
   _lgPendingPlace = place;
-  if(!CONFIG.GAS_URL||!currentUser){ lgLoadPlace(place); return; }
+  if(!CONFIG.GAS_URL||!currentUser||!getSessionToken()){ lgLoadPlace(place); return; }
   try{
     const ratings = await lgGetRatings();
     const existing = (ratings||[]).find(r=>
@@ -3476,7 +3290,7 @@ function lgProceedToRate(){
 
 async function lgGetRatings(){
   if(_lgRatingsCache && (Date.now()-_lgRatingsCacheTime)<300000) return _lgRatingsCache;
-  const data = await lgCall({action:'getRestaurantRatings', user:currentUser.name});
+  const data = await lgCall({action:'getRestaurantRatings'});
   if(Array.isArray(data)){ _lgRatingsCache=data; _lgRatingsCacheTime=Date.now(); }
   return data||[];
 }
@@ -3485,14 +3299,14 @@ async function lgGetRatings(){
 async function lgGoStats(){
   showScreen('lg-stats');
   const content = document.getElementById('lg-stats-content');
-  if(!CONFIG.GAS_URL||!currentUser){
+  if(!CONFIG.GAS_URL||!currentUser||!getSessionToken()){
     content.innerHTML=`<div class="stats-empty" style="color:#6a3a3a">Log in to see your restaurant stats.</div>`;
     return;
   }
   content.innerHTML=`<div class="stats-loading" style="color:#6a3a3a">Loading...</div>`;
   try{
     const [ratingsData, summaryData] = await Promise.all([
-      lgCall({action:'getRestaurantRatings', user:currentUser.name}),
+      lgCall({action:'getRestaurantRatings'}),
       lgCall({action:'getRestaurantSummary'})
     ]);
     _lgStatsData = {ratings: ratingsData||[], summary: summaryData||null};
@@ -3644,41 +3458,8 @@ function lgToggleAll(btn){
 }
 
 // ── SHARED API CALL ───────────────────────────────────────────
-function getLgToken(){
-  try{ return localStorage.getItem('cf_session_token')||''; }
-  catch(e){ return ''; }
-}
-
-async function lgGet(params){
-  if(!CONFIG.GAS_URL) return null;
-  try{
-    params.token = getLgToken();
-    const qs = new URLSearchParams(params).toString();
-    const res = await fetch(`${CONFIG.GAS_URL}?${qs}`);
-    const text = await res.text();
-    if(!text||text.trim().startsWith('<')||text.trim().startsWith('<!')) return null;
-    return JSON.parse(text);
-  }catch(e){ console.error('lgGet failed:',e); return null; }
-}
-
-function lgPost(body){
-  if(!CONFIG.GAS_URL) return;
-  body.token = getLgToken();
-  fetch(CONFIG.GAS_URL,{
-    method:'POST', mode:'no-cors',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify(body)
-  }).catch(e=>console.error('lgPost failed:',e));
-}
-
 async function lgCall(body){
-  const reads=['searchRestaurants','getRestaurantRatings','getRestaurantSummary'];
-  if(reads.includes(body.action)){
-    return lgGet(body);
-  } else {
-    lgPost(body);
-    return {ok:true};
-  }
+  return apiCall(body.action, {...body, token: getSessionToken()});
 }
 
 // ── SAVE AS IMAGE for Le Guide ────────────────────────────────
@@ -3940,12 +3721,16 @@ function updateAdminDots(){
     document.getElementById("ad"+i).classList.toggle("filled", i < adminPinEntered.length);
   }
 }
-function checkAdminPin(){
-  if(adminPinEntered === MASTER_PIN){
+async function checkAdminPin(){
+  try{
+    const data = await apiCall("loginAdmin", {pin: adminPinEntered});
+    adminToken = data.adminToken || data.token;
     closeAdminModal();
+    await syncUsersFromSheets();
+    settingsLoaded = false;
     showScreen("settings");
-  } else {
-    document.getElementById("admin-error").textContent = "Incorrect PIN.";
+  }catch(e){
+    document.getElementById("admin-error").textContent = e.message || "Incorrect PIN.";
     adminPinEntered = "";
     updateAdminDots();
   }
@@ -3954,13 +3739,8 @@ function checkAdminPin(){
 // ── INIT ─────────────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded",async ()=>{
   applyStoredConfig();
-  // Sync users from Sheets so all devices see the same list
   await syncUsersFromSheets();
-  const saved=getSavedUser();
-  if(saved&&getUsers().find(u=>u.name===saved.name&&String(u.pin)===String(saved.pin))){
-    currentUser=saved; updateNavUser();
-    prefetchRatings();
-  }
+  await restoreSession();
   showScreen("home");
 });
 
