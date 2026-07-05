@@ -1,5 +1,12 @@
 // ─────────────────────────────────────────────────────────────
 //  CINE-FILE — Google Apps Script
+//  Version: 2026.07.05-secure-restaurant.2
+//  Runtime: GitHub Pages frontend + Apps Script JSON backend
+//
+//  Version notes:
+//  - secure-restaurant.1: merged Le Guide restaurant flow with secure backend sessions.
+//  - secure-restaurant.2: trim Users values and support name | pinHash | pinSalt login.
+//
 //  Original by friend, restaurant functions added by Claude
 // ─────────────────────────────────────────────────────────────
 
@@ -112,12 +119,15 @@ function getUsers_() {
   var rows = tab.getDataRange().getValues();
   var out  = [];
   for (var i = 1; i < rows.length; i++) {
-    if (rows[i][0]) {
+    var name = String(rows[i][0] || '').trim();
+    var pinHash = String(rows[i][1] || '').replace(/^'/, '').trim();
+    var pinSalt = String(rows[i][2] || '').trim();
+    if (name) {
       out.push({
-        name: rows[i][0],
-        pinHash: rows[i][1],
-        pinSalt: rows[i][2],
-        legacyPin: rows[i][2] ? '' : String(rows[i][1] || '').replace(/^'/, '').trim()
+        name: name,
+        pinHash: pinHash,
+        pinSalt: pinSalt,
+        legacyPin: pinSalt ? '' : pinHash
       });
     }
   }
@@ -213,7 +223,7 @@ function doGet(e) {
 function doLogin_(d) {
   var users = getUsers_();
   var username = String(d.username || d.name || '').trim();
-  var user  = users.filter(function(u){ return u.name === username; })[0];
+  var user  = users.filter(function(u){ return String(u.name).trim().toLowerCase() === username.toLowerCase(); })[0];
   if (!user) return jsonOut_({ success: false, error: 'User not found' });
   var pin = String(d.pin || '').padStart(4, '0');
   var valid = user.legacyPin
