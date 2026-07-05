@@ -1867,7 +1867,7 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 async function prefetchRatings(){
   if(!CONFIG.GAS_URL || !currentUser) return;
   try{
-    const res = await fetch(`${CONFIG.GAS_URL}?action=getRatings&user=${encodeURIComponent(currentUser.name)}&token=${localStorage.getItem('cf_session_token')||''}&t=${Date.now()}`);
+    const res = await fetch(`${CONFIG.GAS_URL}?action=getRatings&user=${encodeURIComponent(currentUser.name)}&t=${Date.now()}`);
     const data = await res.json().catch(()=>[]);
     if(Array.isArray(data)){
       _ratingsCache = data;
@@ -1893,7 +1893,7 @@ async function checkAlreadyRated(movie){
     document.getElementById("spinner").classList.add("visible");
     try{
       const fetchPromise = fetch(
-        `${CONFIG.GAS_URL}?action=getRatings&user=${encodeURIComponent(currentUser.name)}&token=${localStorage.getItem('cf_session_token')||''}&t=${Date.now()}`
+        `${CONFIG.GAS_URL}?action=getRatings&user=${encodeURIComponent(currentUser.name)}&t=${Date.now()}`
       ).then(r=>r.text()).then(text=>{
         if(!text||text.trim().startsWith("<")) return null;
         return JSON.parse(text);
@@ -2153,8 +2153,7 @@ function pushToSheets(raw100, g, overallNote, today){
     emotional:    quickMode?"":scores.emotional||"",    emotionalGrade:quickMode?"":grade(scores.emotional||0),emotionalNotes:quickMode?"":notes.emotional||"",
     notes: overallNote,
   };
-  row.token = localStorage.getItem('cf_session_token')||'';
-  fetch(CONFIG.GAS_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(row)})
+  fetch(CONFIG.GAS_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"application/json"},body:JSON.stringify(row)})
     .then(()=>{
       const el=document.getElementById("sheet-msg");
       el.textContent="✓ Added to Google Sheets"; el.className="sheet-msg";
@@ -2174,8 +2173,8 @@ async function loadRankReveal(){
   try{
     // Fetch personal ratings + summary tab in parallel
     const [personalRes, summaryRes] = await Promise.all([
-      fetch(`${CONFIG.GAS_URL}?action=getRatings&user=${encodeURIComponent(currentUser.name)}&token=${encodeURIComponent(localStorage.getItem('cf_session_token')||'')}`),
-      fetch(`${CONFIG.GAS_URL}?action=getSummary&token=${encodeURIComponent(localStorage.getItem('cf_session_token')||'')}`)
+      fetch(`${CONFIG.GAS_URL}?action=getRatings&user=${encodeURIComponent(currentUser.name)}`),
+      fetch(`${CONFIG.GAS_URL}?action=getSummary`)
     ]);
     const ratings = await personalRes.json().catch(()=>[]);
     const summary = await summaryRes.json().catch(()=>null);
@@ -2273,14 +2272,11 @@ async function goStats(){
   content.innerHTML=`<div class="stats-loading">Loading your ratings...</div>`;
   try{
     const [personalRes, summaryRes] = await Promise.all([
-      fetch(`${CONFIG.GAS_URL}?action=getRatings&user=${encodeURIComponent(currentUser.name)}&token=${encodeURIComponent(localStorage.getItem('cf_session_token')||'')}`),
-      fetch(`${CONFIG.GAS_URL}?action=getSummary&token=${encodeURIComponent(localStorage.getItem('cf_session_token')||'')}`)
+      fetch(`${CONFIG.GAS_URL}?action=getRatings&user=${encodeURIComponent(currentUser.name)}`),
+      fetch(`${CONFIG.GAS_URL}?action=getSummary`)
     ]);
-    const ratingsText = await personalRes.text().catch(()=>'[]');
-    const summaryText = await summaryRes.text().catch(()=>'null');
-    let ratings=[], summary=null;
-    try{ const r=JSON.parse(ratingsText); if(Array.isArray(r)) ratings=r; }catch(e){}
-    try{ summary=JSON.parse(summaryText); }catch(e){}
+    const ratings = await personalRes.json().catch(()=>[]);
+    const summary = await summaryRes.json().catch(()=>null);
     if(!ratings||!ratings.length){
       content.innerHTML=`<div class="stats-empty">No ratings yet for ${currentUser.name}. Rate your first film!</div>`;
       return;
