@@ -225,7 +225,32 @@ table.card-table{width:100%;border-collapse:collapse;margin-bottom:4px;}
    STATS SCREEN
 ══════════════════════════════════════ */
 #screen-stats{background:#060908;}
-.stats-loading{text-align:center;padding:60px;color:#3d6a3d;font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;}
+/* ── STATS TABS ── */
+  .stats-tabs{display:flex;gap:4px;margin-bottom:28px;border-bottom:1px solid #1a3a1a;padding-bottom:0;}
+  .stats-tab{background:transparent;border:none;border-bottom:2px solid transparent;padding:10px 20px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:0.18em;text-transform:uppercase;color:#3d6a3d;transition:all 0.15s;margin-bottom:-1px;}
+  .stats-tab:hover{color:#7ab07a;}
+  .stats-tab.active{color:#80d080;border-bottom-color:#4a9a4a;}
+  .score-mode-toggle{display:flex;background:#0b120b;border:1px solid #1e3a1e;border-radius:20px;padding:3px;gap:2px;margin-bottom:24px;width:fit-content;}
+  .score-mode-btn{padding:6px 18px;border-radius:16px;border:none;background:transparent;color:#3d6a3d;font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:0.15em;text-transform:uppercase;cursor:pointer;transition:all 0.2s;}
+  .score-mode-btn.active{background:#1a4a1a;color:#90d090;box-shadow:0 1px 4px rgba(0,0,0,0.4);}
+  .group-table{width:100%;border-collapse:collapse;margin-bottom:4px;}
+  .group-table th{padding:8px 12px;background:#0b120b;border-bottom:2px solid #1e3a1e;font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:#3d6a3d;text-align:left;font-weight:400;}
+  .group-table th.tc{text-align:center;}
+  .group-table td{padding:10px 12px;border-bottom:1px solid #0f190f;font-size:13px;color:#c0e0c0;}
+  .group-table td.tc{text-align:center;font-family:'Bebas Neue',sans-serif;font-size:17px;color:#80d080;}
+  .group-table td.tc.empty{color:#2a5a2a;font-size:13px;font-family:'Barlow',sans-serif;}
+  .group-table .film-title-cell{font-weight:600;max-width:180px;}
+  .controversy-badge{display:inline-block;font-family:'Barlow Condensed',sans-serif;font-size:9px;letter-spacing:0.15em;text-transform:uppercase;padding:2px 7px;border-radius:2px;margin-left:6px;vertical-align:middle;}
+  .badge-hot{background:#3a1a0b;color:#d08040;}
+  .badge-agree{background:#0b1f0b;color:#4a9a4a;}
+  .h2h-select-row{display:flex;gap:12px;align-items:center;margin-bottom:28px;flex-wrap:wrap;}
+  .h2h-select{padding:10px 14px;background:#0b120b;border:1px solid #1e3a1e;border-radius:2px;color:#c0e0c0;font-family:'Barlow Condensed',sans-serif;font-size:14px;letter-spacing:0.08em;outline:none;cursor:pointer;}
+  .h2h-vs{font-family:'Bebas Neue',sans-serif;font-size:22px;color:#2a5a2a;}
+  .h2h-stat-row{display:flex;gap:16px;margin-bottom:24px;flex-wrap:wrap;}
+  .h2h-stat{flex:1;min-width:120px;background:#0b120b;border:1px solid #1e3a1e;border-radius:2px;padding:14px;text-align:center;}
+  .h2h-stat-num{font-family:'Bebas Neue',sans-serif;font-size:32px;color:#e8f8e8;line-height:1;}
+  .h2h-stat-lbl{font-family:'Barlow Condensed',sans-serif;font-size:9px;letter-spacing:0.2em;text-transform:uppercase;color:#3d6a3d;margin-top:4px;}
+  .stats-loading{text-align:center;padding:60px;color:#3d6a3d;font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;}
 .stats-section{margin-bottom:40px;}
 .stats-section-title{font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:0.28em;text-transform:uppercase;color:#3d7a3d;margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid #1a3a1a;}
 .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:0;}
@@ -318,6 +343,323 @@ table.card-table{width:100%;border-collapse:collapse;margin-bottom:4px;}
   .round-opt{min-width:110px;padding:18px 20px;}
   .round-opt-num{font-size:40px;}
 }
+
+  /* ══════════════════════════════════════
+     LE GUIDE — RESTAURANT RATING SYSTEM
+  ══════════════════════════════════════ */
+
+  /* Home card update */
+  .home-card.restaurant { border-color: #5a1a1a; background: #120808; }
+  .home-card.restaurant:hover { background: #1c0c0c; border-color: #8a2a2a; box-shadow: 0 8px 32px rgba(120,0,0,0.2); }
+
+  /* Le Guide color scheme — deep Michelin red */
+  :root {
+    --lg-red: #C41E3A;
+    --lg-dark: #1a0608;
+    --lg-darker: #0d0304;
+    --lg-gold: #C8A45A;
+    --lg-cream: #F5ECD7;
+    --lg-text: #F5ECD7;
+  }
+
+  /* Le Guide screens */
+  #screen-lg-search {
+    background: radial-gradient(ellipse at 50% -10%, #2a0a0a 0%, #0d0304 65%);
+    align-items: center; justify-content: center; padding: 48px 24px;
+  }
+  .lg-search-center { max-width: 580px; width: 100%; text-align: center; }
+  .lg-eyebrow {
+    font-family: 'Barlow Condensed', sans-serif; font-size: 11px;
+    letter-spacing: 0.4em; text-transform: uppercase; color: var(--lg-gold);
+    margin-bottom: 12px;
+  }
+  .lg-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(52px, 12vw, 96px); color: var(--lg-cream);
+    line-height: 0.9; letter-spacing: 0.04em; margin-bottom: 8px;
+    text-shadow: 0 0 80px rgba(196,30,58,0.4);
+  }
+  .lg-subtitle {
+    font-family: 'Barlow Condensed', sans-serif; font-size: 13px;
+    letter-spacing: 0.25em; text-transform: uppercase; color: var(--lg-gold);
+    margin-bottom: 8px;
+  }
+  .lg-sub { font-size: 13px; color: #6a3a3a; font-style: italic; margin-bottom: 44px; }
+
+  .lg-search-field {
+    display: flex; align-items: center; gap: 12px;
+    background: #1a0608; border: 1px solid #4a1a1a;
+    padding: 0 18px; border-radius: 2px;
+    box-shadow: 0 0 40px rgba(196,30,58,0.15);
+  }
+  .lg-search-input {
+    flex: 1; background: transparent; border: none; outline: none;
+    color: var(--lg-cream); font-size: 19px; font-family: 'Barlow', sans-serif;
+    padding: 18px 0;
+  }
+  .lg-search-input::placeholder { color: #3a1a1a; }
+  .lg-dropdown {
+    display: none; position: absolute; top: calc(100% + 3px); left: 0; right: 0;
+    background: #1a0608; border: 1px solid #4a1a1a; border-radius: 2px;
+    z-index: 99; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+  }
+  .lg-dropdown.open { display: block; }
+  .lg-drop-item {
+    display: flex; align-items: center; gap: 14px; padding: 12px 18px;
+    border-bottom: 1px solid #2a0a0a; cursor: pointer; transition: background 0.1s;
+    background: transparent; border-left: none; border-right: none;
+    color: var(--lg-cream); text-align: left; width: 100%;
+  }
+  .lg-drop-item:last-child { border-bottom: none; }
+  .lg-drop-item:hover { background: #220a0c; }
+  .lg-drop-photo { width: 44px; height: 44px; object-fit: cover; border-radius: 2px; flex-shrink: 0; background: #2a0a0a; }
+  .lg-drop-name { font-weight: 600; font-size: 15px; }
+  .lg-drop-addr { font-size: 11px; color: #8a4a4a; margin-top: 2px; }
+  .lg-drop-meta { font-size: 11px; color: var(--lg-gold); margin-top: 1px; }
+
+  /* Le Guide score screen */
+  #screen-lg-score { background: radial-gradient(ellipse at 50% -5%, #1a0608 0%, #0d0304 70%); }
+  .lg-back-btn {
+    background: transparent; border: 1px solid #3a1a1a; border-radius: 2px;
+    color: #8a4a4a; padding: 7px 16px; cursor: pointer;
+    font-family: 'Barlow Condensed', sans-serif; font-size: 12px;
+    letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 28px;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .lg-back-btn:hover { color: #c07070; border-color: #6a2a2a; }
+  .lg-restaurant-header { display: flex; gap: 22px; align-items: flex-start; margin-bottom: 36px; }
+  .lg-restaurant-photo { width: 80px; height: 80px; object-fit: cover; border-radius: 2px; flex-shrink: 0; box-shadow: 0 8px 24px rgba(0,0,0,0.6); }
+  .lg-restaurant-name { font-family: 'Bebas Neue', sans-serif; font-size: 36px; color: var(--lg-cream); line-height: 1; margin-bottom: 6px; }
+  .lg-restaurant-meta { font-size: 13px; color: #8a4a4a; line-height: 1.8; }
+  .lg-restaurant-meta span { color: var(--lg-gold); }
+
+  /* Le Guide scorer table */
+  .lg-scorer thead th {
+    background: #1a0608; border-bottom: 2px solid #3a1a1a;
+    color: #8a4a4a;
+  }
+  .lg-scorer tbody td { border-bottom: 1px solid #1a0608; }
+  .lg-score-inp {
+    width: 62px; padding: 5px; background: #120408; border: 1px solid #3a1a1a;
+    border-radius: 2px; color: var(--lg-cream); font-size: 19px; text-align: center;
+    font-family: 'Barlow', sans-serif; outline: none;
+  }
+  .lg-score-inp:focus { border-color: #8a2a2a; }
+  .lg-grade-filled { color: #d08080 !important; }
+  .lg-note-inp {
+    width: 100%; min-width: 130px; padding: 5px 8px; background: #120408;
+    border: 1px solid #200808; border-radius: 2px; color: #c08080;
+    font-size: 12px; font-family: 'Barlow', sans-serif; outline: none;
+    resize: vertical; min-height: 38px;
+  }
+  .lg-total-bar {
+    display: flex; align-items: baseline; gap: 14px; justify-content: flex-end;
+    padding: 18px 0; border-top: 2px solid #200808; border-bottom: 1px solid #200808;
+    margin-bottom: 22px;
+  }
+  .lg-total-lbl { font-family: 'Barlow Condensed', sans-serif; font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: #8a4a4a; }
+  .lg-total-num { font-family: 'Bebas Neue', sans-serif; font-size: 54px; color: var(--lg-cream); line-height: 1; }
+  .lg-total-grade { font-family: 'Bebas Neue', sans-serif; font-size: 28px; color: var(--lg-red); }
+  .lg-btn-pri {
+    padding: 11px 28px; background: #3a0a0e; border: 1px solid #8a2a2a;
+    border-radius: 2px; color: #f0c0c0; cursor: pointer;
+    font-family: 'Barlow Condensed', sans-serif; font-size: 13px;
+    letter-spacing: 0.12em; text-transform: uppercase; transition: all 0.15s;
+  }
+  .lg-btn-pri:hover { background: #4a0e12; }
+
+  /* Le Guide rounding screen */
+  #screen-lg-round { align-items: center; justify-content: center; background: radial-gradient(ellipse at 50% 0%, #1a0608 0%, #0d0304 65%); }
+  .lg-round-box { max-width: 440px; width: 100%; text-align: center; padding: 48px 24px; }
+  .lg-round-opt { padding: 24px 32px; background: #1a0608; border: 2px solid #3a1a1a; border-radius: 3px; cursor: pointer; transition: all 0.15s; min-width: 140px; }
+  .lg-round-opt:hover { background: #220a0c; border-color: #8a2a2a; }
+  .lg-round-opt.selected { background: #2a0810; border-color: #C41E3A; }
+  .lg-round-num { font-family: 'Bebas Neue', sans-serif; font-size: 52px; color: var(--lg-cream); line-height: 1; }
+  .lg-round-lbl { font-family: 'Barlow Condensed', sans-serif; font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: #8a4a4a; margin-top: 4px; }
+  .lg-round-confirm { padding: 13px 36px; background: #3a0a0e; border: 1px solid #8a2a2a; border-radius: 2px; color: #f0c0c0; font-family: 'Barlow Condensed', sans-serif; font-size: 14px; letter-spacing: 0.15em; text-transform: uppercase; cursor: pointer; }
+  .lg-round-confirm:disabled { opacity: 0.4; cursor: default; }
+
+  /* ══════════════════════════════════════
+     LE GUIDE RATING CARD
+  ══════════════════════════════════════ */
+  #screen-lg-result {
+    align-items: center; background: radial-gradient(ellipse at 50% 15%, #1a0408 0%, #070204 70%);
+    padding: 48px 24px 64px;
+  }
+
+  .lg-card {
+    width: 100%; max-width: 720px;
+    background: var(--lg-red);
+    border: 6px solid #8B0000;
+    border-radius: 3px;
+    padding: 40px 48px;
+    box-shadow: 0 0 0 1px #5a0010, 0 0 100px rgba(196,30,58,0.3), inset 0 0 120px rgba(0,0,0,0.2);
+    position: relative; overflow: hidden;
+    font-family: 'Georgia', serif;
+  }
+  .lg-card::before {
+    content: ''; position: absolute; inset: 8px;
+    border: 1px solid rgba(200,164,90,0.3); pointer-events: none; border-radius: 1px;
+  }
+  .lg-card::after {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(ellipse at 50% 50%, transparent 40%, rgba(0,0,0,0.3) 100%);
+  }
+
+  /* Card header */
+  .lg-card-header { text-align: center; margin-bottom: 16px; }
+  .lg-card-guide-name {
+    font-family: 'Bebas Neue', sans-serif; font-size: 13px;
+    letter-spacing: 0.5em; color: var(--lg-gold); text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .lg-card-rule-gold { border: none; border-top: 1px solid var(--lg-gold); margin: 10px 0; opacity: 0.6; }
+  .lg-card-reviewed {
+    font-family: 'Barlow Condensed', sans-serif; font-size: 10px;
+    letter-spacing: 0.3em; text-transform: uppercase; color: var(--lg-cream);
+    margin-bottom: 4px; opacity: 0.8;
+  }
+
+  /* Oval badge */
+  .lg-oval-wrap { display: flex; justify-content: center; margin: 16px 0; }
+  .lg-oval {
+    width: 220px; height: 140px;
+    background: #8B0000;
+    border: 3px solid var(--lg-gold);
+    border-radius: 50%;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    box-shadow: 0 0 0 6px rgba(139,0,0,0.5), inset 0 2px 20px rgba(0,0,0,0.4);
+    position: relative;
+  }
+  .lg-oval-stars { display: flex; gap: 4px; margin-bottom: 6px; }
+  .lg-oval-star svg { width: 22px; height: 22px; }
+  .lg-oval-score {
+    font-family: 'Bebas Neue', sans-serif; font-size: 32px; color: var(--lg-cream);
+    line-height: 1; letter-spacing: 0.05em;
+  }
+  .lg-oval-grade {
+    font-family: 'Bebas Neue', sans-serif; font-size: 16px; color: var(--lg-gold);
+    letter-spacing: 0.1em;
+  }
+
+  /* Restaurant name */
+  .lg-card-rest-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(30px, 6vw, 54px);
+    color: var(--lg-cream); text-align: center; line-height: 1;
+    letter-spacing: 0.04em; text-shadow: 0 2px 12px rgba(0,0,0,0.5);
+    margin-bottom: 6px;
+  }
+  .lg-card-rest-sub {
+    font-family: 'Barlow Condensed', sans-serif; font-size: 11px;
+    letter-spacing: 0.2em; text-transform: uppercase; color: var(--lg-gold);
+    text-align: center; margin-bottom: 4px; opacity: 0.9;
+  }
+
+  /* Info boxes */
+  .lg-info-boxes {
+    display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+    margin: 18px 0;
+  }
+  .lg-info-box {
+    background: #8B0000; border: 1px solid var(--lg-gold);
+    border-radius: 2px; padding: 8px 14px; text-align: center; min-width: 80px;
+    opacity: 0.9;
+  }
+  .lg-info-box-val {
+    font-family: 'Bebas Neue', sans-serif; font-size: 20px; color: var(--lg-cream); line-height: 1;
+  }
+  .lg-info-box-lbl {
+    font-family: 'Barlow Condensed', sans-serif; font-size: 8px;
+    letter-spacing: 0.2em; text-transform: uppercase; color: var(--lg-gold); margin-top: 2px;
+  }
+
+  /* Category table */
+  table.lg-card-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
+  .lg-card-table th {
+    padding: 7px 10px; border-bottom: 1px solid rgba(200,164,90,0.4);
+    font-family: 'Barlow Condensed', sans-serif; font-size: 9px;
+    letter-spacing: 0.22em; text-transform: uppercase; color: var(--lg-gold);
+    text-align: left; font-weight: 400;
+  }
+  .lg-card-table th.tc { text-align: center; }
+  .lg-card-table td { padding: 8px 10px; border-bottom: 1px solid rgba(139,0,0,0.5); }
+  .lg-card-table td.tc { text-align: center; }
+  .lg-ct-name { font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 13px; color: var(--lg-cream); }
+  .lg-ct-dim { font-size: 12px; color: var(--lg-gold); font-family: 'Barlow', sans-serif; opacity: 0.8; }
+  .lg-ct-score { font-family: 'Bebas Neue', sans-serif; font-size: 19px; color: var(--lg-cream); }
+  .lg-ct-grade { font-family: 'Bebas Neue', sans-serif; font-size: 19px; color: var(--lg-gold); }
+  .lg-ct-note { font-size: 11px; color: var(--lg-cream); font-style: italic; opacity: 0.8; }
+
+  .lg-card-notes {
+    background: #8B0000; border: 1px solid rgba(200,164,90,0.4);
+    border-radius: 2px; padding: 12px 16px; margin: 14px 0;
+  }
+  .lg-notes-ey {
+    font-family: 'Barlow Condensed', sans-serif; font-size: 9px;
+    letter-spacing: 0.28em; text-transform: uppercase; color: var(--lg-gold); margin-bottom: 6px;
+  }
+  .lg-notes-body { font-size: 12px; color: var(--lg-cream); line-height: 1.6; font-style: italic; opacity: 0.9; }
+
+  .lg-card-footer {
+    display: flex; justify-content: space-between; align-items: center;
+    padding-top: 12px; border-top: 1px solid rgba(200,164,90,0.3); margin-top: 12px;
+    font-family: 'Barlow Condensed', sans-serif; font-size: 9px;
+    letter-spacing: 0.18em; text-transform: uppercase; color: var(--lg-gold); opacity: 0.8;
+  }
+
+  /* Result actions */
+  .lg-result-actions { display: flex; gap: 10px; margin-top: 26px; flex-wrap: wrap; justify-content: center; }
+  .lg-act-btn {
+    padding: 10px 22px; background: #1a0608; border: 1px solid #4a1a1a;
+    border-radius: 2px; color: #8a4a4a; cursor: pointer;
+    font-family: 'Barlow Condensed', sans-serif; font-size: 12px;
+    letter-spacing: 0.14em; text-transform: uppercase; transition: all 0.15s;
+  }
+  .lg-act-btn:hover { background: #220a0c; border-color: #6a2a2a; color: #c07070; }
+  .lg-act-share { background: #2a0810; border-color: #8a2a2a; color: #f0a0a0; }
+  .lg-act-share:hover { background: #380a14; border-color: #C41E3A; }
+
+  /* Le Guide Stats */
+  #screen-lg-stats { background: #0d0304; }
+  .lg-stats-tabs { display: flex; gap: 4px; margin-bottom: 28px; border-bottom: 1px solid #3a1a1a; }
+  .lg-stats-tab {
+    background: transparent; border: none; border-bottom: 2px solid transparent;
+    padding: 10px 20px; cursor: pointer; font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: #6a3a3a; transition: all 0.15s; margin-bottom: -1px;
+  }
+  .lg-stats-tab:hover { color: #c07070; }
+  .lg-stats-tab.active { color: var(--lg-red); border-bottom-color: var(--lg-red); }
+  .lg-stat-card { background: #1a0608; border: 1px solid #3a1a1a; border-radius: 2px; padding: 18px 16px; text-align: center; }
+  .lg-stat-card-num { font-family: 'Bebas Neue', sans-serif; font-size: 40px; color: var(--lg-cream); line-height: 1; }
+  .lg-stat-card-lbl { font-family: 'Barlow Condensed', sans-serif; font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: #6a3a3a; margin-top: 4px; }
+  .lg-film-row { display: flex; align-items: center; gap: 14px; padding: 12px 16px; background: #1a0608; border: 1px solid #2a0a0a; border-radius: 2px; margin-bottom: 8px; }
+  .lg-film-row-rank { font-family: 'Bebas Neue', sans-serif; font-size: 22px; color: #6a3a3a; width: 24px; flex-shrink: 0; text-align: right; }
+  .lg-film-row-title { flex: 1; font-weight: 600; font-size: 14px; color: var(--lg-cream); }
+  .lg-film-row-sub { font-size: 12px; color: #6a3a3a; }
+  .lg-film-row-score { font-family: 'Bebas Neue', sans-serif; font-size: 22px; color: var(--lg-red); }
+  .lg-grade-bar-fill { height: 100%; background: var(--lg-red); border-radius: 4px; }
+  .lg-grade-bar-label { font-family: 'Bebas Neue', sans-serif; font-size: 18px; color: var(--lg-red); width: 28px; text-align: right; flex-shrink: 0; }
+
+  /* Le Guide Quick Rating */
+  #screen-lg-quick { align-items: center; justify-content: center; background: radial-gradient(ellipse at 50% 0%, #1a0608 0%, #0d0304 65%); }
+  .lg-quick-score-display { font-family: 'Bebas Neue', sans-serif; font-size: 96px; color: var(--lg-cream); line-height: 1; margin-bottom: 4px; }
+  .lg-quick-grade { font-family: 'Bebas Neue', sans-serif; font-size: 32px; color: var(--lg-red); margin-bottom: 8px; }
+  .lg-quick-slider { -webkit-appearance: none; appearance: none; width: 100%; height: 6px; background: linear-gradient(to right, var(--lg-red) 0%, var(--lg-red) var(--pct,50%), #3a1a1a var(--pct,50%), #3a1a1a 100%); border-radius: 3px; outline: none; cursor: pointer; }
+  .lg-quick-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 28px; height: 28px; border-radius: 50%; background: var(--lg-red); border: 3px solid var(--lg-cream); cursor: pointer; }
+
+  /* Nav in Le Guide mode */
+  .nav.lg-mode { background: #0d0304; border-bottom-color: #3a1a1a; }
+  .nav.lg-mode .nav-logo { color: var(--lg-gold); }
+  .nav.lg-mode .nav-btn { color: #6a3a3a; }
+  .nav.lg-mode .nav-btn:hover { color: var(--lg-gold); background: #1a0608; }
+  .nav.lg-mode .nav-btn.active { color: var(--lg-red); border-bottom-color: var(--lg-red); }
+  .nav.lg-mode .nav-user-name { color: var(--lg-gold); }
+
+  /* Already rated modal for restaurants */
+  #lg-already-rated-modal { background: rgba(0,0,0,0.9); }
+
 </style>
 </head>
 <body>
@@ -327,22 +669,30 @@ table.card-table{width:100%;border-collapse:collapse;margin-bottom:4px;}
 ══════════════════════════════════════ -->
 <script>
 const CONFIG = {
-  // This URL is public by design. Apps Script validates every action server-side.
-  GAS_URL: "https://script.google.com/macros/s/AKfycbySt4E344pCaFrQlbYQrYEwDw3MEMuIrmdmahUhw6Ddr9fzeNDMSd30ncxkY1bE0f9cuA/exec",
+  TMDB_KEY: "9edc42c5a3fdd824b9f69ba7353b2725",
+  OMDB_KEY: "d8357964",
+  GAS_URL:  "https://script.google.com/macros/s/AKfycbwFmnuEoxH9TgSYOsmt9aIhdvXV18iRdPmFlnTNXx4s_3co54M76miA4lBSCVroa6xhdw/exec",
 };
-const SITE_NAME = "Cine-file";
+const MASTER_PIN = "2028";
+const SITE_NAME  = "Cine-file";
 </script>
 
 <!-- ══════════════════════════════════════
      NAV
 ══════════════════════════════════════ -->
 <nav class="nav" id="main-nav" style="display:none">
-  <div class="nav-logo" onclick="goHome()">Cine-file</div>
-  <div class="nav-links">
+  <div class="nav-logo" id="nav-logo-text" onclick="lgMode?lgGoHome():goHome()">Cine-file</div>
+  <div class="nav-links" id="nav-film-links">
     <button class="nav-btn" id="nav-home"     onclick="goHome()">Home</button>
     <button class="nav-btn" id="nav-rate"     onclick="showScreen('search')">Rate</button>
     <button class="nav-btn" id="nav-stats"    onclick="goStats()">Stats</button>
     <button class="nav-btn" id="nav-settings" onclick="promptAdminPin()">Settings</button>
+  </div>
+  <div class="nav-links" id="nav-lg-links" style="display:none">
+    <button class="nav-btn" id="nav-lg-home"  onclick="lgGoHome()">Home</button>
+    <button class="nav-btn" id="nav-lg-rate"  onclick="showScreen('lg-search')">Rate</button>
+    <button class="nav-btn" id="nav-lg-stats" onclick="lgGoStats()">Stats</button>
+    <button class="nav-btn" id="nav-lg-back"  onclick="goHome()">← Cine-file</button>
   </div>
   <div class="nav-user">
     <span class="nav-user-name" id="nav-user-name"></span>
@@ -364,11 +714,10 @@ const SITE_NAME = "Cine-file";
         <div class="home-card-title">Film</div>
         <div class="home-card-sub">Rate a movie</div>
       </div>
-      <div class="home-card disabled">
-        <div class="coming-soon">Coming Soon</div>
-        <div class="home-card-icon">🍽️</div>
-        <div class="home-card-title">Restaurant</div>
-        <div class="home-card-sub">Rate a restaurant</div>
+      <div class="home-card restaurant" onclick="startRating('restaurant')">
+        <div class="home-card-icon">⭐</div>
+        <div class="home-card-title" style="font-size:22px;color:#F5ECD7">Le Guide</div>
+        <div class="home-card-sub" style="color:#8a4a4a">Rate a restaurant</div>
       </div>
     </div>
   </div>
@@ -433,8 +782,8 @@ const SITE_NAME = "Cine-file";
       <span class="quick-toggle-label">⚡ Quick Rating — rate out of 10 without categories</span>
     </label>
     <div class="setup-notice" id="setup-notice" style="display:none">
-      <strong>Backend Not Configured</strong><br><br>
-      Ask the admin to set the Apps Script backend URL and Script Properties, or try the demo below.<br><br>
+      <strong>⚙ API Keys Not Yet Configured</strong><br><br>
+      Go to Settings to add your TMDB and OMDB keys, or try the demo below.<br><br>
       <button class="demo-btn" onclick="loadDemo()">Try Demo with "Good Will Hunting" →</button>
     </div>
   </div>
@@ -596,10 +945,247 @@ const SITE_NAME = "Cine-file";
 </div>
 
 <!-- ══════════════════════════════════════
+     LE GUIDE — RESTAURANT SEARCH
+══════════════════════════════════════ -->
+<div id="screen-lg-search" class="screen">
+  <div class="lg-search-center">
+    <div class="lg-eyebrow">Restaurant Rating System</div>
+    <h1 class="lg-title">Le Guide</h1>
+    <div class="lg-subtitle">★ ★ ★</div>
+    <p class="lg-sub">Search for the restaurant you visited</p>
+    <div class="search-wrap" style="text-align:left">
+      <div class="lg-search-field">
+        <span class="search-icon" style="color:#8a4a4a">🍽️</span>
+        <input id="lg-search-input" class="lg-search-input" type="text"
+          placeholder="Start typing a restaurant name..." autocomplete="off"/>
+        <span class="search-spinner" id="lg-spinner">⟳</span>
+      </div>
+      <div class="lg-dropdown" id="lg-dropdown"></div>
+    </div>
+    <label class="quick-toggle" style="margin-top:20px">
+      <input type="checkbox" id="lg-quick-toggle" onchange="lgToggleQuick(this.checked)"/>
+      <span class="quick-toggle-label" style="color:#8a4a4a">⚡ Quick Rating</span>
+    </label>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     LE GUIDE — SCORE
+══════════════════════════════════════ -->
+<div id="screen-lg-score" class="screen">
+  <div class="inner">
+    <button class="lg-back-btn" onclick="showScreen('lg-search')">← Back to Search</button>
+    <div class="lg-restaurant-header">
+      <img id="lg-score-photo" src="" alt="" style="display:none" class="lg-restaurant-photo"/>
+      <div>
+        <div class="lg-restaurant-name" id="lg-score-name"></div>
+        <div class="lg-restaurant-meta" id="lg-score-meta"></div>
+      </div>
+    </div>
+    <div class="grade-legend" style="border-color:#3a1a1a;background:#1a0608">
+      <div class="grade-legend-title" style="color:#8a4a4a">What the grades mean</div>
+      <div class="gl-row"><span class="gl-grade" style="color:#C41E3A">A</span><span class="gl-desc">Exceptional — destination worthy</span></div>
+      <div class="gl-row"><span class="gl-grade" style="color:#C41E3A">B</span><span class="gl-desc">Very good — would return</span></div>
+      <div class="gl-row"><span class="gl-grade" style="color:#C41E3A">C</span><span class="gl-desc">Decent — some issues</span></div>
+      <div class="gl-row"><span class="gl-grade" style="color:#C41E3A">D</span><span class="gl-desc">Below expectations</span></div>
+      <div class="gl-row"><span class="gl-grade" style="color:#C41E3A">F</span><span class="gl-desc">Do not recommend</span></div>
+    </div>
+    <div class="table-scroll">
+      <table class="scorer lg-scorer">
+        <thead>
+          <tr>
+            <th>Category</th><th class="tc">Weight</th><th>Prompt</th>
+            <th class="tc">Score /100</th><th class="tc">Grade</th><th>Notes</th>
+          </tr>
+        </thead>
+        <tbody id="lg-scorer-body"></tbody>
+      </table>
+    </div>
+    <div class="lg-total-bar">
+      <div class="lg-total-lbl">Weighted Score</div>
+      <div class="lg-total-num" id="lg-total-num">0.00</div>
+      <div class="lg-total-grade" id="lg-total-grade">—</div>
+    </div>
+    <div class="overall-wrap">
+      <label class="overall-lbl" style="color:#8a4a4a">Overall Notes</label>
+      <textarea id="lg-overall-note" class="lg-note-inp overall-note" placeholder="Final thoughts on the restaurant..."></textarea>
+    </div>
+    <div class="btn-row">
+      <button class="btn-sec" style="border-color:#3a1a1a;color:#8a4a4a" onclick="showScreen('lg-search')">Cancel</button>
+      <button class="lg-btn-pri" onclick="lgGoRound()">Next: Choose Final Score →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     LE GUIDE — ROUNDING
+══════════════════════════════════════ -->
+<div id="screen-lg-round" class="screen">
+  <div class="round-box lg-round-box">
+    <div class="round-eyebrow" style="color:#8a4a4a">Step 2 of 2 — Final Score</div>
+    <div class="round-title" style="color:#F5ECD7">Choose Your Rating</div>
+    <div class="round-movie" id="lg-round-name" style="color:#C41E3A"></div>
+    <div class="round-raw">
+      <div class="round-raw-lbl" style="color:#8a4a4a">Raw Weighted Score</div>
+      <div>
+        <span class="round-raw-num" id="lg-round-raw-num" style="color:#F5ECD7"></span>
+        <span class="round-raw-grade" id="lg-round-raw-grade" style="color:#C41E3A"></span>
+      </div>
+      <div class="round-raw-sub" style="color:#6a3a3a">out of 100 · Pick the /10 score that feels right</div>
+    </div>
+    <p class="round-prompt" style="color:#8a4a4a">Round up or down based on your overall feel:</p>
+    <div class="round-options" id="lg-round-options"></div>
+    <button class="lg-round-confirm" id="lg-round-confirm" onclick="lgConfirmRound()" disabled>Generate Rating Card →</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     LE GUIDE — QUICK RATING
+══════════════════════════════════════ -->
+<div id="screen-lg-quick" class="screen">
+  <div class="quick-box">
+    <button class="lg-back-btn" style="margin-bottom:24px" onclick="showScreen('lg-search')">← Back to Search</button>
+    <div class="quick-movie-title lg-restaurant-name" id="lg-quick-name"></div>
+    <div class="quick-movie-sub lg-restaurant-meta" id="lg-quick-sub"></div>
+    <div class="lg-quick-score-display" id="lg-quick-display">5.0</div>
+    <div class="lg-quick-grade" id="lg-quick-grade">F</div>
+    <div class="quick-score-lbl" style="color:#8a4a4a">out of 10</div>
+    <div class="quick-slider-wrap">
+      <input type="range" class="lg-quick-slider" id="lg-quick-slider"
+        min="0" max="20" value="10" step="1" oninput="lgUpdateQuick(this.value)"/>
+    </div>
+    <div class="quick-ticks" style="color:#6a3a3a">
+      <span>0</span><span>2</span><span>4</span><span>6</span><span>8</span><span>10</span>
+    </div>
+    <div class="quick-note-wrap">
+      <label class="quick-note-lbl" style="color:#8a4a4a">Notes (optional)</label>
+      <textarea id="lg-quick-note" class="lg-note-inp" style="min-height:68px" placeholder="Any thoughts..."></textarea>
+    </div>
+    <button class="lg-btn-pri" style="width:100%;padding:14px" onclick="lgSubmitQuick()">Generate Rating Card →</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     LE GUIDE — RESULT CARD
+══════════════════════════════════════ -->
+<div id="screen-lg-result" class="screen">
+  <div class="lg-card" id="lg-card">
+    <!-- Inner gold border via ::before -->
+
+    <!-- Guide header -->
+    <div class="lg-card-header">
+      <div class="lg-card-guide-name">Le Guide</div>
+      <hr class="lg-card-rule-gold"/>
+      <div class="lg-card-reviewed">The Following Establishment Has Been Reviewed</div>
+    </div>
+
+    <!-- Oval badge with stars -->
+    <div class="lg-oval-wrap">
+      <div class="lg-oval">
+        <div class="lg-oval-stars" id="lg-oval-stars"></div>
+        <div class="lg-oval-score" id="lg-oval-score"></div>
+        <div class="lg-oval-grade" id="lg-oval-grade"></div>
+      </div>
+    </div>
+
+    <!-- Restaurant name -->
+    <div class="lg-card-rest-name" id="lg-card-name"></div>
+    <div class="lg-card-rest-sub" id="lg-card-sub"></div>
+
+    <hr class="lg-card-rule-gold"/>
+
+    <!-- Info boxes -->
+    <div class="lg-info-boxes" id="lg-info-boxes"></div>
+
+    <hr class="lg-card-rule-gold"/>
+
+    <!-- Category table -->
+    <table class="lg-card-table" id="lg-card-table">
+      <thead>
+        <tr>
+          <th>Category</th><th class="tc">Weight</th>
+          <th class="tc">Score</th><th class="tc">Grade</th><th>Notes</th>
+        </tr>
+      </thead>
+      <tbody id="lg-card-table-body"></tbody>
+    </table>
+
+    <!-- Notes -->
+    <div class="lg-card-notes" id="lg-card-notes" style="display:none">
+      <div class="lg-notes-ey">Reviewer's Notes</div>
+      <div class="lg-notes-body" id="lg-card-notes-body"></div>
+    </div>
+
+    <!-- Footer -->
+    <div class="lg-card-footer">
+      <span id="lg-card-date"></span>
+      <span id="lg-card-cuisine"></span>
+    </div>
+  </div>
+
+  <!-- Rank reveal -->
+  <div class="rank-reveal" id="lg-rank-reveal" style="display:none;border-color:#3a1a1a;background:#1a0608">
+    <div class="rank-reveal-title" style="color:#8a4a4a">📊 Your Restaurant Stats</div>
+    <div class="rank-stats" id="lg-rank-stats"></div>
+  </div>
+
+  <div class="lg-result-actions">
+    <button class="lg-act-btn" onclick="lgGoEditScores()">← Edit Scores</button>
+    <button class="lg-act-btn" onclick="lgGoHome()">Rate Another</button>
+    <button class="lg-act-btn lg-act-share" id="lg-save-img-btn" onclick="lgSaveImage()">Save as Image</button>
+  </div>
+  <div class="sheet-msg" id="lg-sheet-msg" style="color:#c07070"></div>
+</div>
+
+<!-- ══════════════════════════════════════
+     LE GUIDE — STATS
+══════════════════════════════════════ -->
+<div id="screen-lg-stats" class="screen">
+  <div class="inner">
+    <div class="lg-stats-tabs">
+      <button class="lg-stats-tab active" id="lg-tab-my" onclick="lgSwitchTab('my')">My Ratings</button>
+      <button class="lg-stats-tab" id="lg-tab-group" onclick="lgSwitchTab('group')">Group</button>
+    </div>
+    <div id="lg-stats-content"><div class="stats-loading" style="color:#6a3a3a">Loading your restaurant ratings...</div></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     LE GUIDE — ALREADY RATED MODAL
+══════════════════════════════════════ -->
+<div id="lg-already-rated-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:999;align-items:center;justify-content:center;">
+  <div style="background:#1a0608;border:1px solid #8a2a2a;border-radius:3px;padding:40px 32px;max-width:400px;width:90%;text-align:center;">
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:0.28em;text-transform:uppercase;color:#C41E3A;margin-bottom:12px;">Already Reviewed</div>
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:#F5ECD7;margin-bottom:6px;" id="lg-ar-name"></div>
+    <div style="font-size:13px;color:#8a4a4a;margin-bottom:24px;font-style:italic;" id="lg-ar-date"></div>
+    <div style="display:flex;gap:16px;justify-content:center;margin-bottom:20px;">
+      <div style="background:#0d0304;border:2px solid #4a1a1a;border-radius:3px;padding:14px 20px;text-align:center;min-width:90px;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:40px;color:#F5ECD7;line-height:1;" id="lg-ar-score"></div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:8px;letter-spacing:0.2em;text-transform:uppercase;color:#8a4a4a;margin-top:4px;">Your Score</div>
+      </div>
+      <div style="background:#0d0304;border:2px solid #4a1a1a;border-radius:3px;padding:14px 20px;text-align:center;min-width:90px;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:40px;color:#C41E3A;line-height:1;" id="lg-ar-grade"></div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:8px;letter-spacing:0.2em;text-transform:uppercase;color:#8a4a4a;margin-top:4px;">Grade</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:center;">
+      <button onclick="closeLgAlreadyRated()" style="padding:11px 24px;background:transparent;border:1px solid #3a1a1a;border-radius:2px;color:#8a4a4a;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:0.12em;text-transform:uppercase;">← Back</button>
+      <button onclick="lgProceedToRate()" style="padding:11px 24px;background:#3a0a0e;border:1px solid #8a2a2a;border-radius:2px;color:#f0c0c0;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:0.12em;text-transform:uppercase;">Re-review</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
      STATS
 ══════════════════════════════════════ -->
 <div id="screen-stats" class="screen">
   <div class="inner">
+    <!-- Stats Tab Bar -->
+    <div class="stats-tabs" id="stats-tabs">
+      <button class="stats-tab active" id="tab-my"    onclick="switchStatsTab('my')">My Stats</button>
+      <button class="stats-tab"        id="tab-group" onclick="switchStatsTab('group')">Group</button>
+      <button class="stats-tab"        id="tab-h2h"   onclick="switchStatsTab('h2h')">Head to Head</button>
+    </div>
     <div id="stats-content"><div class="stats-loading">Loading your ratings...</div></div>
   </div>
 </div>
@@ -621,19 +1207,175 @@ const SITE_NAME = "Cine-file";
     </div>
 
     <div class="settings-section">
-      <div class="settings-section-title">Backend Configuration</div>
+      <div class="settings-section-title">API Configuration</div>
       <div class="config-field">
-        <label class="config-lbl">Apps Script Web App URL</label>
-        <input class="config-inp" id="cfg-gas" placeholder="https://script.google.com/macros/s/.../exec"/>
+        <label class="config-lbl">TMDB API Key <span style="color:#2a5a2a">(movie search & posters)</span></label>
+        <input class="config-inp" id="cfg-tmdb" placeholder="Paste your TMDB key..."/>
       </div>
-      <button class="config-save-btn" onclick="saveConfig()">Save Backend URL</button>
+      <div class="config-field">
+        <label class="config-lbl">OMDB API Key <span style="color:#2a5a2a">(RT audience & IMDb scores)</span></label>
+        <input class="config-inp" id="cfg-omdb" placeholder="Paste your OMDB key..."/>
+      </div>
+      <div class="config-field">
+        <label class="config-lbl">Google Apps Script URL <span style="color:#2a5a2a">(Sheets sync)</span></label>
+        <input class="config-inp" id="cfg-gas" placeholder="https://script.google.com/macros/s/..."/>
+      </div>
+      <button class="config-save-btn" onclick="saveConfig()">Save Keys</button>
       <div class="settings-msg" id="config-msg"></div>
       <div class="config-note" style="margin-top:16px">
-        Private values are stored in Apps Script Project Settings, not in this public website.
-        Required properties: <code>SHEET_ID</code>, <code>ADMIN_PIN</code>, and <code>TMDB_API_KEY</code>.
-        Optional: <code>OMDB_API_KEY</code>.
+        Get free keys: TMDB → <code>themoviedb.org/settings/api</code> · OMDB → <code>omdbapi.com/apikey.aspx</code><br>
+        Keys are saved to this device only. See the Apps Script setup guide in the README.
       </div>
     </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">Apps Script (Google Sheets)</div>
+      <div class="config-note">
+        Go to <code>script.google.com</code> → New Project → paste the script below → Deploy as Web App (Anyone) → copy URL above.<br><br>
+        <pre style="background:#040604;padding:14px;border-radius:2px;font-size:11px;color:#6aaa6a;overflow-x:auto;line-height:1.7">var SHEET_ID = "YOUR_SHEET_ID"; // ← replace this
+
+function doPost(e) {
+  var ss   = SpreadsheetApp.openById(SHEET_ID);
+  var d    = JSON.parse(e.postData.contents);
+  var action = d.action || "saveRating";
+
+  // ── Save Users ──
+  if (action === "saveUsers") {
+    var uTab = ss.getSheetByName("Users") || ss.insertSheet("Users");
+    uTab.clearContents();
+    uTab.appendRow(["name","pin"]);
+    // Format PIN column as text so leading zeros are preserved
+    var pinCol = uTab.getRange(1, 2, 1, 1);
+    pinCol.setNumberFormat("@");
+    (d.users||[]).forEach(function(u){
+      var row = uTab.getLastRow() + 1;
+      uTab.appendRow([u.name, "'"+String(u.pin)]);
+    });
+    return ContentService.createTextOutput(JSON.stringify({ok:true}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // ── Save Rating ──
+  var user = d.user || "Unknown";
+  var tab  = ss.getSheetByName(user) || ss.insertSheet(user);
+  if (tab.getLastRow() === 0) {
+    tab.appendRow(["Date","Title","Year","Director","RT Audience",
+      "IMDb","Score /10","Raw /100","Grade",
+      "Plot","Plot Grade","Plot Notes",
+      "Entertainment","Ent Grade","Ent Notes",
+      "Acting","Acting Grade","Acting Notes",
+      "Visuals","Visuals Grade","Visuals Notes",
+      "Pacing","Pacing Grade","Pacing Notes",
+      "Emotional","Emotional Grade","Emotional Notes","Overall Notes"]);
+  }
+  // Check if this movie was already rated — overwrite if so
+  var newRow = [d.date,d.title,d.year,d.director,d.rt,d.imdb,
+    d.score10,d.score100,d.grade,
+    d.plot,d.plotGrade,d.plotNotes,
+    d.entertainment,d.entGrade,d.entNotes,
+    d.acting,d.actingGrade,d.actingNotes,
+    d.visuals,d.visualsGrade,d.visualsNotes,
+    d.pacing,d.pacingGrade,d.pacingNotes,
+    d.emotional,d.emotionalGrade,d.emotionalNotes,d.notes];
+  var tabData = tab.getDataRange().getValues();
+  var existingRow = -1;
+  for (var i = 1; i < tabData.length; i++) {
+    if (String(tabData[i][1]).toLowerCase() === String(d.title).toLowerCase()) {
+      existingRow = i + 1; break;
+    }
+  }
+  if (existingRow > -1) {
+    tab.getRange(existingRow, 1, 1, newRow.length).setValues([newRow]);
+  } else {
+    tab.appendRow(newRow);
+  }
+
+  // ── Summary tab ──
+  var sum  = ss.getSheetByName("Summary") || ss.insertSheet("Summary");
+  if (sum.getLastRow() === 0)
+    sum.appendRow(["Title","Year","Director","RT Audience","IMDb"]);
+  var data = sum.getDataRange().getValues();
+  var rowIdx = -1;
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0] === d.title) { rowIdx = i + 1; break; }
+  }
+  if (rowIdx === -1) {
+    sum.appendRow([d.title,d.year,d.director,d.rt,d.imdb]);
+    rowIdx = sum.getLastRow();
+    data = sum.getDataRange().getValues();
+  }
+  var headers = data[0];
+  var userCol = headers.indexOf(user);
+  if (userCol === -1) {
+    userCol = headers.length;
+    sum.getRange(1, userCol + 1).setValue(user);
+  }
+  sum.getRange(rowIdx, userCol + 1).setValue(d.score10);
+
+  return ContentService.createTextOutput(JSON.stringify({ok:true}))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function doGet(e) {
+  var ss     = SpreadsheetApp.openById(SHEET_ID);
+  var action = e.parameter.action || "getRatings";
+
+  // ── Get Users ──
+  if (action === "getUsers") {
+    var uTab = ss.getSheetByName("Users");
+    if (!uTab) return out([]);
+    var rows = uTab.getDataRange().getValues();
+    var users = [];
+    for (var i = 1; i < rows.length; i++) {
+      if (rows[i][0]) users.push({name: String(rows[i][0]), pin: String(rows[i][1]).replace(/^'/,'').padStart(4,'0')});
+    }
+    return ContentService.createTextOutput(JSON.stringify({users:users}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // ── Get Summary (group stats) ──
+  if (action === "getSummary") {
+    var sum = ss.getSheetByName("Summary");
+    if (!sum) return ContentService.createTextOutput(JSON.stringify({rows:[]}))
+      .setMimeType(ContentService.MimeType.JSON);
+    var data    = sum.getDataRange().getValues();
+    var headers = data[0];
+    var rows    = [];
+    for (var i = 1; i < data.length; i++) {
+      var row = {Title:data[i][0],Year:data[i][1],scores:[],userScores:{}};
+      for (var j = 5; j < headers.length; j++) {
+        if (headers[j] && data[i][j] !== "") {
+          var s = parseFloat(data[i][j]);
+          if (!isNaN(s)) {
+            row.scores.push(s);
+            row.userScores[headers[j]] = s;
+          }
+        }
+      }
+      rows.push(row);
+    }
+    return ContentService.createTextOutput(JSON.stringify({rows:rows}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // ── Get Personal Ratings ──
+  var user = e.parameter.user;
+  var tab  = ss.getSheetByName(user);
+  if (!tab) return ContentService.createTextOutput(JSON.stringify([]))
+    .setMimeType(ContentService.MimeType.JSON);
+  var rows = tab.getDataRange().getValues();
+  var keys = rows[0];
+  var out  = [];
+  for (var i = 1; i < rows.length; i++) {
+    var obj = {};
+    keys.forEach(function(k,j){ obj[k] = rows[i][j]; });
+    out.push(obj);
+  }
+  return ContentService.createTextOutput(JSON.stringify(out))
+    .setMimeType(ContentService.MimeType.JSON);
+}</pre>
+        Replace <code>YOUR_SHEET_ID</code> with your Sheet's ID from the URL.
+      </div>
     </div>
   </div>
 </div>
@@ -779,85 +1521,68 @@ let scores        = {};
 let notes         = {};
 let chosenScore10 = null;
 let ratingDate    = "";
-let currentUser   = null; // {name, role}
+let currentUser   = null; // {name, pin}
 let pendingMode   = null; // "film" or "restaurant"
 
 // ── PERSISTENCE ──────────────────────────────────────────────
-let _usersCache = [];
-let sessionToken = null;
-let adminToken = null;
+// ── USER STORAGE — synced via Sheets, cached in localStorage ──
+let _usersCache = null;
 
-async function apiCall(action, payload = {}){
-  if(!CONFIG.GAS_URL){
-    throw new Error("Apps Script backend URL is not configured.");
-  }
-  const res = await fetch(CONFIG.GAS_URL, {
-    method: "POST",
-    headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify({ action, ...payload }),
-  });
-  const data = await res.json().catch(()=>null);
-  if(!res.ok || !data){
-    throw new Error("Backend request failed.");
-  }
-  if(data.ok === false){
-    throw new Error(data.error || "Backend request failed.");
-  }
-  return data.result;
+function getCachedUsers(){
+  if(_usersCache) return _usersCache;
+  try{ return JSON.parse(localStorage.getItem("cf_users")||"[]"); }
+  catch(e){ return []; }
 }
-
-function getUsers(){ return _usersCache || []; }
-function setCachedUsers(users){ _usersCache = Array.isArray(users) ? users : []; }
-function getStoredSession(){
-  try{ return JSON.parse(localStorage.getItem("cf_session")||"null"); }
-  catch(e){ return null; }
+function setCachedUsers(u){
+  _usersCache = u;
+  localStorage.setItem("cf_users", JSON.stringify(u));
 }
-function setStoredSession(token, user){
-  if(token && user) localStorage.setItem("cf_session", JSON.stringify({token, user}));
-  else localStorage.removeItem("cf_session");
+function getUsers(){ return getCachedUsers(); }
+function saveUsers(u){
+  setCachedUsers(u);
+  // Sync to Sheets in background
+  if(CONFIG.GAS_URL){
+    fetch(CONFIG.GAS_URL, {
+      method:"POST", mode:"no-cors",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({action:"saveUsers", users:u})
+    }).catch(e=>console.error("User sync failed:",e));
+  }
 }
 function getSavedUser(){
-  const saved = getStoredSession();
-  return saved && saved.user ? saved.user : null;
+  try{ return JSON.parse(localStorage.getItem("cf_current_user")||"null"); }
+  catch(e){ return null; }
 }
-function setSavedUser(user){
-  if(user) setStoredSession(sessionToken, user);
-  else setStoredSession(null, null);
-}
+function setSavedUser(u){ localStorage.setItem("cf_current_user",JSON.stringify(u)); }
+
+// Fetch users from Sheets and cache locally
 async function syncUsersFromSheets(){
   if(!CONFIG.GAS_URL) return;
   try{
-    const users = await apiCall("getUsersPublic");
-    setCachedUsers(users);
-  }catch(e){
-    console.error("Could not load users:", e);
-    setCachedUsers([]);
-  }
-}
-async function restoreSession(){
-  const saved = getStoredSession();
-  if(!saved || !saved.token || !CONFIG.GAS_URL) return false;
-  try{
-    const user = await apiCall("getSession", { token: saved.token });
-    sessionToken = saved.token;
-    currentUser = user;
-    setStoredSession(sessionToken, user);
-    updateNavUser();
-    prefetchRatings();
-    return true;
-  }catch(e){
-    setStoredSession(null, null);
-    return false;
-  }
+    const timeoutPromise = new Promise((_,rej)=>setTimeout(()=>rej(new Error("timeout")),6000));
+    const fetchPromise = fetch(CONFIG.GAS_URL+"?action=getUsers")
+      .then(r=>r.text())
+      .then(text=>{
+        // Guard against HTML error pages from Apps Script
+        if(!text || text.trim().startsWith("<")) return null;
+        return JSON.parse(text);
+      });
+    const data = await Promise.race([fetchPromise, timeoutPromise]);
+    if(data && Array.isArray(data.users) && data.users.length > 0){
+      setCachedUsers(data.users);
+    }
+  }catch(e){ console.log("Could not sync users — using cached:", e.message); }
 }
 function getStoredConfig(){
   try{ return JSON.parse(localStorage.getItem("cf_config")||"{}"); }
   catch(e){ return {}; }
 }
-function saveStoredConfig(c){ localStorage.setItem("cf_config", JSON.stringify(c)); }
+function saveStoredConfig(c){ localStorage.setItem("cf_config",JSON.stringify(c)); }
 function applyStoredConfig(){
   const c = getStoredConfig();
-  if(c.GAS_URL) CONFIG.GAS_URL = c.GAS_URL;
+  if(c.TMDB_KEY) CONFIG.TMDB_KEY = c.TMDB_KEY;
+  if(c.OMDB_KEY) CONFIG.OMDB_KEY = c.OMDB_KEY;
+  if(c.GAS_URL)  CONFIG.GAS_URL  = c.GAS_URL;
 }
 
 // ── NAV / SCREEN ─────────────────────────────────────────────
@@ -885,7 +1610,6 @@ function goHome(){
 
 function switchUser(){
   setSavedUser(null);
-  sessionToken = null;
   currentUser = null;
   showScreen("pin");
   renderPinScreen();
@@ -896,9 +1620,12 @@ function startRating(mode){
   pendingMode = mode;
   CATS = mode === "restaurant" ? RESTAURANT_CATS : FILM_CATS;
   // Check if user is already logged in
-  if(currentUser && sessionToken){
+  const saved = getSavedUser();
+  if(saved && getUsers().find(u=>u.name===saved.name&&String(u.pin)===String(saved.pin))){
+    currentUser = saved;
     updateNavUser();
     showScreen("search");
+    if(!CONFIG.TMDB_KEY) document.getElementById("setup-notice").style.display="block";
   } else {
     showScreen("pin");
     renderPinScreen();
@@ -921,7 +1648,7 @@ function renderPinScreen(){
     return;
   }
   list.innerHTML = users.map(u=>`
-    <button class="user-btn" onclick='selectPinUser(${JSON.stringify(u.name)})'>${escHtml(u.name)}</button>`).join("");
+    <button class="user-btn" onclick="selectPinUser('${escHtml(u.name)}')">${escHtml(u.name)}</button>`).join("");
 }
 
 function selectPinUser(name){
@@ -949,20 +1676,20 @@ function updatePinDots(){
   }
 }
 
-async function checkPin(){
-  const user = getUsers().find(u=>u.name===pinSelected);
+function checkPin(){
+  const users = getUsers();
+  const user  = users.find(u=>u.name===pinSelected);
   if(!user) return;
-  try{
-    document.getElementById("pin-error").textContent = "";
-    const res = await apiCall("login", { name: pinSelected, pin: pinEntered });
-    sessionToken = res.token;
-    currentUser = res.user;
-    setSavedUser(currentUser);
+  if(pinEntered === String(user.pin).padStart(4,'0') || pinEntered === MASTER_PIN){
+    currentUser = user;
+    setSavedUser(user);
     updateNavUser();
+    document.getElementById("pin-error").textContent = "";
     showScreen("search");
+    if(!CONFIG.TMDB_KEY) document.getElementById("setup-notice").style.display="block";
     prefetchRatings(); // warm the cache in background after login
-  }catch(e){
-    document.getElementById("pin-error").textContent = e.message || "Incorrect PIN. Try again.";
+  } else {
+    document.getElementById("pin-error").textContent = "Incorrect PIN. Try again.";
     pinEntered = "";
     updatePinDots();
   }
@@ -985,76 +1712,56 @@ function renderSettingsUsers(){
     : `<div style="color:#3d6a3d;font-size:13px;font-style:italic">No users yet.</div>`;
 }
 
-async function addUser(){
+function addUser(){
   const name = document.getElementById("new-user-name").value.trim();
   const pin  = document.getElementById("new-user-pin").value.trim();
   const msg  = document.getElementById("settings-msg");
-  if(!adminToken){ msg.textContent="Admin session expired. Reopen Settings."; msg.className="settings-msg err"; return; }
   if(!name){ msg.textContent="Please enter a name."; msg.className="settings-msg err"; return; }
   if(!/^\d{4}$/.test(pin)){ msg.textContent="PIN must be exactly 4 digits."; msg.className="settings-msg err"; return; }
-  try{
-    await apiCall("addUser", { token: adminToken, name, pin });
-    await syncUsersFromSheets();
-    document.getElementById("new-user-name").value="";
-    document.getElementById("new-user-pin").value="";
-    msg.textContent=`✓ ${name} added.`; msg.className="settings-msg";
-    renderSettingsUsers();
-  }catch(e){
-    msg.textContent=e.message || "Could not add user."; msg.className="settings-msg err";
-  }
+  if(pin===MASTER_PIN){ msg.textContent="That PIN is reserved. Choose another."; msg.className="settings-msg err"; return; }
+  const users = getUsers();
+  if(users.find(u=>u.name.toLowerCase()===name.toLowerCase())){ msg.textContent="A user with that name already exists."; msg.className="settings-msg err"; return; }
+  users.push({name, pin: String(pin)});
+  saveUsers(users);
+  document.getElementById("new-user-name").value="";
+  document.getElementById("new-user-pin").value="";
+  msg.textContent=`✓ ${name} added.`; msg.className="settings-msg";
+  renderSettingsUsers();
 }
 
-async function deleteUser(i){
+function deleteUser(i){
   const users = getUsers();
-  const removed = users[i];
-  if(!removed || !adminToken) return;
-  try{
-    await apiCall("deleteUser", { token: adminToken, name: removed.name });
-    await syncUsersFromSheets();
-    document.getElementById("settings-msg").textContent=`Removed ${removed.name}.`;
-    document.getElementById("settings-msg").className="settings-msg";
-    renderSettingsUsers();
-  }catch(e){
-    document.getElementById("settings-msg").textContent=e.message || "Could not remove user.";
-    document.getElementById("settings-msg").className="settings-msg err";
-  }
+  const removed = users.splice(i,1)[0];
+  saveUsers(users);
+  document.getElementById("settings-msg").textContent=`Removed ${removed.name}.`;
+  document.getElementById("settings-msg").className="settings-msg";
+  renderSettingsUsers();
 }
 
 // ── SETTINGS — CONFIG ─────────────────────────────────────────
-async function loadConfigFields(){
+function loadConfigFields(){
   const c = getStoredConfig();
-  document.getElementById("cfg-gas").value = c.GAS_URL || CONFIG.GAS_URL || "";
-  const msg = document.getElementById("config-msg");
-  if(!CONFIG.GAS_URL){
-    msg.textContent = "Backend URL is not configured.";
-    msg.className = "settings-msg err";
-    return;
-  }
-  try{
-    const status = await apiCall("getDeploymentStatus", { token: adminToken || sessionToken || "" });
-    const missing = [];
-    if(!status.hasSheetId) missing.push("SHEET_ID");
-    if(!status.hasAdminPin) missing.push("ADMIN_PIN");
-    if(!status.hasTmdbKey) missing.push("TMDB_API_KEY");
-    msg.textContent = missing.length ? `Missing script properties: ${missing.join(", ")}` : "Backend is configured.";
-    msg.className = missing.length ? "settings-msg err" : "settings-msg";
-  }catch(e){
-    msg.textContent = "Could not reach backend.";
-    msg.className = "settings-msg err";
-  }
+  document.getElementById("cfg-tmdb").value = c.TMDB_KEY||"";
+  document.getElementById("cfg-omdb").value = c.OMDB_KEY||"";
+  document.getElementById("cfg-gas").value  = c.GAS_URL||"";
 }
 function saveConfig(){
-  const c = { GAS_URL: document.getElementById("cfg-gas").value.trim() };
+  const c = {
+    TMDB_KEY: document.getElementById("cfg-tmdb").value.trim(),
+    OMDB_KEY: document.getElementById("cfg-omdb").value.trim(),
+    GAS_URL:  document.getElementById("cfg-gas").value.trim(),
+  };
   saveStoredConfig(c);
   applyStoredConfig();
-  settingsLoaded = false;
+  settingsLoaded = false; // allow reload next time to pick up saved values
   const msg = document.getElementById("config-msg");
-  msg.textContent = "Backend URL saved to this device.";
-  msg.className = "settings-msg";
-  syncUsersFromSheets();
+  msg.textContent="✓ Keys saved to this device."; msg.className="settings-msg";
+  setTimeout(()=>msg.textContent="",3000);
 }
 
 // ── SEARCH ───────────────────────────────────────────────────
+const TMDB="https://api.themoviedb.org/3";
+const OMDB="https://www.omdbapi.com";
 let searchTimer=null;
 
 document.getElementById("search-input").addEventListener("input",function(){
@@ -1069,20 +1776,16 @@ document.getElementById("search-input").addEventListener("blur",()=>{
 });
 
 async function doSearch(q){
-  if(!CONFIG.GAS_URL){
+  if(!CONFIG.TMDB_KEY){
     document.getElementById("setup-notice").style.display="block";
     document.getElementById("spinner").classList.remove("visible");
     return;
   }
   try{
-    const results = await apiCall("searchMovies", { query: q });
-    document.getElementById("setup-notice").style.display="none";
-    renderDropdown((results||[]).slice(0,7));
-  }catch(e){
-    console.error(e);
-    document.getElementById("setup-notice").style.display="block";
-    closeDropdown();
-  }
+    const res=await fetch(`${TMDB}/search/movie?api_key=${CONFIG.TMDB_KEY}&query=${encodeURIComponent(q)}&include_adult=false`);
+    const data=await res.json();
+    renderDropdown((data.results||[]).slice(0,7));
+  }catch(e){console.error(e);}
   document.getElementById("spinner").classList.remove("visible");
 }
 
@@ -1107,7 +1810,29 @@ async function pickMovie(id){
   closeDropdown();
   document.getElementById("spinner").classList.add("visible");
   try{
-    const movie = await apiCall("getMovieDetails", { id });
+    const d=await (await fetch(`${TMDB}/movie/${id}?api_key=${CONFIG.TMDB_KEY}&append_to_response=credits`)).json();
+    const director=(d.credits?.crew||[]).find(c=>c.job==="Director");
+    let rt=null,imdb=null;
+    if(CONFIG.OMDB_KEY){
+      try{
+        const o=await (await fetch(`${OMDB}/?apikey=${CONFIG.OMDB_KEY}&t=${encodeURIComponent(d.title)}&y=${(d.release_date||"").slice(0,4)}&tomatoes=true`)).json();
+        // Try Ratings array first (most reliable), then fallback fields
+        const rtEntry = (o.Ratings||[]).find(r=>r.Source==="Rotten Tomatoes");
+        const rtCritics = rtEntry ? rtEntry.Value : null;
+        const rtAudience = o.tomatoUserMeter ? o.tomatoUserMeter+"%" : (o.tomatoUserRating ? o.tomatoUserRating+"%" : null);
+        // Prefer audience score, fall back to critics if no audience available
+        rt = rtAudience && rtAudience !== "N/A%" ? rtAudience : (rtCritics && rtCritics !== "N/A%" ? rtCritics+"*" : null);
+        imdb = (o.imdbRating&&o.imdbRating!=="N/A"&&o.imdbRating!=="") ? o.imdbRating : null;
+        if(rt&&rt.includes("N/A")) rt=null;
+      }catch(e){}
+    }
+    const movie={
+      id:d.id, title:d.title, year:(d.release_date||"").slice(0,4),
+      director:director?.name||"", rt, imdb,
+      poster:d.poster_path||"",
+      genres:(d.genres||[]).map(g=>g.name),
+    };
+    // Check if this movie has already been rated by current user
     await checkAlreadyRated(movie);
   }catch(e){console.error(e);}
   document.getElementById("spinner").classList.remove("visible");
@@ -1122,7 +1847,8 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 async function prefetchRatings(){
   if(!CONFIG.GAS_URL || !currentUser) return;
   try{
-    const data = await apiCall("getRatings", { token: sessionToken });
+    const res = await fetch(`${CONFIG.GAS_URL}?action=getRatings&user=${encodeURIComponent(currentUser.name)}&t=${Date.now()}`);
+    const data = await res.json().catch(()=>[]);
     if(Array.isArray(data)){
       _ratingsCache = data;
       _ratingsCacheTime = Date.now();
@@ -1146,7 +1872,12 @@ async function checkAlreadyRated(movie){
     // Either way, never leave the user staring at a spinner
     document.getElementById("spinner").classList.add("visible");
     try{
-      const fetchPromise = apiCall("getRatings", { token: sessionToken }).catch(()=>null);
+      const fetchPromise = fetch(
+        `${CONFIG.GAS_URL}?action=getRatings&user=${encodeURIComponent(currentUser.name)}&t=${Date.now()}`
+      ).then(r=>r.text()).then(text=>{
+        if(!text||text.trim().startsWith("<")) return null;
+        return JSON.parse(text);
+      }).catch(()=>null);
 
       const timeoutPromise = new Promise(res=>setTimeout(()=>res(null), 4000));
 
@@ -1402,14 +2133,14 @@ function pushToSheets(raw100, g, overallNote, today){
     emotional:    quickMode?"":scores.emotional||"",    emotionalGrade:quickMode?"":grade(scores.emotional||0),emotionalNotes:quickMode?"":notes.emotional||"",
     notes: overallNote,
   };
-  apiCall("saveRating", { token: sessionToken, payload: row })
+  fetch(CONFIG.GAS_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"application/json"},body:JSON.stringify(row)})
     .then(()=>{
       const el=document.getElementById("sheet-msg");
       el.textContent="✓ Added to Google Sheets"; el.className="sheet-msg";
     })
-    .catch((e)=>{
+    .catch(()=>{
       const el=document.getElementById("sheet-msg");
-      el.textContent=e.message || "Sheets sync failed"; el.className="sheet-msg err";
+      el.textContent="⚠ Sheets sync failed"; el.className="sheet-msg err";
     });
 }
 
@@ -1421,10 +2152,12 @@ async function loadRankReveal(){
   if(!CONFIG.GAS_URL||!currentUser) return;
   try{
     // Fetch personal ratings + summary tab in parallel
-    const [ratings, summary] = await Promise.all([
-      apiCall("getRatings", { token: sessionToken }),
-      apiCall("getSummary", { token: sessionToken })
+    const [personalRes, summaryRes] = await Promise.all([
+      fetch(`${CONFIG.GAS_URL}?action=getRatings&user=${encodeURIComponent(currentUser.name)}`),
+      fetch(`${CONFIG.GAS_URL}?action=getSummary`)
     ]);
+    const ratings = await personalRes.json().catch(()=>[]);
+    const summary = await summaryRes.json().catch(()=>null);
 
     if(!ratings||!ratings.length) return;
 
@@ -1477,34 +2210,78 @@ async function loadRankReveal(){
 }
 
 // ── STATS PAGE ────────────────────────────────────────────────
+// ── STATS STATE ──────────────────────────────────────────────────
+let _statsData = { ratings: null, summary: null };
+let _statsTab = 'my';
+let _scoreMode = localStorage.getItem('cf_score_mode') || '10'; // '10' or 'raw'
+
+function switchStatsTab(tab){
+  _statsTab = tab;
+  ['my','group','h2h'].forEach(t=>{
+    document.getElementById('tab-'+t).classList.toggle('active', t===tab);
+  });
+  renderCurrentTab();
+}
+
+function setScoreMode(mode){
+  _scoreMode = mode;
+  localStorage.setItem('cf_score_mode', mode);
+  document.querySelectorAll('.score-mode-btn').forEach(b=>{
+    b.classList.toggle('active', b.dataset.mode===mode);
+  });
+  renderMyStats(_statsData.ratings, _statsData.summary);
+}
+
+function getScore(r){
+  if(_scoreMode==='raw') return parseFloat(r["Raw /100"]||0);
+  return parseFloat(r["Score /10"]||0);
+}
+function fmtScore(s){
+  if(_scoreMode==='raw') return s.toFixed(1);
+  return s.toFixed(1);
+}
+function scoreLabel(){ return _scoreMode==='raw' ? '/100' : '/10'; }
+
 async function goStats(){
   showScreen("stats");
   const content=document.getElementById("stats-content");
   if(!CONFIG.GAS_URL||!currentUser){
-    content.innerHTML=`<div class="stats-empty">Log in to see your stats.<br><br><button class="btn-pri" onclick="promptAdminPin()">Go to Settings →</button></div>`;
+    content.innerHTML=`<div class="stats-empty">Connect Google Sheets and log in to see your stats.<br><br><button class="btn-pri" onclick="promptAdminPin()">Go to Settings →</button></div>`;
     return;
   }
   content.innerHTML=`<div class="stats-loading">Loading your ratings...</div>`;
   try{
-    const [ratings, summary] = await Promise.all([
-      apiCall("getRatings", { token: sessionToken }),
-      apiCall("getSummary", { token: sessionToken })
+    const [personalRes, summaryRes] = await Promise.all([
+      fetch(`${CONFIG.GAS_URL}?action=getRatings&user=${encodeURIComponent(currentUser.name)}`),
+      fetch(`${CONFIG.GAS_URL}?action=getSummary`)
     ]);
+    const ratings = await personalRes.json();
+    const summary = await summaryRes.json().catch(()=>null);
     if(!ratings||!ratings.length){
       content.innerHTML=`<div class="stats-empty">No ratings yet for ${currentUser.name}. Rate your first film!</div>`;
       return;
     }
-    renderStats(ratings, summary, content);
+    _statsData = {ratings, summary};
+    renderCurrentTab();
   }catch(e){
-    content.innerHTML=`<div class="stats-empty">Could not load ratings. Try logging in again.</div>`;
+    content.innerHTML=`<div class="stats-empty">Could not load ratings. Check your GAS URL in Settings.</div>`;
   }
 }
 
-function renderStats(ratings, summary, container){
-  const scores10=ratings.map(r=>parseFloat(r["Score /10"]||0)).filter(s=>s>0);
-  const avg=(scores10.reduce((a,b)=>a+b,0)/scores10.length)||0;
+function renderCurrentTab(){
+  if(_statsTab==='my')    renderMyStats(_statsData.ratings, _statsData.summary);
+  if(_statsTab==='group') renderGroupStats(_statsData.summary);
+  if(_statsTab==='h2h')   renderH2H(_statsData.summary);
+}
 
-  // Grade distribution
+// ── MY STATS TAB ──────────────────────────────────────────────────
+function renderMyStats(ratings, summary){
+  const container = document.getElementById('stats-content');
+  const useRaw = _scoreMode==='raw';
+
+  const scoreVals = ratings.map(r=>useRaw ? parseFloat(r["Raw /100"]||0) : parseFloat(r["Score /10"]||0)).filter(s=>s>0);
+  const avg = (scoreVals.reduce((a,b)=>a+b,0)/scoreVals.length)||0;
+
   const GRADES=["A+","A","A-","B+","B","B-","C+","C","C-","D+","D","F"];
   const gradeCounts={};
   GRADES.forEach(g=>gradeCounts[g]=0);
@@ -1514,7 +2291,6 @@ function renderStats(ratings, summary, container){
   });
   const maxGrade=Math.max(...Object.values(gradeCounts),1);
 
-  // Category averages
   const catFields={
     "Plot & Concept":"Plot","Entertainment Value":"Entertainment",
     "Acting & Characters":"Acting","Visuals & Production":"Visuals",
@@ -1526,20 +2302,30 @@ function renderStats(ratings, summary, container){
     catAvgs[label]=vals.length?(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1):"—";
   });
 
-  // Top 5 + Recent 5
-  const sorted=[...ratings].sort((a,b)=>parseFloat(b["Score /10"]||0)-parseFloat(a["Score /10"]||0));
+  const sorted=[...ratings].sort((a,b)=>{
+    const aS = useRaw ? parseFloat(b["Raw /100"]||0) : parseFloat(b["Score /10"]||0);
+    const bS = useRaw ? parseFloat(a["Raw /100"]||0) : parseFloat(a["Score /10"]||0);
+    return aS - bS;
+  });
   const top5=sorted.slice(0,5);
   const recent5=[...ratings].slice(-5).reverse();
+  const scoreL = scoreLabel();
 
   container.innerHTML=`
+    <!-- Score mode toggle -->
+    <div class="score-mode-toggle">
+      <button class="score-mode-btn ${_scoreMode==='10'?'active':''}" data-mode="10" onclick="setScoreMode('10')">/10 Score</button>
+      <button class="score-mode-btn ${_scoreMode==='raw'?'active':''}" data-mode="raw" onclick="setScoreMode('raw')">Raw /100</button>
+    </div>
+
     <!-- Overview -->
     <div class="stats-section">
-      <div class="stats-section-title">Overview — ${currentUser.name}</div>
+      <div class="stats-section-title">Overview — ${escHtml(currentUser.name)}</div>
       <div class="stats-grid">
         <div class="stat-card"><div class="stat-card-num">${ratings.length}</div><div class="stat-card-lbl">Films Rated</div></div>
-        <div class="stat-card"><div class="stat-card-num">${avg.toFixed(1)}</div><div class="stat-card-lbl">Average Score /10</div></div>
-        <div class="stat-card"><div class="stat-card-num">${sorted[0]?parseFloat(sorted[0]["Score /10"]).toFixed(1):"—"}</div><div class="stat-card-lbl">Highest Rating</div></div>
-        <div class="stat-card"><div class="stat-card-num">${sorted[sorted.length-1]?parseFloat(sorted[sorted.length-1]["Score /10"]).toFixed(1):"—"}</div><div class="stat-card-lbl">Lowest Rating</div></div>
+        <div class="stat-card"><div class="stat-card-num">${avg.toFixed(useRaw?1:1)}</div><div class="stat-card-lbl">Avg ${scoreL}</div></div>
+        <div class="stat-card"><div class="stat-card-num">${sorted[0] ? (useRaw?parseFloat(sorted[0]["Raw /100"]):parseFloat(sorted[0]["Score /10"])).toFixed(1) : "—"}</div><div class="stat-card-lbl">Highest</div></div>
+        <div class="stat-card"><div class="stat-card-num">${sorted[sorted.length-1] ? (useRaw?parseFloat(sorted[sorted.length-1]["Raw /100"]):parseFloat(sorted[sorted.length-1]["Score /10"])).toFixed(1) : "—"}</div><div class="stat-card-lbl">Lowest</div></div>
       </div>
     </div>
 
@@ -1550,9 +2336,7 @@ function renderStats(ratings, summary, container){
         ${GRADES.map(g=>`
           <div class="grade-bar-row">
             <div class="grade-bar-label">${g}</div>
-            <div class="grade-bar-track">
-              <div class="grade-bar-fill" style="width:${Math.round((gradeCounts[g]/maxGrade)*100)}%"></div>
-            </div>
+            <div class="grade-bar-track"><div class="grade-bar-fill" style="width:${Math.round((gradeCounts[g]/maxGrade)*100)}%"></div></div>
             <div class="grade-bar-count">${gradeCounts[g]}</div>
           </div>`).join("")}
       </div>
@@ -1565,21 +2349,21 @@ function renderStats(ratings, summary, container){
         ${top5.map((r,i)=>`
           <div class="film-row">
             <div class="film-row-rank">#${i+1}</div>
-            <div class="film-row-title">${escHtml(r["Title"]||"")}</div>
+            <div class="film-row-title">${escHtml(String(r["Title"]||""))}</div>
             <div class="film-row-year">${r["Year"]||""}</div>
-            <div class="film-row-score">${parseFloat(r["Score /10"]||0).toFixed(1)}</div>
+            <div class="film-row-score">${(useRaw?parseFloat(r["Raw /100"]||0):parseFloat(r["Score /10"]||0)).toFixed(1)}</div>
           </div>`).join("")}
       </div>
       <button class="view-all-btn" onclick="toggleAllRatings(this)">View All ${ratings.length} Ratings ↓</button>
       <div class="all-ratings-wrap" id="all-ratings-wrap">
-        <div class="all-ratings-count">${ratings.length} films rated · sorted best to worst</div>
+        <div class="all-ratings-count">${ratings.length} films · best to worst · showing ${scoreL}</div>
         <div class="film-list">
           ${sorted.map((r,i)=>`
             <div class="film-row">
               <div class="film-row-rank">#${i+1}</div>
-              <div class="film-row-title">${escHtml(r["Title"]||"")}</div>
+              <div class="film-row-title">${escHtml(String(r["Title"]||""))}</div>
               <div class="film-row-year">${r["Year"]||""}</div>
-              <div class="film-row-score">${parseFloat(r["Score /10"]||0).toFixed(1)}</div>
+              <div class="film-row-score">${(useRaw?parseFloat(r["Raw /100"]||0):parseFloat(r["Score /10"]||0)).toFixed(1)}</div>
             </div>`).join("")}
         </div>
       </div>
@@ -1591,9 +2375,9 @@ function renderStats(ratings, summary, container){
       <div class="film-list">
         ${recent5.map(r=>`
           <div class="film-row">
-            <div class="film-row-title">${escHtml(r["Title"]||"")}</div>
+            <div class="film-row-title">${escHtml(String(r["Title"]||""))}</div>
             <div class="film-row-year">${r["Year"]||""}</div>
-            <div class="film-row-score">${parseFloat(r["Score /10"]||0).toFixed(1)}</div>
+            <div class="film-row-score">${(useRaw?parseFloat(r["Raw /100"]||0):parseFloat(r["Score /10"]||0)).toFixed(1)}</div>
           </div>`).join("")}
       </div>
     </div>
@@ -1605,40 +2389,310 @@ function renderStats(ratings, summary, container){
         ${Object.entries(catAvgs).map(([label,val])=>`
           <div class="cat-bar-row">
             <div class="cat-bar-label">${label}</div>
-            <div class="cat-bar-track">
-              <div class="cat-bar-fill" style="width:${val==="—"?0:val}%"></div>
-            </div>
+            <div class="cat-bar-track"><div class="cat-bar-fill" style="width:${val==="—"?0:val}%"></div></div>
             <div class="cat-bar-val">${val}</div>
+          </div>`).join("")}
+      </div>
+    </div>`;
+}
+
+// ── GROUP TAB ─────────────────────────────────────────────────────
+function renderGroupStats(summary){
+  const container = document.getElementById('stats-content');
+  if(!summary||!summary.rows||!summary.rows.length){
+    container.innerHTML=`<div class="stats-empty">No group data yet. Rate some films with your friends!</div>`;
+    return;
+  }
+
+  const rated = summary.rows.filter(r=>r.scores&&r.scores.length>=2);
+  if(!rated.length){
+    container.innerHTML=`<div class="stats-empty">No films rated by multiple people yet.</div>`;
+    return;
+  }
+
+  // Sort by group average
+  const sorted = [...rated].sort((a,b)=>{
+    const aAvg=a.scores.reduce((x,y)=>x+y,0)/a.scores.length;
+    const bAvg=b.scores.reduce((x,y)=>x+y,0)/b.scores.length;
+    return bAvg-aAvg;
+  });
+
+  // Group averages per user
+  const userTotals={};
+  summary.rows.forEach(r=>{
+    if(r.userScores) Object.entries(r.userScores).forEach(([u,s])=>{
+      if(!userTotals[u]) userTotals[u]={sum:0,count:0};
+      userTotals[u].sum+=parseFloat(s)||0;
+      userTotals[u].count++;
+    });
+  });
+  const userAvgs = Object.entries(userTotals)
+    .map(([u,d])=>({name:u, avg:(d.sum/d.count).toFixed(2)}))
+    .sort((a,b)=>parseFloat(b.avg)-parseFloat(a.avg));
+
+  // Variance calc for consensus/controversy
+  function variance(scores){
+    const mean=scores.reduce((a,b)=>a+b,0)/scores.length;
+    return scores.reduce((s,x)=>s+Math.pow(x-mean,2),0)/scores.length;
+  }
+
+  const withVar = rated.map(r=>({...r, var:variance(r.scores)}));
+  const mostControversial = [...withVar].sort((a,b)=>b.var-a.var).slice(0,5);
+  const mostConsensus = [...withVar].filter(r=>r.scores.length>=2).sort((a,b)=>a.var-b.var).slice(0,5);
+
+  // Get all users from summary headers
+  const allUsers = [...new Set(summary.rows.flatMap(r=>Object.keys(r.userScores||{})))];
+
+  container.innerHTML=`
+    <!-- Group member averages -->
+    <div class="stats-section">
+      <div class="stats-section-title">Average Rating by Person</div>
+      <div class="stats-grid">
+        ${userAvgs.map(u=>`
+          <div class="stat-card">
+            <div class="stat-card-num">${u.avg}</div>
+            <div class="stat-card-lbl">${escHtml(u.name)}</div>
           </div>`).join("")}
       </div>
     </div>
 
-    <!-- Group Stats -->
-    ${summary && summary.rows && summary.rows.length ? `
+    <!-- Group Rankings table -->
     <div class="stats-section">
-      <div class="stats-section-title">Group Rankings</div>
-      <div class="film-list">
-        ${[...summary.rows]
-          .filter(r=>r.scores&&r.scores.length>0)
-          .sort((a,b)=>{
-            const aAvg=a.scores.reduce((x,y)=>x+y,0)/a.scores.length;
-            const bAvg=b.scores.reduce((x,y)=>x+y,0)/b.scores.length;
-            return bAvg-aAvg;
-          })
-          .slice(0,10)
-          .map((r,i)=>{
-            const avg=(r.scores.reduce((x,y)=>x+y,0)/r.scores.length).toFixed(1);
-            const myEntry=r.userScores&&r.userScores[currentUser.name];
-            const myStr=myEntry?parseFloat(myEntry).toFixed(1):"—";
-            return `<div class="film-row">
-              <div class="film-row-rank">#${i+1}</div>
-              <div class="film-row-title">${escHtml(r.Title||"")}</div>
-              <div class="film-row-year" style="color:#5a9a5a">Avg: ${avg}</div>
-              <div class="film-row-score" style="font-size:14px;color:#5aaa5a">You: ${myStr}</div>
-            </div>`;
-          }).join("")}
+      <div class="stats-section-title">Group Rankings — ${sorted.length} Films</div>
+      <div style="overflow-x:auto">
+        <table class="group-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Film</th>
+              <th class="tc">Group Avg</th>
+              ${allUsers.map(u=>`<th class="tc">${escHtml(u)}</th>`).join("")}
+            </tr>
+          </thead>
+          <tbody>
+            ${sorted.map((r,i)=>{
+              const avg=(r.scores.reduce((x,y)=>x+y,0)/r.scores.length).toFixed(1);
+              return `<tr>
+                <td style="color:#3d6a3d;font-family:'Bebas Neue',sans-serif;font-size:16px">#${i+1}</td>
+                <td class="film-title-cell">${escHtml(String(r.Title||""))}<br><span style="font-size:11px;color:#3d6a3d;font-weight:normal">${r.Year||""}</span></td>
+                <td class="tc" style="color:#ffffff;font-size:20px">${avg}</td>
+                ${allUsers.map(u=>{
+                  const s=r.userScores&&r.userScores[u];
+                  return s ? `<td class="tc">${parseFloat(s).toFixed(1)}</td>`
+                           : `<td class="tc empty">—</td>`;
+                }).join("")}
+              </tr>`;
+            }).join("")}
+          </tbody>
+        </table>
       </div>
-    </div>` : ""}`;
+    </div>
+
+    <!-- Most Controversial -->
+    <div class="stats-section">
+      <div class="stats-section-title">🔥 Most Controversial</div>
+      <div class="film-list">
+        ${mostControversial.map(r=>{
+          const avg=(r.scores.reduce((x,y)=>x+y,0)/r.scores.length).toFixed(1);
+          const spread=(Math.max(...r.scores)-Math.min(...r.scores)).toFixed(1);
+          return `<div class="film-row">
+            <div class="film-row-title">${escHtml(String(r.Title||""))}</div>
+            <div class="film-row-year">Avg ${avg}</div>
+            <div class="film-row-score" style="font-size:13px;color:#d08040">±${spread}</div>
+          </div>`;
+        }).join("")}
+      </div>
+    </div>
+
+    <!-- Most Consensus -->
+    <div class="stats-section">
+      <div class="stats-section-title">🤝 Most Agreement</div>
+      <div class="film-list">
+        ${mostConsensus.map(r=>{
+          const avg=(r.scores.reduce((x,y)=>x+y,0)/r.scores.length).toFixed(1);
+          const spread=(Math.max(...r.scores)-Math.min(...r.scores)).toFixed(1);
+          return `<div class="film-row">
+            <div class="film-row-title">${escHtml(String(r.Title||""))}</div>
+            <div class="film-row-year">Avg ${avg}</div>
+            <div class="film-row-score" style="font-size:13px;color:#4a9a4a">±${spread}</div>
+          </div>`;
+        }).join("")}
+      </div>
+    </div>`;
+}
+
+// ── HEAD TO HEAD TAB ──────────────────────────────────────────────
+function renderH2H(summary){
+  const container = document.getElementById('stats-content');
+  if(!summary||!summary.rows||!summary.rows.length){
+    container.innerHTML=`<div class="stats-empty">No group data available.</div>`;
+    return;
+  }
+
+  const allUsers = [...new Set(summary.rows.flatMap(r=>Object.keys(r.userScores||{})))];
+  if(allUsers.length<2){
+    container.innerHTML=`<div class="stats-empty">Need at least 2 users with ratings for head to head.</div>`;
+    return;
+  }
+
+  const u1 = allUsers[0];
+  const u2 = allUsers[1];
+
+  container.innerHTML=`
+    <div class="h2h-select-row">
+      <select class="h2h-select" id="h2h-user1" onchange="updateH2H()">
+        ${allUsers.map(u=>`<option value="${escHtml(u)}" ${u===u1?'selected':''}>${escHtml(u)}</option>`).join("")}
+      </select>
+      <div class="h2h-vs">VS</div>
+      <select class="h2h-select" id="h2h-user2" onchange="updateH2H()">
+        ${allUsers.map(u=>`<option value="${escHtml(u)}" ${u===u2?'selected':''}>${escHtml(u)}</option>`).join("")}
+      </select>
+    </div>
+    <div id="h2h-results"></div>`;
+
+  updateH2H();
+}
+
+function updateH2H(){
+  const u1 = document.getElementById('h2h-user1')?.value;
+  const u2 = document.getElementById('h2h-user2')?.value;
+  const results = document.getElementById('h2h-results');
+  if(!results||!u1||!u2||u1===u2){
+    if(results) results.innerHTML=`<div class="stats-empty">Please select two different users.</div>`;
+    return;
+  }
+
+  const summary = _statsData.summary;
+  if(!summary) return;
+
+  // Films both have rated
+  const both = summary.rows.filter(r=>
+    r.userScores && r.userScores[u1]!=null && r.userScores[u2]!=null
+  );
+
+  if(!both.length){
+    results.innerHTML=`<div class="stats-empty">No films rated by both ${escHtml(u1)} and ${escHtml(u2)} yet.</div>`;
+    return;
+  }
+
+  const s1 = both.map(r=>parseFloat(r.userScores[u1]));
+  const s2 = both.map(r=>parseFloat(r.userScores[u2]));
+  const avg1 = (s1.reduce((a,b)=>a+b,0)/s1.length).toFixed(2);
+  const avg2 = (s2.reduce((a,b)=>a+b,0)/s2.length).toFixed(2);
+  const u1Higher = both.filter(r=>parseFloat(r.userScores[u1])>parseFloat(r.userScores[u2])).length;
+  const u2Higher = both.filter(r=>parseFloat(r.userScores[u2])>parseFloat(r.userScores[u1])).length;
+  const tied     = both.length - u1Higher - u2Higher;
+
+  // Sort by biggest disagreement
+  const byDiff = [...both].sort((a,b)=>{
+    return Math.abs(parseFloat(b.userScores[u2])-parseFloat(b.userScores[u1]))
+         - Math.abs(parseFloat(a.userScores[u2])-parseFloat(a.userScores[u1]));
+  });
+
+  // Sort by both agreeing (low diff, both rated similarly)
+  const byAgreement = [...both].sort((a,b)=>{
+    return Math.abs(parseFloat(a.userScores[u2])-parseFloat(a.userScores[u1]))
+         - Math.abs(parseFloat(b.userScores[u2])-parseFloat(b.userScores[u1]));
+  });
+
+  results.innerHTML=`
+    <!-- Summary stats -->
+    <div class="h2h-stat-row">
+      <div class="h2h-stat">
+        <div class="h2h-stat-num">${avg1}</div>
+        <div class="h2h-stat-lbl">${escHtml(u1)} avg</div>
+      </div>
+      <div class="h2h-stat">
+        <div class="h2h-stat-num">${both.length}</div>
+        <div class="h2h-stat-lbl">Films both rated</div>
+      </div>
+      <div class="h2h-stat">
+        <div class="h2h-stat-num">${avg2}</div>
+        <div class="h2h-stat-lbl">${escHtml(u2)} avg</div>
+      </div>
+    </div>
+    <div class="h2h-stat-row">
+      <div class="h2h-stat">
+        <div class="h2h-stat-num">${u1Higher}</div>
+        <div class="h2h-stat-lbl">${escHtml(u1)} rated higher</div>
+      </div>
+      <div class="h2h-stat">
+        <div class="h2h-stat-num">${tied}</div>
+        <div class="h2h-stat-lbl">Tied</div>
+      </div>
+      <div class="h2h-stat">
+        <div class="h2h-stat-num">${u2Higher}</div>
+        <div class="h2h-stat-lbl">${escHtml(u2)} rated higher</div>
+      </div>
+    </div>
+
+    <!-- Biggest disagreements -->
+    <div class="stats-section">
+      <div class="stats-section-title">🔥 Biggest Disagreements</div>
+      <div class="film-list">
+        ${byDiff.slice(0,8).map(r=>{
+          const sc1=parseFloat(r.userScores[u1]).toFixed(1);
+          const sc2=parseFloat(r.userScores[u2]).toFixed(1);
+          const diff=Math.abs(parseFloat(r.userScores[u1])-parseFloat(r.userScores[u2])).toFixed(1);
+          return `<div class="film-row">
+            <div class="film-row-title">${escHtml(String(r.Title||""))}</div>
+            <div class="film-row-year" style="color:#5a8a5a;font-size:12px">${escHtml(u1)}: ${sc1} · ${escHtml(u2)}: ${sc2}</div>
+            <div class="film-row-score" style="color:#d08040;font-size:14px">Δ${diff}</div>
+          </div>`;
+        }).join("")}
+      </div>
+    </div>
+
+    <!-- Most agreement -->
+    <div class="stats-section">
+      <div class="stats-section-title">🤝 Most Agreement</div>
+      <div class="film-list">
+        ${byAgreement.slice(0,8).map(r=>{
+          const sc1=parseFloat(r.userScores[u1]).toFixed(1);
+          const sc2=parseFloat(r.userScores[u2]).toFixed(1);
+          return `<div class="film-row">
+            <div class="film-row-title">${escHtml(String(r.Title||""))}</div>
+            <div class="film-row-year" style="color:#5a8a5a;font-size:12px">${escHtml(u1)}: ${sc1} · ${escHtml(u2)}: ${sc2}</div>
+            <div class="film-row-score" style="color:#4a9a4a;font-size:14px">${sc1}</div>
+          </div>`;
+        }).join("")}
+      </div>
+    </div>
+
+    <!-- Full comparison table -->
+    <div class="stats-section">
+      <div class="stats-section-title">All ${both.length} Films Both Rated</div>
+      <div style="overflow-x:auto">
+        <table class="group-table">
+          <thead>
+            <tr>
+              <th>Film</th>
+              <th class="tc">${escHtml(u1)}</th>
+              <th class="tc">${escHtml(u2)}</th>
+              <th class="tc">Diff</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${[...both].sort((a,b)=>{
+              const aAvg=(parseFloat(a.userScores[u1])+parseFloat(a.userScores[u2]))/2;
+              const bAvg=(parseFloat(b.userScores[u1])+parseFloat(b.userScores[u2]))/2;
+              return bAvg-aAvg;
+            }).map(r=>{
+              const sc1=parseFloat(r.userScores[u1]).toFixed(1);
+              const sc2=parseFloat(r.userScores[u2]).toFixed(1);
+              const diff=(parseFloat(r.userScores[u1])-parseFloat(r.userScores[u2])).toFixed(1);
+              const diffColor=parseFloat(diff)>0?'#4a9a4a':parseFloat(diff)<0?'#d08040':'#3d6a3d';
+              return `<tr>
+                <td class="film-title-cell">${escHtml(String(r.Title||""))}</td>
+                <td class="tc">${sc1}</td>
+                <td class="tc">${sc2}</td>
+                <td class="tc" style="color:${diffColor};font-size:14px">${parseFloat(diff)>0?'+':''}${diff}</td>
+              </tr>`;
+            }).join("")}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
 }
 
 // ── TOGGLE ALL RATINGS ───────────────────────────────────────────
@@ -1956,6 +3010,866 @@ function showImageOverlay(dataUrl){
   document.body.appendChild(overlay);
 }
 
+// ══════════════════════════════════════════════════════════════
+//  LE GUIDE — RESTAURANT RATING SYSTEM
+// ══════════════════════════════════════════════════════════════
+
+// ── LE GUIDE STATE ────────────────────────────────────────────
+let lgMode = false;          // are we in Le Guide mode?
+let lgQuickMode = false;     // quick rating within Le Guide
+let lgCurrentPlace = null;   // selected restaurant
+let lgScores = {};
+let lgNotes = {};
+let lgChosenScore10 = null;
+let lgRatingDate = "";
+let _lgRatingsCache = null;
+let _lgRatingsCacheTime = 0;
+let _lgStatsTab = 'my';
+let _lgStatsData = { ratings: null, summary: null };
+
+// ── MICHELIN STAR SVG ─────────────────────────────────────────
+function starSVG(filled){
+  const color = filled ? '#C8A45A' : 'rgba(200,164,90,0.25)';
+  return `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+      fill="${color}" stroke="${filled?'#8B6914':'rgba(200,164,90,0.2)'}" stroke-width="0.5"/>
+  </svg>`;
+}
+
+function renderStars(score10){
+  const stars = score10 / 2; // 0-10 → 0-5
+  const full  = Math.floor(stars);
+  const half  = stars - full >= 0.5 ? 1 : 0;
+  const empty = 5 - full - half;
+  let html = '';
+  for(let i=0;i<full;i++)  html += starSVG(true);
+  if(half) html += starSVG(false).replace('rgba(200,164,90,0.25)','url(#half)');
+  // use half-filled SVG
+  if(half){
+    html = html.slice(0, html.lastIndexOf(starSVG(false).replace('rgba(200,164,90,0.25)','url(#half)')));
+    html += `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <defs><linearGradient id="hg"><stop offset="50%" stop-color="#C8A45A"/><stop offset="50%" stop-color="rgba(200,164,90,0.25)"/></linearGradient></defs>
+      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+        fill="url(#hg)" stroke="#8B6914" stroke-width="0.5"/></svg>`;
+  }
+  for(let i=0;i<empty;i++) html += starSVG(false);
+  return html;
+}
+
+// ── NAV MODE SWITCH ───────────────────────────────────────────
+function setLgMode(on){
+  lgMode = on;
+  const nav = document.getElementById('main-nav');
+  const filmLinks = document.getElementById('nav-film-links');
+  const lgLinks   = document.getElementById('nav-lg-links');
+  if(on){
+    nav.classList.add('lg-mode');
+    filmLinks.style.display = 'none';
+    lgLinks.style.display   = 'flex';
+    document.getElementById('nav-logo-text').textContent = 'Le Guide';
+  } else {
+    nav.classList.remove('lg-mode');
+    filmLinks.style.display = 'flex';
+    lgLinks.style.display   = 'none';
+    document.getElementById('nav-logo-text').textContent = 'Cine-file';
+  }
+}
+
+// ── START RATING (override for restaurant) ────────────────────
+const _origStartRating = typeof startRating === 'function' ? startRating : null;
+
+function startRating(mode){
+  pendingMode = mode;
+  if(mode === 'restaurant'){
+    CATS = RESTAURANT_CATS;
+    setLgMode(true);
+    // Check login
+    const saved = getSavedUser();
+    if(saved && getUsers().find(u=>u.name===saved.name&&String(u.pin)===String(saved.pin))){
+      currentUser = saved; updateNavUser();
+      showScreen('lg-search');
+    } else {
+      showScreen('pin');
+      renderPinScreen();
+    }
+    return;
+  }
+  // Film mode
+  CATS = FILM_CATS;
+  setLgMode(false);
+  const saved = getSavedUser();
+  if(saved && getUsers().find(u=>u.name===saved.name&&String(u.pin)===String(saved.pin))){
+    currentUser = saved; updateNavUser();
+    showScreen('search');
+    if(!CONFIG.TMDB_KEY) document.getElementById('setup-notice').style.display='block';
+  } else {
+    showScreen('pin');
+    renderPinScreen();
+  }
+}
+
+function lgGoHome(){
+  lgMode = false; lgQuickMode = false; lgCurrentPlace = null;
+  setLgMode(false);
+  goHome();
+}
+
+// ── LE GUIDE SEARCH ───────────────────────────────────────────
+let lgSearchTimer = null;
+let lgUserLat = null, lgUserLng = null;
+
+// Try to get user location for biasing
+if(navigator.geolocation){
+  navigator.geolocation.getCurrentPosition(pos=>{
+    lgUserLat = pos.coords.latitude;
+    lgUserLng = pos.coords.longitude;
+  }, ()=>{});
+}
+
+document.addEventListener('DOMContentLoaded', ()=>{
+  const inp = document.getElementById('lg-search-input');
+  if(inp){
+    inp.addEventListener('input', function(){
+      const q = this.value.trim();
+      clearTimeout(lgSearchTimer);
+      if(!q){ closeLgDropdown(); return; }
+      document.getElementById('lg-spinner').classList.add('visible');
+      lgSearchTimer = setTimeout(()=>lgDoSearch(q), 350);
+    });
+    inp.addEventListener('blur', ()=>setTimeout(closeLgDropdown, 160));
+  }
+});
+
+async function lgDoSearch(q){
+  try{
+    const body = { action:'searchRestaurants', query:q };
+    if(lgUserLat) { body.lat = lgUserLat; body.lng = lgUserLng; }
+    const res = await lgCall(body);
+    if(res && res.results) lgRenderDropdown(res.results);
+  }catch(e){ console.error('Restaurant search failed:', e); }
+  document.getElementById('lg-spinner').classList.remove('visible');
+}
+
+function lgRenderDropdown(results){
+  const dd = document.getElementById('lg-dropdown');
+  if(!results.length){ dd.classList.remove('open'); return; }
+  dd.innerHTML = results.map(r=>`
+    <button class="lg-drop-item" onmousedown="lgPickPlace('${escHtml(JSON.stringify(r).replace(/'/g,"\'"))}')">
+      ${r.photo ? `<img class="lg-drop-photo" src="${escHtml(r.photo)}" alt="" onerror="this.style.display='none'">` : '<div class="lg-drop-photo"></div>'}
+      <div>
+        <div class="lg-drop-name">${escHtml(r.name)}</div>
+        <div class="lg-drop-addr">${escHtml(r.address||'')}</div>
+        <div class="lg-drop-meta">${escHtml(r.cuisine||'')}${r.price?' · '+r.price:''}${r.rating?' · ⭐'+r.rating:''}</div>
+      </div>
+    </button>`).join('');
+  dd.classList.add('open');
+}
+
+function closeLgDropdown(){ document.getElementById('lg-dropdown').classList.remove('open'); }
+
+async function lgPickPlace(jsonStr){
+  closeLgDropdown();
+  let place;
+  try{ place = JSON.parse(jsonStr); }catch(e){ return; }
+  lgCurrentPlace = place;
+  document.getElementById('lg-search-input').value = '';
+
+  // Check already rated
+  await lgCheckAlreadyRated(place);
+}
+
+function lgToggleQuick(on){ lgQuickMode = on; }
+
+// ── LOAD RESTAURANT INTO SCORE SCREEN ─────────────────────────
+function lgLoadPlace(place){
+  lgCurrentPlace = place;
+  lgScores = {}; lgNotes = {};
+
+  document.getElementById('lg-score-name').textContent = place.name;
+  document.getElementById('lg-score-meta').innerHTML = [
+    place.address && `<span>${escHtml(place.address)}</span>`,
+    place.cuisine && `<span>${escHtml(place.cuisine)}</span>`,
+    place.price   && `<span>${escHtml(place.price)}</span>`,
+    place.rating  && `<span>Google: ⭐${place.rating}</span>`,
+  ].filter(Boolean).join(' · ');
+
+  const photo = document.getElementById('lg-score-photo');
+  if(place.photo){ photo.src=place.photo; photo.style.display='block'; }
+  else photo.style.display='none';
+
+  // Build scorer rows
+  document.getElementById('lg-scorer-body').innerHTML = RESTAURANT_CATS.map(c=>`
+    <tr>
+      <td class="td-cat" style="color:#c8d0c0">${c.label}</td>
+      <td class="tc td-wt" style="color:#8a4a4a">${Math.round(c.w*100)}%</td>
+      <td class="td-prompt" style="color:#6a3a3a">${c.prompt}</td>
+      <td class="tc">
+        <input class="lg-score-inp" id="lg-inp-${c.id}" type="number" min="0" max="100"
+          placeholder="—" oninput="lgUpdateTotal()"/>
+      </td>
+      <td class="tc td-grade" id="lg-grade-${c.id}" style="color:#4a2a2a">—</td>
+      <td><textarea class="lg-note-inp" id="lg-note-${c.id}" rows="2" placeholder="Optional..."></textarea></td>
+    </tr>`).join('');
+
+  document.getElementById('lg-overall-note').value = '';
+  document.getElementById('lg-total-num').textContent = '0.00';
+  document.getElementById('lg-total-grade').textContent = '—';
+
+  if(lgQuickMode){
+    document.getElementById('lg-quick-name').textContent = place.name;
+    document.getElementById('lg-quick-sub').textContent =
+      [place.address, place.cuisine, place.price].filter(Boolean).join(' · ');
+    document.getElementById('lg-quick-slider').value = 10;
+    document.getElementById('lg-quick-note').value = '';
+    lgUpdateQuick(10);
+    showScreen('lg-quick');
+  } else {
+    showScreen('lg-score');
+  }
+}
+
+function lgUpdateTotal(){
+  RESTAURANT_CATS.forEach(c=>{
+    const v = document.getElementById('lg-inp-'+c.id)?.value;
+    const el = document.getElementById('lg-grade-'+c.id);
+    if(v!==''&&v!==null&&!isNaN(v)){
+      el.textContent=grade(v); el.classList.add('lg-grade-filled');
+    } else { el.textContent='—'; el.classList.remove('lg-grade-filled'); }
+  });
+  const t = RESTAURANT_CATS.reduce((s,c)=>s+Number(document.getElementById('lg-inp-'+c.id)?.value||0)*c.w,0);
+  document.getElementById('lg-total-num').textContent = t.toFixed(2);
+  document.getElementById('lg-total-grade').textContent = grade(t);
+}
+
+// ── LE GUIDE ROUNDING ─────────────────────────────────────────
+function lgGoRound(){
+  RESTAURANT_CATS.forEach(c=>{
+    lgScores[c.id] = Number(document.getElementById('lg-inp-'+c.id)?.value||0);
+    lgNotes[c.id]  = document.getElementById('lg-note-'+c.id)?.value||'';
+  });
+  const raw = RESTAURANT_CATS.reduce((s,c)=>s+(lgScores[c.id]||0)*c.w,0);
+  const g   = grade(raw);
+  lgChosenScore10 = null;
+  document.getElementById('lg-round-name').textContent = lgCurrentPlace.name.toUpperCase();
+  document.getElementById('lg-round-raw-num').textContent = raw.toFixed(2);
+  document.getElementById('lg-round-raw-grade').textContent = g;
+  const opts = halfOptions(raw);
+  document.getElementById('lg-round-options').innerHTML = opts.map(o=>`
+    <div class="lg-round-opt" onclick="lgSelectRound(${o}, this)">
+      <div class="lg-round-num">${o.toFixed(1)}</div>
+      <div class="lg-round-lbl">out of 10</div>
+    </div>`).join('');
+  document.getElementById('lg-round-confirm').disabled = true;
+  showScreen('lg-round');
+}
+
+function lgSelectRound(val, el){
+  lgChosenScore10 = val;
+  document.querySelectorAll('.lg-round-opt').forEach(o=>o.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('lg-round-confirm').disabled = false;
+}
+
+function lgConfirmRound(){
+  if(lgChosenScore10===null) return;
+  lgRatingDate = new Date().toISOString().slice(0,10);
+  lgGenerateCard();
+}
+
+// ── QUICK RATING ──────────────────────────────────────────────
+function lgUpdateQuick(val){
+  const score = (parseInt(val)/2).toFixed(1);
+  document.getElementById('lg-quick-display').textContent = score;
+  document.getElementById('lg-quick-grade').textContent = grade(parseFloat(score)*10);
+  const pct = (val/20*100).toFixed(1);
+  document.getElementById('lg-quick-slider').style.setProperty('--pct', pct+'%');
+}
+
+function lgSubmitQuick(){
+  const val = document.getElementById('lg-quick-slider').value;
+  lgChosenScore10 = parseFloat((parseInt(val)/2).toFixed(1));
+  lgScores = {}; lgNotes = {};
+  lgRatingDate = new Date().toISOString().slice(0,10);
+  document.getElementById('lg-overall-note').value = document.getElementById('lg-quick-note').value||'';
+  lgGenerateCard();
+}
+
+function lgGoEditScores(){
+  if(lgQuickMode) showScreen('lg-quick');
+  else showScreen('lg-score');
+}
+
+// ── GENERATE CARD ─────────────────────────────────────────────
+function lgGenerateCard(){
+  const raw = RESTAURANT_CATS.reduce((s,c)=>s+(lgScores[c.id]||0)*c.w,0);
+  const g   = grade(raw);
+  const overallNote = document.getElementById('lg-overall-note')?.value||'';
+  const today = new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+  const stars = lgChosenScore10 / 2;
+
+  // Oval
+  document.getElementById('lg-oval-stars').innerHTML = renderStars(lgChosenScore10);
+  document.getElementById('lg-oval-score').textContent = lgChosenScore10.toFixed(1)+'/10';
+  document.getElementById('lg-oval-grade').textContent = g;
+
+  // Name + sub
+  document.getElementById('lg-card-name').textContent = lgCurrentPlace.name;
+  document.getElementById('lg-card-sub').textContent =
+    [lgCurrentPlace.cuisine, lgCurrentPlace.address].filter(Boolean).join(' · ');
+
+  // Info boxes
+  const boxes = [];
+  if(lgCurrentPlace.rating) boxes.push({val:'⭐ '+lgCurrentPlace.rating, lbl:'Google Rating'});
+  if(lgCurrentPlace.price)  boxes.push({val:lgCurrentPlace.price, lbl:'Price Range'});
+  if(lgCurrentPlace.city)   boxes.push({val:lgCurrentPlace.city, lbl:'Location'});
+  document.getElementById('lg-info-boxes').innerHTML = boxes.map(b=>`
+    <div class="lg-info-box">
+      <div class="lg-info-box-val">${escHtml(b.val)}</div>
+      <div class="lg-info-box-lbl">${b.lbl}</div>
+    </div>`).join('');
+
+  // Category table
+  const tableEl = document.getElementById('lg-card-table');
+  if(lgQuickMode){
+    tableEl.style.display='none';
+    document.getElementById('lg-card-table-body').innerHTML='';
+  } else {
+    tableEl.style.display='';
+    document.getElementById('lg-card-table-body').innerHTML = RESTAURANT_CATS.map(c=>`
+      <tr>
+        <td class="lg-ct-name">${c.label}</td>
+        <td class="tc lg-ct-dim">${Math.round(c.w*100)}%</td>
+        <td class="tc lg-ct-score">${lgScores[c.id]||'—'}</td>
+        <td class="tc lg-ct-grade">${lgScores[c.id]?grade(lgScores[c.id]):'—'}</td>
+        <td class="lg-ct-note">${escHtml(lgNotes[c.id]||'')}</td>
+      </tr>`).join('');
+  }
+
+  // Notes
+  const notesEl = document.getElementById('lg-card-notes');
+  if(overallNote){
+    document.getElementById('lg-card-notes-body').textContent = overallNote;
+    notesEl.style.display='block';
+  } else notesEl.style.display='none';
+
+  document.getElementById('lg-card-date').textContent = today;
+  document.getElementById('lg-card-cuisine').textContent = lgCurrentPlace.cuisine||'';
+  document.getElementById('lg-sheet-msg').textContent = '';
+
+  showScreen('lg-result');
+  lgPushToSheets(raw.toFixed(2), g, overallNote, today);
+  lgLoadRankReveal();
+}
+
+// ── PUSH TO SHEETS ────────────────────────────────────────────
+async function lgPushToSheets(raw100, g, overallNote, today){
+  if(!CONFIG.GAS_URL) return;
+  const row = {
+    action: 'saveRestaurantRating',
+    user:   currentUser?.name||'Unknown',
+    date:   today,
+    name:   lgCurrentPlace.name,
+    address:lgCurrentPlace.address||'',
+    cuisine:lgCurrentPlace.cuisine||'',
+    price:  lgCurrentPlace.price||'',
+    googleRating: lgCurrentPlace.rating||'',
+    score10: lgChosenScore10.toFixed(1),
+    score100: lgQuickMode ? (lgChosenScore10*10).toFixed(1) : raw100,
+    grade:   g,
+    stars:   (lgChosenScore10/2).toFixed(1),
+    food:          lgQuickMode?'':lgScores.food||'',        foodGrade:    lgQuickMode?'':grade(lgScores.food||0),
+    value:         lgQuickMode?'':lgScores.value||'',       valueGrade:   lgQuickMode?'':grade(lgScores.value||0),
+    service:       lgQuickMode?'':lgScores.service||'',     serviceGrade: lgQuickMode?'':grade(lgScores.service||0),
+    atmosphere:    lgQuickMode?'':lgScores.atmosphere||'',  atmosphereGrade: lgQuickMode?'':grade(lgScores.atmosphere||0),
+    craving:       lgQuickMode?'':lgScores.craving||'',     cravingGrade: lgQuickMode?'':grade(lgScores.craving||0),
+    notes: overallNote,
+    placeId: lgCurrentPlace.placeId||'',
+  };
+  try{
+    await lgCall(row);
+    const el = document.getElementById('lg-sheet-msg');
+    el.textContent='✓ Added to Le Guide Sheets'; el.style.color='#80d080';
+  }catch(e){
+    const el = document.getElementById('lg-sheet-msg');
+    el.textContent='⚠ Sheets sync failed'; el.style.color='#c07070';
+  }
+  _lgRatingsCache = null;
+}
+
+// ── RANK REVEAL ───────────────────────────────────────────────
+async function lgLoadRankReveal(){
+  const reveal = document.getElementById('lg-rank-reveal');
+  const stats  = document.getElementById('lg-rank-stats');
+  reveal.style.display='none';
+  if(!CONFIG.GAS_URL||!currentUser) return;
+  try{
+    const ratings = await lgGetRatings();
+    if(!ratings||!ratings.length) return;
+    const scores10 = ratings.map(r=>parseFloat(r['Score /10']||0)).filter(s=>s>0).sort((a,b)=>b-a);
+    const myScore  = lgChosenScore10;
+    const rank     = scores10.filter(s=>s>myScore).length+1;
+    const total    = scores10.length;
+    const g        = grade(RESTAURANT_CATS.reduce((s,c)=>s+(lgScores[c.id]||0)*c.w,0));
+    const gCount   = ratings.filter(r=>grade(parseFloat(r['Raw /100']||0))===g).length;
+    stats.innerHTML=`
+      <div class="rank-stat">
+        <div class="rank-stat-num">#${rank}</div>
+        <div class="rank-stat-lbl">Your rank out of ${total}</div>
+      </div>
+      <div class="rank-stat">
+        <div class="rank-stat-num">${total}</div>
+        <div class="rank-stat-lbl">Restaurants rated</div>
+      </div>
+      <div class="rank-stat">
+        <div class="rank-stat-num">${gCount}</div>
+        <div class="rank-stat-lbl">${g}'s given</div>
+      </div>`;
+    reveal.style.display='block';
+  }catch(e){ console.error(e); }
+}
+
+// ── ALREADY RATED CHECK ───────────────────────────────────────
+let _lgPendingPlace = null;
+
+async function lgCheckAlreadyRated(place){
+  _lgPendingPlace = place;
+  if(!CONFIG.GAS_URL||!currentUser){ lgLoadPlace(place); return; }
+  try{
+    const ratings = await lgGetRatings();
+    const existing = (ratings||[]).find(r=>
+      String(r['Name']||'').toLowerCase()===place.name.toLowerCase() &&
+      String(r['Address']||'').toLowerCase()===String(place.address||'').toLowerCase()
+    );
+    if(existing){
+      document.getElementById('lg-ar-name').textContent = place.name;
+      document.getElementById('lg-ar-score').textContent = parseFloat(existing['Score /10']||0).toFixed(1);
+      document.getElementById('lg-ar-grade').textContent = existing['Grade']||'—';
+      document.getElementById('lg-ar-date').textContent  = existing['Date']?`Reviewed on ${existing['Date']}`:'';
+      document.getElementById('lg-already-rated-modal').style.display='flex';
+    } else { lgLoadPlace(place); }
+  }catch(e){ lgLoadPlace(place); }
+}
+
+function closeLgAlreadyRated(){
+  document.getElementById('lg-already-rated-modal').style.display='none';
+  _lgPendingPlace=null;
+}
+function lgProceedToRate(){
+  document.getElementById('lg-already-rated-modal').style.display='none';
+  if(_lgPendingPlace) lgLoadPlace(_lgPendingPlace);
+}
+
+async function lgGetRatings(){
+  if(_lgRatingsCache && (Date.now()-_lgRatingsCacheTime)<300000) return _lgRatingsCache;
+  const data = await lgCall({action:'getRestaurantRatings', user:currentUser.name});
+  if(Array.isArray(data)){ _lgRatingsCache=data; _lgRatingsCacheTime=Date.now(); }
+  return data||[];
+}
+
+// ── LE GUIDE STATS ────────────────────────────────────────────
+async function lgGoStats(){
+  showScreen('lg-stats');
+  const content = document.getElementById('lg-stats-content');
+  if(!CONFIG.GAS_URL||!currentUser){
+    content.innerHTML=`<div class="stats-empty" style="color:#6a3a3a">Log in to see your restaurant stats.</div>`;
+    return;
+  }
+  content.innerHTML=`<div class="stats-loading" style="color:#6a3a3a">Loading...</div>`;
+  try{
+    const [ratingsData, summaryData] = await Promise.all([
+      lgCall({action:'getRestaurantRatings', user:currentUser.name}),
+      lgCall({action:'getRestaurantSummary'})
+    ]);
+    _lgStatsData = {ratings: ratingsData||[], summary: summaryData||null};
+    lgRenderCurrentTab();
+  }catch(e){
+    content.innerHTML=`<div class="stats-empty" style="color:#6a3a3a">Could not load data.</div>`;
+  }
+}
+
+function lgSwitchTab(tab){
+  _lgStatsTab = tab;
+  ['my','group'].forEach(t=>{
+    document.getElementById('lg-tab-'+t).classList.toggle('active',t===tab);
+  });
+  lgRenderCurrentTab();
+}
+
+function lgRenderCurrentTab(){
+  if(_lgStatsTab==='my')    lgRenderMyStats();
+  if(_lgStatsTab==='group') lgRenderGroupStats();
+}
+
+function lgRenderMyStats(){
+  const container = document.getElementById('lg-stats-content');
+  const ratings   = _lgStatsData.ratings||[];
+  if(!ratings.length){
+    container.innerHTML=`<div class="stats-empty" style="color:#6a3a3a">No restaurant ratings yet.</div>`;
+    return;
+  }
+  const scores10 = ratings.map(r=>parseFloat(r['Score /10']||0)).filter(s=>s>0);
+  const avg = (scores10.reduce((a,b)=>a+b,0)/scores10.length)||0;
+  const sorted = [...ratings].sort((a,b)=>parseFloat(b['Score /10']||0)-parseFloat(a['Score /10']||0));
+  const top5   = sorted.slice(0,5);
+  const recent5= [...ratings].slice(-5).reverse();
+
+  const GRADES=["A+","A","A-","B+","B","B-","C+","C","C-","D+","D","F"];
+  const gradeCounts={}; GRADES.forEach(g=>gradeCounts[g]=0);
+  ratings.forEach(r=>{ const raw=parseFloat(r['Raw /100']||0); if(raw>0) gradeCounts[grade(raw)]=(gradeCounts[grade(raw)]||0)+1; });
+  const maxGrade=Math.max(...Object.values(gradeCounts),1);
+
+  const catFields={'Food & Taste':'Food','Value':'Value','Service':'Service','Atmosphere':'Atmosphere','Craving Factor':'Craving'};
+  const catAvgs={};
+  Object.entries(catFields).forEach(([label,col])=>{
+    const vals=ratings.map(r=>parseFloat(r[col]||0)).filter(v=>v>0);
+    catAvgs[label]=vals.length?(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1):'—';
+  });
+
+  container.innerHTML=`
+    <div class="stats-section">
+      <div class="stats-section-title" style="border-color:#3a1a1a;color:#8a4a4a">Overview — ${escHtml(currentUser.name)}</div>
+      <div class="stats-grid">
+        <div class="lg-stat-card"><div class="lg-stat-card-num">${ratings.length}</div><div class="lg-stat-card-lbl">Restaurants Rated</div></div>
+        <div class="lg-stat-card"><div class="lg-stat-card-num">${avg.toFixed(1)}</div><div class="lg-stat-card-lbl">Average /10</div></div>
+        <div class="lg-stat-card"><div class="lg-stat-card-num">${sorted[0]?parseFloat(sorted[0]['Score /10']).toFixed(1):'—'}</div><div class="lg-stat-card-lbl">Highest</div></div>
+        <div class="lg-stat-card"><div class="lg-stat-card-num">${sorted[sorted.length-1]?parseFloat(sorted[sorted.length-1]['Score /10']).toFixed(1):'—'}</div><div class="lg-stat-card-lbl">Lowest</div></div>
+      </div>
+    </div>
+
+    <div class="stats-section">
+      <div class="stats-section-title" style="border-color:#3a1a1a;color:#8a4a4a">Grade Distribution</div>
+      <div class="grade-bars">
+        ${GRADES.map(g=>`
+          <div class="grade-bar-row">
+            <div class="lg-grade-bar-label">${g}</div>
+            <div class="grade-bar-track" style="background:#1a0608"><div class="lg-grade-bar-fill" style="width:${Math.round((gradeCounts[g]/maxGrade)*100)}%"></div></div>
+            <div class="grade-bar-count" style="color:#6a3a3a">${gradeCounts[g]}</div>
+          </div>`).join('')}
+      </div>
+    </div>
+
+    <div class="stats-section">
+      <div class="stats-section-title" style="border-color:#3a1a1a;color:#8a4a4a">Top 5 Restaurants</div>
+      ${top5.map((r,i)=>`
+        <div class="lg-film-row">
+          <div class="lg-film-row-rank">#${i+1}</div>
+          <div style="flex:1">
+            <div class="lg-film-row-title">${escHtml(String(r['Name']||''))}</div>
+            <div class="lg-film-row-sub">${escHtml(String(r['Cuisine']||''))}${r['Address']?' · '+escHtml(String(r['Address']||'').split(',')[0]):''}</div>
+          </div>
+          <div class="lg-film-row-score">${parseFloat(r['Score /10']||0).toFixed(1)}</div>
+        </div>`).join('')}
+      <button class="view-all-btn" style="border-color:#3a1a1a;color:#8a4a4a" onclick="lgToggleAll(this)">View All ${ratings.length} Ratings ↓</button>
+      <div class="all-ratings-wrap" id="lg-all-wrap">
+        ${sorted.map((r,i)=>`
+          <div class="lg-film-row">
+            <div class="lg-film-row-rank">#${i+1}</div>
+            <div style="flex:1">
+              <div class="lg-film-row-title">${escHtml(String(r['Name']||''))}</div>
+              <div class="lg-film-row-sub">${escHtml(String(r['Cuisine']||''))}</div>
+            </div>
+            <div class="lg-film-row-score">${parseFloat(r['Score /10']||0).toFixed(1)}</div>
+          </div>`).join('')}
+      </div>
+    </div>
+
+    <div class="stats-section">
+      <div class="stats-section-title" style="border-color:#3a1a1a;color:#8a4a4a">Recently Visited</div>
+      ${recent5.map(r=>`
+        <div class="lg-film-row">
+          <div style="flex:1">
+            <div class="lg-film-row-title">${escHtml(String(r['Name']||''))}</div>
+            <div class="lg-film-row-sub">${r['Date']||''}</div>
+          </div>
+          <div class="lg-film-row-score">${parseFloat(r['Score /10']||0).toFixed(1)}</div>
+        </div>`).join('')}
+    </div>
+
+    <div class="stats-section">
+      <div class="stats-section-title" style="border-color:#3a1a1a;color:#8a4a4a">Category Averages</div>
+      <div class="cat-bars">
+        ${Object.entries(catAvgs).map(([label,val])=>`
+          <div class="cat-bar-row">
+            <div class="cat-bar-label" style="color:#8a6a6a">${label}</div>
+            <div class="grade-bar-track" style="background:#1a0608"><div class="lg-grade-bar-fill" style="width:${val==='—'?0:val}%"></div></div>
+            <div class="cat-bar-val" style="color:#C41E3A">${val}</div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+}
+
+function lgRenderGroupStats(){
+  const container = document.getElementById('lg-stats-content');
+  const summary   = _lgStatsData.summary;
+  if(!summary||!summary.rows||!summary.rows.length){
+    container.innerHTML=`<div class="stats-empty" style="color:#6a3a3a">No group restaurant data yet.</div>`;
+    return;
+  }
+  const rated = summary.rows.filter(r=>r.scores&&r.scores.length>=2)
+    .sort((a,b)=>(b.scores.reduce((x,y)=>x+y,0)/b.scores.length)-(a.scores.reduce((x,y)=>x+y,0)/a.scores.length));
+
+  container.innerHTML=`
+    <div class="stats-section">
+      <div class="stats-section-title" style="border-color:#3a1a1a;color:#8a4a4a">Group Restaurant Rankings</div>
+      ${rated.length ? rated.map((r,i)=>{
+        const avg=(r.scores.reduce((x,y)=>x+y,0)/r.scores.length).toFixed(1);
+        return `<div class="lg-film-row">
+          <div class="lg-film-row-rank">#${i+1}</div>
+          <div style="flex:1"><div class="lg-film-row-title">${escHtml(String(r.Name||''))}</div></div>
+          <div class="lg-film-row-score">${avg}</div>
+        </div>`;
+      }).join('') : `<div class="stats-empty" style="color:#6a3a3a">No restaurants rated by multiple people yet.</div>`}
+    </div>`;
+}
+
+function lgToggleAll(btn){
+  const wrap = document.getElementById('lg-all-wrap');
+  const open = wrap.classList.toggle('open');
+  btn.textContent = open ? 'Hide ↑' : `View All Ratings ↓`;
+}
+
+// ── SHARED API CALL ───────────────────────────────────────────
+async function lgCall(body){
+  const res = await fetch(CONFIG.GAS_URL, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({...body, token: sessionToken})
+  });
+  const text = await res.text();
+  if(!text||text.trim().startsWith('<')) return null;
+  return JSON.parse(text);
+}
+
+// ── SAVE AS IMAGE for Le Guide ────────────────────────────────
+async function lgSaveImage(){
+  const btn = document.getElementById('lg-save-img-btn');
+  btn.textContent='Generating...'; btn.disabled=true;
+  try{
+    const raw = RESTAURANT_CATS.reduce((s,c)=>s+(lgScores[c.id]||0)*c.w,0);
+    const g   = grade(raw);
+    const CARD_W=720, SCALE=2, OUTER_PAD=80;
+    const W=CARD_W+OUTER_PAD*2, cw=W*SCALE;
+    const cv=document.createElement('canvas');
+    cv.width=cw; cv.height=cw*2;
+    const ctx=cv.getContext('2d');
+    const S=SCALE;
+
+    function fs(size,weight,family){ctx.font=`${weight||'normal'} ${size*S}px ${family||'Georgia, serif'}`;}
+    function fw(text,x,y,maxW){ctx.fillText(text,x*S,y*S,maxW?maxW*S:undefined);}
+    function fillRect(x,y,w,h,fill){ctx.fillStyle=fill;ctx.fillRect(x*S,y*S,w*S,h*S);}
+    function strokeRect(x,y,w,h,color,lw){ctx.strokeStyle=color;ctx.lineWidth=lw*S;ctx.strokeRect(x*S,y*S,w*S,h*S);}
+    function hline(y,x1,x2,color,lw){ctx.strokeStyle=color;ctx.lineWidth=lw*S;ctx.beginPath();ctx.moveTo(x1*S,y*S);ctx.lineTo(x2*S,y*S);ctx.stroke();}
+    function wrapText(text,x,y,maxW,lineH){
+      const words=String(text).split(' ');let line='',ly=y;
+      for(let i=0;i<words.length;i++){
+        const test=line+words[i]+' ';
+        if(ctx.measureText(test).width>maxW*S&&i>0){ctx.fillText(line.trim(),x*S,ly*S);line=words[i]+' ';ly+=lineH;}
+        else line=test;
+      }
+      ctx.fillText(line.trim(),x*S,ly*S); return ly;
+    }
+
+    const CP=50,CX=OUTER_PAD,CIX=CX+CP,CW=CARD_W-CP*2;
+    let Y=60; const cardStartY=Y; Y+=40;
+
+    // Stamp
+    ctx.textAlign='center'; ctx.fillStyle='#C8A45A';
+    fs(11,'400','Georgia, serif');
+    fw('LE GUIDE',W/2,Y); Y+=20;
+
+    // Gold rule
+    hline(Y,CIX,CIX+CW,'#C8A45A',0.5); Y+=18;
+
+    ctx.fillStyle='#F5ECD7'; fs(10,'400','Arial');
+    fw('THE FOLLOWING ESTABLISHMENT HAS BEEN REVIEWED',W/2,Y); Y+=22;
+
+    hline(Y,CIX,CIX+CW,'#C8A45A',0.5); Y+=24;
+
+    // Stars oval
+    const ovalW=200,ovalH=120,ovalX=(W-ovalW)/2;
+    ctx.fillStyle='#8B0000';
+    ctx.beginPath(); ctx.ellipse((ovalX+ovalW/2)*S,(Y+ovalH/2)*S,(ovalW/2)*S,(ovalH/2)*S,0,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#C8A45A'; ctx.lineWidth=2*S;
+    ctx.beginPath(); ctx.ellipse((ovalX+ovalW/2)*S,(Y+ovalH/2)*S,(ovalW/2)*S,(ovalH/2)*S,0,0,Math.PI*2); ctx.stroke();
+
+    // Draw stars in oval
+    const starSize=18, starGap=4;
+    const numStars=5, totalStarW=numStars*starSize+(numStars-1)*starGap;
+    let sx=(W-totalStarW)/2;
+    const starY=Y+28;
+    const starVal=lgChosenScore10/2;
+    for(let i=0;i<5;i++){
+      const filled=i<Math.floor(starVal);
+      const half=!filled&&(i===Math.floor(starVal))&&(starVal%1>=0.5);
+      ctx.fillStyle=filled?'#C8A45A':(half?'#C8A45A':'rgba(200,164,90,0.2)');
+      // Draw star shape
+      ctx.beginPath();
+      for(let p=0;p<5;p++){
+        const ang=(p*4*Math.PI/5)-Math.PI/2;
+        const ir=(p%2===0)?starSize/2:starSize/4;
+        const px=sx*S+Math.cos(ang)*ir*S+(starSize/2)*S;
+        const py=starY*S+Math.sin(ang)*ir*S+(starSize/2)*S;
+        if(p===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+      }
+      ctx.closePath(); ctx.fill();
+      sx+=starSize+starGap;
+    }
+
+    ctx.fillStyle='#F5ECD7'; fs(18,'bold','Bebas Neue, Georgia, serif');
+    ctx.textAlign='center';
+    fw(lgChosenScore10.toFixed(1)+'/10',W/2,Y+72);
+    ctx.fillStyle='#C8A45A'; fs(12,'400','Georgia, serif');
+    fw(g,W/2,Y+88);
+    Y+=ovalH+20;
+
+    // Restaurant name
+    const titleSize=Math.min(50,Math.max(22,Math.floor(480/(lgCurrentPlace.name.length*0.55))));
+    fs(titleSize,'bold','Bebas Neue, Georgia, serif');
+    ctx.fillStyle='#F5ECD7'; ctx.textAlign='center';
+    fw(lgCurrentPlace.name.toUpperCase(),W/2,Y+titleSize*0.8);
+    Y+=titleSize+8;
+
+    ctx.fillStyle='#C8A45A'; fs(10,'400','Arial');
+    fw([lgCurrentPlace.cuisine,lgCurrentPlace.address].filter(Boolean).join(' · ').toUpperCase(),W/2,Y);
+    Y+=22;
+
+    hline(Y,CIX,CIX+CW,'#C8A45A',0.5); Y+=18;
+
+    // Info boxes
+    const iBoxes=[];
+    if(lgCurrentPlace.rating) iBoxes.push({v:'⭐ '+lgCurrentPlace.rating,l:'Google'});
+    if(lgCurrentPlace.price)  iBoxes.push({v:lgCurrentPlace.price,l:'Price'});
+    const ibW=90,ibH=55,ibGap=12,iTotalW=iBoxes.length*ibW+(iBoxes.length-1)*ibGap;
+    let ibx=(W-iTotalW)/2;
+    iBoxes.forEach(b=>{
+      fillRect(ibx,Y,ibW,ibH,'#8B0000');
+      ctx.strokeStyle='#C8A45A'; ctx.lineWidth=1*S; ctx.strokeRect(ibx*S,Y*S,ibW*S,ibH*S);
+      ctx.fillStyle='#F5ECD7'; ctx.textAlign='center'; fs(16,'bold','Bebas Neue, Georgia, serif');
+      fw(b.v,ibx+ibW/2,Y+30);
+      ctx.fillStyle='#C8A45A'; fs(8,'400','Arial');
+      fw(b.l.toUpperCase(),ibx+ibW/2,Y+44);
+      ibx+=ibW+ibGap;
+    });
+    Y+=ibH+18;
+
+    hline(Y,CIX,CIX+CW,'#C8A45A',0.5); Y+=16;
+
+    // Table
+    if(!lgQuickMode){
+      ctx.fillStyle='#C8A45A'; ctx.textAlign='left'; fs(9,'400','Arial');
+      fw('CATEGORY',CIX,Y); ctx.textAlign='center';
+      fw('WT',CIX+175+25,Y); fw('SCORE',CIX+230+25,Y); fw('GRADE',CIX+285+25,Y);
+      ctx.textAlign='left'; fw('NOTES',CIX+340,Y); Y+=8;
+      hline(Y,CIX,CIX+CW,'#C8A45A',0.3); Y+=12;
+
+      RESTAURANT_CATS.forEach(c=>{
+        const s=lgScores[c.id]||0; const rowH=30;
+        ctx.fillStyle='#F5ECD7'; ctx.textAlign='left'; fs(11,'600','Arial');
+        fw(c.label,CIX,Y+rowH*0.6);
+        ctx.textAlign='center'; fs(10,'400','Arial'); ctx.fillStyle='#C8A45A';
+        fw(Math.round(c.w*100)+'%',CIX+175+25,Y+rowH*0.6);
+        ctx.fillStyle='#F5ECD7'; fs(14,'bold','Bebas Neue, Georgia, serif');
+        fw(s?String(s):'—',CIX+230+25,Y+rowH*0.65);
+        fw(s?grade(s):'—',CIX+285+25,Y+rowH*0.65);
+        const n=lgNotes[c.id]||'';
+        if(n){ctx.fillStyle='#F5ECD7';ctx.textAlign='left';fs(9,'400','Arial');ctx.font=`italic ${9*S}px Arial`;fw(n.slice(0,48),CIX+340,Y+rowH*0.6,CW-340);}
+        Y+=rowH; hline(Y,CIX,CIX+CW,'rgba(200,164,90,0.2)',0.3); Y+=3;
+      });
+      Y+=8;
+    }
+
+    // Notes
+    const overallNote=document.getElementById('lg-overall-note')?.value||'';
+    if(overallNote){
+      const nH=60; fillRect(CIX,Y,CW,nH,'#8B0000');
+      ctx.strokeStyle='rgba(200,164,90,0.4)'; ctx.lineWidth=1*S; ctx.strokeRect(CIX*S,Y*S,CW*S,nH*S);
+      ctx.fillStyle='#C8A45A'; ctx.textAlign='left'; fs(8,'400','Arial');
+      fw("REVIEWER'S NOTES",CIX+14,Y+14);
+      ctx.fillStyle='#F5ECD7'; ctx.font=`italic ${10*S}px Georgia`;
+      wrapText(overallNote,CIX+14,Y+30,CW-28,16); Y+=nH+12;
+    }
+
+    // Footer
+    hline(Y,CIX,CIX+CW,'rgba(200,164,90,0.3)',0.5); Y+=14;
+    ctx.fillStyle='rgba(200,164,90,0.7)'; fs(8,'400','Arial');
+    ctx.textAlign='left';
+    fw(new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}).toUpperCase(),CIX,Y);
+    ctx.textAlign='right'; fw('LE GUIDE',CIX+CW,Y); Y+=36;
+
+    // Composite
+    const cardH=Y-cardStartY+42, finalH=Y+60;
+    const final=document.createElement('canvas');
+    final.width=cw; final.height=finalH*S;
+    const fc=final.getContext('2d');
+
+    // Dark outer bg
+    fc.fillStyle='#070204'; fc.fillRect(0,0,final.width,final.height);
+    // Red glow
+    const fg=fc.createRadialGradient(cw/2,final.height*0.4,0,cw/2,final.height*0.4,cw*0.65);
+    fg.addColorStop(0,'rgba(196,30,58,0.25)'); fg.addColorStop(1,'rgba(0,0,0,0)');
+    fc.fillStyle=fg; fc.fillRect(0,0,final.width,final.height);
+    // Red card
+    fc.fillStyle='#C41E3A'; fc.fillRect(CX*S,cardStartY*S,CARD_W*S,cardH*S);
+    fc.strokeStyle='#8B0000'; fc.lineWidth=6*S; fc.strokeRect(CX*S,cardStartY*S,CARD_W*S,cardH*S);
+    // Gold inner border
+    fc.strokeStyle='rgba(200,164,90,0.4)'; fc.lineWidth=1*S;
+    fc.strokeRect((CX+8)*S,(cardStartY+8)*S,(CARD_W-16)*S,(cardH-16)*S);
+    // Content
+    fc.drawImage(cv,0,0);
+    // Watermark
+    fc.font=`400 ${9*S}px Arial`; fc.fillStyle='rgba(200,164,90,0.3)';
+    fc.textAlign='center'; fc.fillText('LE GUIDE',final.width/2,final.height-18*S);
+
+    const dataUrl=final.toDataURL('image/jpeg',0.94);
+    const safeName=(lgCurrentPlace.name||'restaurant').replace(/[^a-z0-9]/gi,'-').toLowerCase();
+    const isIOS=/iP(hone|ad|od)/i.test(navigator.userAgent);
+    if(isIOS){
+      const w=window.open('','_blank');
+      if(w){
+        w.document.write(`<html><body style="margin:0;background:#070204">
+          <img src="${dataUrl}" style="max-width:100%;display:block">
+          <p style="color:#C8A45A;font-family:sans-serif;text-align:center;padding:14px;font-size:14px">
+            Tap &amp; hold → <strong>Save to Photos</strong></p></body></html>`);
+        w.document.close();
+      }
+    } else {
+      const a=document.createElement('a');
+      a.download=`le-guide-${safeName}.jpg`; a.href=dataUrl;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    }
+  }catch(e){ console.error(e); alert('Could not generate image: '+e.message); }
+  btn.textContent='Save as Image'; btn.disabled=false;
+}
+
+// ── SHOW SCREEN override to handle Le Guide nav ───────────────
+const _origShowScreen = showScreen;
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+id).classList.add('active');
+  window.scrollTo(0,0);
+
+  const isLg = id.startsWith('lg-');
+  setLgMode(isLg && id!=='lg-result'? true : lgMode);
+
+  if(!isLg){
+    ['home','search','stats','settings'].forEach(n=>{
+      const b=document.getElementById('nav-'+n);
+      if(b) b.classList.toggle('active',n===id||(id==='score'&&n==='search')||(id==='round'&&n==='search')||(id==='result'&&n==='search'));
+    });
+  } else {
+    ['lg-home','lg-rate','lg-stats','lg-back'].forEach(n=>{
+      const b=document.getElementById('nav-'+n);
+      if(b) b.classList.toggle('active',
+        (n==='lg-rate'&&(id==='lg-search'||id==='lg-score'||id==='lg-round'||id==='lg-quick'))||
+        (n==='lg-stats'&&id==='lg-stats')
+      );
+    });
+  }
+
+  document.getElementById('main-nav').style.display=(id==='home'||id==='pin')?'none':'flex';
+  if(id==='settings') openSettings();
+}
+
 // ── ADMIN PIN MODAL ──────────────────────────────────────────
 let adminPinEntered = "";
 
@@ -1985,16 +3899,12 @@ function updateAdminDots(){
     document.getElementById("ad"+i).classList.toggle("filled", i < adminPinEntered.length);
   }
 }
-async function checkAdminPin(){
-  try{
-    const res = await apiCall("loginAdmin", { pin: adminPinEntered });
-    adminToken = res.token;
+function checkAdminPin(){
+  if(adminPinEntered === MASTER_PIN){
     closeAdminModal();
-    await syncUsersFromSheets();
-    settingsLoaded = false;
     showScreen("settings");
-  }catch(e){
-    document.getElementById("admin-error").textContent = e.message || "Incorrect PIN.";
+  } else {
+    document.getElementById("admin-error").textContent = "Incorrect PIN.";
     adminPinEntered = "";
     updateAdminDots();
   }
@@ -2003,8 +3913,13 @@ async function checkAdminPin(){
 // ── INIT ─────────────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded",async ()=>{
   applyStoredConfig();
+  // Sync users from Sheets so all devices see the same list
   await syncUsersFromSheets();
-  await restoreSession();
+  const saved=getSavedUser();
+  if(saved&&getUsers().find(u=>u.name===saved.name&&String(u.pin)===String(saved.pin))){
+    currentUser=saved; updateNavUser();
+    prefetchRatings(); // warm cache on startup
+  }
   showScreen("home");
 });
 
