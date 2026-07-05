@@ -1676,7 +1676,24 @@ function updatePinDots(){
   }
 }
 
-function checkPin(){
+async function fetchServerToken(username, pin){
+  if(!CONFIG.GAS_URL) return;
+  try{
+    const res = await fetch(CONFIG.GAS_URL, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({action:'login', username:username, pin:String(pin).padStart(4,'0')})
+    });
+    const text = await res.text();
+    if(!text || text.trim().startsWith('<')) return;
+    const data = JSON.parse(text);
+    if(data && data.token){
+      localStorage.setItem('cf_session_token', data.token);
+    }
+  }catch(e){ console.log('Server token fetch failed:', e.message); }
+}
+
+async function checkPin(){
   const users = getUsers();
   const user  = users.find(u=>u.name===pinSelected);
   if(!user) return;
@@ -1685,9 +1702,10 @@ function checkPin(){
     setSavedUser(user);
     updateNavUser();
     document.getElementById("pin-error").textContent = "";
+    await fetchServerToken(user.name, pinEntered);
     showScreen("search");
     if(!CONFIG.TMDB_KEY) document.getElementById("setup-notice").style.display="block";
-    prefetchRatings(); // warm the cache in background after login
+    prefetchRatings();
   } else {
     document.getElementById("pin-error").textContent = "Incorrect PIN. Try again.";
     pinEntered = "";
@@ -3933,9 +3951,6 @@ document.addEventListener("DOMContentLoaded",async ()=>{
   const saved=getSavedUser();
   if(saved&&getUsers().find(u=>u.name===saved.name&&String(u.pin)===String(saved.pin))){
     currentUser=saved; updateNavUser();
-    // Fetch fresh server token if we don't have one
-    const existingToken = localStorage.getItem('cf_session_token');
-    if(!existingToken) fetchServerToken(saved.name, String(saved.pin).padStart(4,'0'));
     prefetchRatings();
   }
   showScreen("home");
