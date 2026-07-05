@@ -107,9 +107,16 @@ function getUsersPublic_() {
 
 // ── JSON OUTPUT ───────────────────────────────────────────────
 function jsonOut_(data) {
-  return ContentService
+  var output = ContentService
     .createTextOutput(JSON.stringify(data))
     .setMimeType(ContentService.MimeType.JSON);
+  return output;
+}
+
+// Handle CORS preflight OPTIONS requests
+function doOptions(e) {
+  return ContentService.createTextOutput('')
+    .setMimeType(ContentService.MimeType.TEXT);
 }
 
 // ── ROUTING ───────────────────────────────────────────────────
@@ -155,19 +162,14 @@ function doGet(e) {
 
     if (action === 'getUsers') return jsonOut_({ users: getUsersPublic_() });
 
-    var sess = validateSession_(token);
-    if (!sess && action !== 'getUsers') {
-      // Allow public summary reads
-      if (action === 'getSummary')           return doGetSummary_();
-      if (action === 'getRestaurantSummary') return doGetRestaurantSummary_();
-      return jsonOut_({ error: 'Invalid session' });
-    }
-    var username = sess ? sess.username : user;
+    if (action === 'getUsers')             return jsonOut_({ users: getUsersPublic_() });
+    if (action === 'getSummary')           return doGetSummary_();
+    if (action === 'getRestaurantSummary') return doGetRestaurantSummary_();
+    if (action === 'searchRestaurants')    return doSearchRestaurants_({query: e.parameter.query||'', lat: e.parameter.lat||null, lng: e.parameter.lng||null});
 
-    if (action === 'getRatings')             return doGetRatings_(username);
-    if (action === 'getRestaurantRatings')   return doGetRestaurantRatings_(username);
-    if (action === 'getSummary')             return doGetSummary_();
-    if (action === 'getRestaurantSummary')   return doGetRestaurantSummary_();
+    // These require a valid user parameter
+    if (action === 'getRatings')           return doGetRatings_(user);
+    if (action === 'getRestaurantRatings') return doGetRestaurantRatings_(user);
 
     return jsonOut_({ error: 'Unknown action' });
   } catch(err) {
