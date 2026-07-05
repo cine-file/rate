@@ -2172,8 +2172,8 @@ async function loadRankReveal(){
   try{
     // Fetch personal ratings + summary tab in parallel
     const [personalRes, summaryRes] = await Promise.all([
-      fetch(`${CONFIG.GAS_URL}?action=getRatings&user=${encodeURIComponent(currentUser.name)}&token=${localStorage.getItem('cf_session_token')||''}`),
-      fetch(`${CONFIG.GAS_URL}?action=getSummary&token=${localStorage.getItem('cf_session_token')||''}`)
+      fetch(`${CONFIG.GAS_URL}?action=getRatings&user=${encodeURIComponent(currentUser.name)}&token=${encodeURIComponent(localStorage.getItem('cf_session_token')||'')}`),
+      fetch(`${CONFIG.GAS_URL}?action=getSummary&token=${encodeURIComponent(localStorage.getItem('cf_session_token')||'')}`)
     ]);
     const ratings = await personalRes.json().catch(()=>[]);
     const summary = await summaryRes.json().catch(()=>null);
@@ -2271,11 +2271,14 @@ async function goStats(){
   content.innerHTML=`<div class="stats-loading">Loading your ratings...</div>`;
   try{
     const [personalRes, summaryRes] = await Promise.all([
-      fetch(`${CONFIG.GAS_URL}?action=getRatings&user=${encodeURIComponent(currentUser.name)}&token=${localStorage.getItem('cf_session_token')||''}`),
-      fetch(`${CONFIG.GAS_URL}?action=getSummary&token=${localStorage.getItem('cf_session_token')||''}`)
+      fetch(`${CONFIG.GAS_URL}?action=getRatings&user=${encodeURIComponent(currentUser.name)}&token=${encodeURIComponent(localStorage.getItem('cf_session_token')||'')}`),
+      fetch(`${CONFIG.GAS_URL}?action=getSummary&token=${encodeURIComponent(localStorage.getItem('cf_session_token')||'')}`)
     ]);
-    const ratings = await personalRes.json();
-    const summary = await summaryRes.json().catch(()=>null);
+    const ratingsText = await personalRes.text().catch(()=>'[]');
+    const summaryText = await summaryRes.text().catch(()=>'null');
+    let ratings=[], summary=null;
+    try{ const r=JSON.parse(ratingsText); if(Array.isArray(r)) ratings=r; }catch(e){}
+    try{ summary=JSON.parse(summaryText); }catch(e){}
     if(!ratings||!ratings.length){
       content.innerHTML=`<div class="stats-empty">No ratings yet for ${currentUser.name}. Rate your first film!</div>`;
       return;
