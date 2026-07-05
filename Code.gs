@@ -75,9 +75,13 @@ function validateAdminSession_(token) {
 // ── PIN HASHING ───────────────────────────────────────────────
 function hashPin_(pin, salt) {
   salt = salt || Utilities.getUuid().replace(/-/g,'').substring(0,16);
+  return hashPinWithValue_(pin + salt, salt);
+}
+
+function hashPinWithValue_(value, salt) {
   var bytes = Utilities.computeDigest(
     Utilities.DigestAlgorithm.SHA_256,
-    pin + salt,
+    value,
     Utilities.Charset.UTF_8
   );
   var hex = bytes.map(function(b){ return ('0'+(b&0xFF).toString(16)).slice(-2); }).join('');
@@ -86,8 +90,12 @@ function hashPin_(pin, salt) {
 
 function verifyPin_(pin, storedHash, storedSalt) {
   if (!storedHash || !storedSalt) return false;
-  var result = hashPin_(pin, storedSalt);
-  return result.hash === storedHash;
+  var current = hashPin_(pin, storedSalt).hash;
+  if (current === storedHash) return true;
+
+  // Compatibility with the earlier secure backend, which used salt + ":" + pin.
+  var previous = hashPinWithValue_(storedSalt + ':' + pin, storedSalt).hash;
+  return previous === storedHash;
 }
 
 // ── USERS ─────────────────────────────────────────────────────
@@ -215,9 +223,14 @@ function doLogin_(d) {
     : verifyPin_(pin, user.hash, user.salt);
   if (!valid)
     return jsonOut_({ success: false, error: 'Incorrect PIN' });
-  if (user.legacyPin) migrateUserPin_(username, pin);
+  if (user.legacyPin || !isCurrentPinHash_(pin, user.hash, user.salt)) migrateUserPin_(username, pin);
   var token = createSession_(username);
   return jsonOut_({ success: true, token: token, username: username, user: { name: username } });
+}
+
+function isCurrentPinHash_(pin, storedHash, storedSalt) {
+  if (!storedHash || !storedSalt) return false;
+  return hashPin_(pin, storedSalt).hash === storedHash;
 }
 
 function migrateUserPin_(name, pin) {
