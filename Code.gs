@@ -1,15 +1,17 @@
 // ─────────────────────────────────────────────────────────────
 //  CINE-FILE — Google Apps Script
-//  Version: 2026.07.05-secure-restaurant.2
+//  Version: 2026.07.05-secure-restaurant.3
 //  Runtime: GitHub Pages frontend + Apps Script JSON backend
 //
 //  Version notes:
 //  - secure-restaurant.1: merged Le Guide restaurant flow with secure backend sessions.
 //  - secure-restaurant.2: trim Users values and support name | pinHash | pinSalt login.
+//  - secure-restaurant.3: add non-sensitive login diagnostics for deployment/sheet debugging.
 //
 //  Original by friend, restaurant functions added by Claude
 // ─────────────────────────────────────────────────────────────
 
+const BACKEND_VERSION = '2026.07.05-secure-restaurant.3';
 const SESSION_TTL_SECONDS = 6 * 60 * 60;
 
 function getScriptProps() {
@@ -213,7 +215,7 @@ function doPost(e) {
 
 function doGet(e) {
   try {
-    return jsonOut_({ service: 'cine-file-api' });
+    return jsonOut_({ service: 'cine-file-api', version: BACKEND_VERSION });
   } catch(err) {
     return jsonOut_({ error: err.message });
   }
@@ -224,13 +226,26 @@ function doLogin_(d) {
   var users = getUsers_();
   var username = String(d.username || d.name || '').trim();
   var user  = users.filter(function(u){ return String(u.name).trim().toLowerCase() === username.toLowerCase(); })[0];
-  if (!user) return jsonOut_({ success: false, error: 'User not found' });
+  if (!user) return jsonOut_({ success: false, error: 'User not found', version: BACKEND_VERSION, debug: { username: username, usersSeen: users.length } });
   var pin = String(d.pin || '').padStart(4, '0');
   var valid = user.legacyPin
     ? String(user.legacyPin).padStart(4, '0') === pin
     : verifyPin_(pin, user.pinHash, user.pinSalt);
-  if (!valid)
-    return jsonOut_({ success: false, error: 'Incorrect PIN' });
+  if (!valid) {
+    return jsonOut_({
+      success: false,
+      error: 'Incorrect PIN',
+      version: BACKEND_VERSION,
+      debug: {
+        username: username,
+        matchedUser: user.name,
+        mode: user.legacyPin ? 'plain-pin' : (user.pinHash && user.pinSalt ? 'pinHash-pinSalt' : 'incomplete-user-row'),
+        enteredPinLength: String(d.pin || '').length,
+        pinHashLength: String(user.pinHash || '').length,
+        hasPinSalt: !!user.pinSalt
+      }
+    });
+  }
   if (user.legacyPin || !isCurrentPinHash_(pin, user.pinHash, user.pinSalt)) migrateUserPin_(username, pin);
   var token = createSession_(username);
   return jsonOut_({ success: true, token: token, username: username, user: { name: username } });
@@ -269,6 +284,7 @@ function doGetSession_(d) {
 function doGetDeploymentStatus_(d) {
   var props = getScriptProps().getProperties();
   return jsonOut_({
+    version: BACKEND_VERSION,
     hasSheetId: !!String(props.SHEET_ID || '').trim(),
     hasAdminPin: !!String(props.ADMIN_PIN || '').trim(),
     hasTmdbKey: !!String(props.TMDB_API_KEY || '').trim(),
