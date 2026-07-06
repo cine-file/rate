@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 //  CINE-FILE — Google Apps Script
-//  Version: 2026.07.05-secure-restaurant.4
+//  Version: 2026.07.05-secure-restaurant.5
 //  Runtime: GitHub Pages frontend + Apps Script JSON backend
 //
 //  Version notes:
@@ -8,11 +8,12 @@
 //  - secure-restaurant.2: trim Users values and support name | pinHash | pinSalt login.
 //  - secure-restaurant.3: add non-sensitive login diagnostics for deployment/sheet debugging.
 //  - secure-restaurant.4: move ratings into shared Films and Restaurants category tabs with migration helpers.
+//  - secure-restaurant.5: harden category-tab header repair and add film diagnostics.
 //
 //  Original by friend, restaurant functions added by Claude
 // ─────────────────────────────────────────────────────────────
 
-const BACKEND_VERSION = '2026.07.05-secure-restaurant.4';
+const BACKEND_VERSION = '2026.07.05-secure-restaurant.5';
 const SESSION_TTL_SECONDS = 6 * 60 * 60;
 
 const FILMS_SHEET_NAME = 'Films';
@@ -226,6 +227,7 @@ function doPost(e) {
     if (action === 'saveRating')             return doSaveRating_(d.payload || d, username);
     if (action === 'getRatings')             return doGetRatings_(username);
     if (action === 'getSummary')             return doGetSummary_();
+    if (action === 'debugFilms')             return doDebugFilms_(username);
     if (action === 'searchRestaurants')      return doSearchRestaurants_(d);
     if (action === 'saveRestaurantRating')   return doSaveRestaurantRating_(d.payload || d, username);
     if (action === 'getRestaurantRatings')   return doGetRestaurantRatings_(username);
@@ -425,14 +427,21 @@ function ensureHeader_(tab, header) {
     return;
   }
   var existing = tab.getRange(1, 1, 1, Math.max(tab.getLastColumn(), header.length)).getValues()[0];
+  if (header[0] === 'user' && String(existing[0] || '').trim() !== 'user') {
+    tab.getRange(1, 1, 1, header.length).setValues([header]);
+    return;
+  }
   header.forEach(function(h, i) {
     if (!existing[i]) tab.getRange(1, i + 1).setValue(h);
   });
 }
 
-function valuesToObjects_(values) {
+function valuesToObjects_(values, expectedHeader) {
   if (!values || values.length < 2) return [];
   var keys = values[0].map(function(k){ return String(k || '').trim(); });
+  if (expectedHeader && expectedHeader.length && keys[0] !== expectedHeader[0]) {
+    keys = expectedHeader.slice();
+  }
   var out = [];
   for (var i = 1; i < values.length; i++) {
     var empty = values[i].every(function(v){ return v === '' || v === null; });
@@ -444,9 +453,9 @@ function valuesToObjects_(values) {
   return out;
 }
 
-function sheetObjects_(tab) {
+function sheetObjects_(tab, expectedHeader) {
   if (!tab || tab.getLastRow() < 2) return [];
-  return valuesToObjects_(tab.getDataRange().getValues());
+  return valuesToObjects_(tab.getDataRange().getValues(), expectedHeader);
 }
 
 function rowForHeader_(header, obj) {
@@ -466,6 +475,9 @@ function findExistingRow_(tab, header, rowObj, keyFn) {
   var values = tab.getDataRange().getValues();
   if (values.length < 2) return -1;
   var keys = values[0].map(function(k){ return String(k || '').trim(); });
+  if (header && header.length && keys[0] !== header[0]) {
+    keys = header.slice();
+  }
   var target = keyFn(rowObj);
   for (var i = 1; i < values.length; i++) {
     var obj = {};
@@ -620,7 +632,7 @@ function doSaveRating_(d, username) {
 // ── GET FILM RATINGS ──────────────────────────────────────────
 function doGetRatings_(username) {
   var tab = SpreadsheetApp.openById(getSheetId()).getSheetByName(FILMS_SHEET_NAME);
-  var rows = sheetObjects_(tab).filter(function(r) {
+  var rows = sheetObjects_(tab, FILMS_HEADER).filter(function(r) {
     return String(r.user || '').toLowerCase() === String(username || '').toLowerCase();
   });
   if (!rows.length) return jsonOut_(legacySheetObjects_(username));
@@ -630,7 +642,7 @@ function doGetRatings_(username) {
 // ── GET FILM SUMMARY ──────────────────────────────────────────
 function doGetSummary_() {
   var tab = SpreadsheetApp.openById(getSheetId()).getSheetByName(FILMS_SHEET_NAME);
-  var data = sheetObjects_(tab);
+  var data = sheetObjects_(tab, FILMS_HEADER);
   if (!data.length) return doGetLegacyFilmSummary_();
 
   var grouped = {};
@@ -646,6 +658,30 @@ function doGetSummary_() {
     }
   });
   return jsonOut_({ rows: Object.keys(grouped).map(function(k){ return grouped[k]; }) });
+}
+
+function doDebugFilms_(username) {
+  var ss = SpreadsheetApp.openById(getSheetId());
+  var tab = ss.getSheetByName(FILMS_SHEET_NAME);
+  var header = tab && tab.getLastRow() > 0
+    ? tab.getRange(1, 1, 1, Math.max(tab.getLastColumn(), FILMS_HEADER.length)).getValues()[0]
+    : [];
+  var rows = sheetObjects_(tab, FILMS_HEADER);
+  var mine = rows.filter(function(r) {
+    return String(r.user || '').toLowerCase() === String(username || '').toLowerCase();
+  });
+  return jsonOut_({
+    version: BACKEND_VERSION,
+    username: username,
+    hasFilmsSheet: !!tab,
+    filmsLastRow: tab ? tab.getLastRow() : 0,
+    filmsLastColumn: tab ? tab.getLastColumn() : 0,
+    headerFirstCell: String(header[0] || ''),
+    headerMatchesExpected: String(header[0] || '') === FILMS_HEADER[0] && String(header[1] || '') === FILMS_HEADER[1],
+    totalRowsSeen: rows.length,
+    rowsForUser: mine.length,
+    firstRowForUser: mine.length ? filmToApiRow_(mine[0]) : null
+  });
 }
 
 function doGetLegacyFilmSummary_() {
@@ -847,7 +883,7 @@ function doSaveRestaurantRating_(d, username) {
 // ── GET RESTAURANT RATINGS ────────────────────────────────────
 function doGetRestaurantRatings_(username) {
   var tab = SpreadsheetApp.openById(getSheetId()).getSheetByName(RESTAURANTS_SHEET_NAME);
-  var rows = sheetObjects_(tab).filter(function(r) {
+  var rows = sheetObjects_(tab, RESTAURANTS_HEADER).filter(function(r) {
     return String(r.user || '').toLowerCase() === String(username || '').toLowerCase();
   });
   if (!rows.length) return jsonOut_(legacySheetObjects_(username + '-Restaurants'));
@@ -857,7 +893,7 @@ function doGetRestaurantRatings_(username) {
 // ── GET RESTAURANT SUMMARY ────────────────────────────────────
 function doGetRestaurantSummary_() {
   var tab = SpreadsheetApp.openById(getSheetId()).getSheetByName(RESTAURANTS_SHEET_NAME);
-  var data = sheetObjects_(tab);
+  var data = sheetObjects_(tab, RESTAURANTS_HEADER);
   if (!data.length) return doGetLegacyRestaurantSummary_();
 
   var grouped = {};
@@ -901,11 +937,15 @@ function doGetLegacyRestaurantSummary_() {
 // ══════════════════════════════════════════════════════════════
 
 function dryRunMigrateFilms() {
-  return migrateFilms_(true);
+  var result = migrateFilms_(true);
+  console.log(JSON.stringify(result, null, 2));
+  return result;
 }
 
 function migrateFilms() {
-  return migrateFilms_(false);
+  var result = migrateFilms_(false);
+  console.log(JSON.stringify(result, null, 2));
+  return result;
 }
 
 function migrateFilms_(dryRun) {
@@ -955,11 +995,15 @@ function migrateFilms_(dryRun) {
 }
 
 function dryRunMigrateRestaurants() {
-  return migrateRestaurants_(true);
+  var result = migrateRestaurants_(true);
+  console.log(JSON.stringify(result, null, 2));
+  return result;
 }
 
 function migrateRestaurants() {
-  return migrateRestaurants_(false);
+  var result = migrateRestaurants_(false);
+  console.log(JSON.stringify(result, null, 2));
+  return result;
 }
 
 function migrateRestaurants_(dryRun) {
