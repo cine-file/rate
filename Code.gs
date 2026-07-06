@@ -1,18 +1,42 @@
 // ─────────────────────────────────────────────────────────────
 //  CINE-FILE — Google Apps Script
-//  Version: 2026.07.05-secure-restaurant.3
+//  Version: 2026.07.05-secure-restaurant.4
 //  Runtime: GitHub Pages frontend + Apps Script JSON backend
 //
 //  Version notes:
 //  - secure-restaurant.1: merged Le Guide restaurant flow with secure backend sessions.
 //  - secure-restaurant.2: trim Users values and support name | pinHash | pinSalt login.
 //  - secure-restaurant.3: add non-sensitive login diagnostics for deployment/sheet debugging.
+//  - secure-restaurant.4: move ratings into shared Films and Restaurants category tabs with migration helpers.
 //
 //  Original by friend, restaurant functions added by Claude
 // ─────────────────────────────────────────────────────────────
 
-const BACKEND_VERSION = '2026.07.05-secure-restaurant.3';
+const BACKEND_VERSION = '2026.07.05-secure-restaurant.4';
 const SESSION_TTL_SECONDS = 6 * 60 * 60;
+
+const FILMS_SHEET_NAME = 'Films';
+const RESTAURANTS_SHEET_NAME = 'Restaurants';
+
+const FILMS_HEADER = [
+  'user','date','title','year','director','rtAudience','imdb',
+  'score10','raw100','grade',
+  'plot','plotGrade','plotNotes',
+  'entertainment','entGrade','entNotes',
+  'acting','actingGrade','actingNotes',
+  'visuals','visualsGrade','visualsNotes',
+  'pacing','pacingGrade','pacingNotes',
+  'emotional','emotionalGrade','emotionalNotes',
+  'overallNotes','tmdbId','posterPath','genres','createdAt','updatedAt'
+];
+
+const RESTAURANTS_HEADER = [
+  'user','date','name','address','city','cuisine','price','googleRating',
+  'score10','raw100','grade','stars',
+  'food','foodGrade','value','valueGrade',
+  'service','serviceGrade','atmosphere','atmosphereGrade',
+  'craving','cravingGrade','overallNotes','placeId','createdAt','updatedAt'
+];
 
 function getScriptProps() {
   return PropertiesService.getScriptProperties();
@@ -387,88 +411,244 @@ function doGetMovieDetails_(d) {
   });
 }
 
+// ── CATEGORY SHEET HELPERS ────────────────────────────────────
+function getOrCreateSheet_(name, header) {
+  var ss = SpreadsheetApp.openById(getSheetId());
+  var tab = ss.getSheetByName(name) || ss.insertSheet(name);
+  ensureHeader_(tab, header);
+  return tab;
+}
+
+function ensureHeader_(tab, header) {
+  if (tab.getLastRow() === 0) {
+    tab.getRange(1, 1, 1, header.length).setValues([header]);
+    return;
+  }
+  var existing = tab.getRange(1, 1, 1, Math.max(tab.getLastColumn(), header.length)).getValues()[0];
+  header.forEach(function(h, i) {
+    if (!existing[i]) tab.getRange(1, i + 1).setValue(h);
+  });
+}
+
+function valuesToObjects_(values) {
+  if (!values || values.length < 2) return [];
+  var keys = values[0].map(function(k){ return String(k || '').trim(); });
+  var out = [];
+  for (var i = 1; i < values.length; i++) {
+    var empty = values[i].every(function(v){ return v === '' || v === null; });
+    if (empty) continue;
+    var obj = {};
+    keys.forEach(function(k, j){ if (k) obj[k] = values[i][j]; });
+    out.push(obj);
+  }
+  return out;
+}
+
+function sheetObjects_(tab) {
+  if (!tab || tab.getLastRow() < 2) return [];
+  return valuesToObjects_(tab.getDataRange().getValues());
+}
+
+function rowForHeader_(header, obj) {
+  return header.map(function(h){ return obj[h] === undefined ? '' : obj[h]; });
+}
+
+function objectAtSheetRow_(tab, rowNumber) {
+  var header = tab.getRange(1, 1, 1, tab.getLastColumn()).getValues()[0]
+    .map(function(k){ return String(k || '').trim(); });
+  var values = tab.getRange(rowNumber, 1, 1, tab.getLastColumn()).getValues()[0];
+  var obj = {};
+  header.forEach(function(k, j){ if (k) obj[k] = values[j]; });
+  return obj;
+}
+
+function findExistingRow_(tab, header, rowObj, keyFn) {
+  var values = tab.getDataRange().getValues();
+  if (values.length < 2) return -1;
+  var keys = values[0].map(function(k){ return String(k || '').trim(); });
+  var target = keyFn(rowObj);
+  for (var i = 1; i < values.length; i++) {
+    var obj = {};
+    keys.forEach(function(k, j){ if (k) obj[k] = values[i][j]; });
+    if (keyFn(obj) === target) return i + 1;
+  }
+  return -1;
+}
+
+function categoryKey_(user, primaryId, name, yearOrAddress) {
+  var id = String(primaryId || '').trim();
+  if (id) return String(user || '').toLowerCase() + '|id|' + id;
+  return String(user || '').toLowerCase() + '|name|' +
+    String(name || '').trim().toLowerCase() + '|' +
+    String(yearOrAddress || '').trim().toLowerCase();
+}
+
+function legacySheetObjects_(sheetName) {
+  var ss = SpreadsheetApp.openById(getSheetId());
+  var tab = ss.getSheetByName(sheetName);
+  if (!tab || tab.getLastRow() < 2) return [];
+  return valuesToObjects_(tab.getDataRange().getValues());
+}
+
+function filmToApiRow_(r) {
+  return {
+    'Date': r.date,
+    'Title': r.title,
+    'Year': r.year,
+    'Director': r.director,
+    'RT Audience': r.rtAudience,
+    'IMDb': r.imdb,
+    'Score /10': r.score10,
+    'Raw /100': r.raw100,
+    'Grade': r.grade,
+    'Plot': r.plot,
+    'Plot Grade': r.plotGrade,
+    'Plot Notes': r.plotNotes,
+    'Entertainment': r.entertainment,
+    'Ent Grade': r.entGrade,
+    'Ent Notes': r.entNotes,
+    'Acting': r.acting,
+    'Acting Grade': r.actingGrade,
+    'Acting Notes': r.actingNotes,
+    'Visuals': r.visuals,
+    'Visuals Grade': r.visualsGrade,
+    'Visuals Notes': r.visualsNotes,
+    'Pacing': r.pacing,
+    'Pacing Grade': r.pacingGrade,
+    'Pacing Notes': r.pacingNotes,
+    'Emotional': r.emotional,
+    'Emotional Grade': r.emotionalGrade,
+    'Emotional Notes': r.emotionalNotes,
+    'Overall Notes': r.overallNotes,
+    'TMDB ID': r.tmdbId,
+    'Poster Path': r.posterPath,
+    'Genres': r.genres
+  };
+}
+
+function filmPayloadToSheetRow_(d, username, existing) {
+  var now = new Date().toISOString();
+  existing = existing || {};
+  return {
+    user: username,
+    date: d.date || existing.date || '',
+    title: d.title || existing.title || '',
+    year: d.year || existing.year || '',
+    director: d.director || existing.director || '',
+    rtAudience: d.rt || d.rtAudience || existing.rtAudience || '',
+    imdb: d.imdb || existing.imdb || '',
+    score10: d.score10 || existing.score10 || '',
+    raw100: d.score100 || d.raw100 || existing.raw100 || '',
+    grade: d.grade || existing.grade || '',
+    plot: d.plot || '',
+    plotGrade: d.plotGrade || '',
+    plotNotes: d.plotNotes || '',
+    entertainment: d.entertainment || '',
+    entGrade: d.entGrade || '',
+    entNotes: d.entNotes || '',
+    acting: d.acting || '',
+    actingGrade: d.actingGrade || '',
+    actingNotes: d.actingNotes || '',
+    visuals: d.visuals || '',
+    visualsGrade: d.visualsGrade || '',
+    visualsNotes: d.visualsNotes || '',
+    pacing: d.pacing || '',
+    pacingGrade: d.pacingGrade || '',
+    pacingNotes: d.pacingNotes || '',
+    emotional: d.emotional || '',
+    emotionalGrade: d.emotionalGrade || '',
+    emotionalNotes: d.emotionalNotes || '',
+    overallNotes: d.notes || d.overallNotes || '',
+    tmdbId: d.tmdbId || existing.tmdbId || '',
+    posterPath: d.posterPath || existing.posterPath || '',
+    genres: d.genres || existing.genres || '',
+    createdAt: existing.createdAt || now,
+    updatedAt: now
+  };
+}
+
+function legacyFilmToSheetRow_(legacy, username) {
+  return filmPayloadToSheetRow_({
+    date: legacy['Date'],
+    title: legacy['Title'],
+    year: legacy['Year'],
+    director: legacy['Director'],
+    rtAudience: legacy['RT Audience'],
+    imdb: legacy['IMDb'],
+    score10: legacy['Score /10'],
+    raw100: legacy['Raw /100'],
+    grade: legacy['Grade'],
+    plot: legacy['Plot'],
+    plotGrade: legacy['Plot Grade'],
+    plotNotes: legacy['Plot Notes'],
+    entertainment: legacy['Entertainment'],
+    entGrade: legacy['Ent Grade'],
+    entNotes: legacy['Ent Notes'],
+    acting: legacy['Acting'],
+    actingGrade: legacy['Acting Grade'],
+    actingNotes: legacy['Acting Notes'],
+    visuals: legacy['Visuals'],
+    visualsGrade: legacy['Visuals Grade'],
+    visualsNotes: legacy['Visuals Notes'],
+    pacing: legacy['Pacing'],
+    pacingGrade: legacy['Pacing Grade'],
+    pacingNotes: legacy['Pacing Notes'],
+    emotional: legacy['Emotional'],
+    emotionalGrade: legacy['Emotional Grade'],
+    emotionalNotes: legacy['Emotional Notes'],
+    overallNotes: legacy['Overall Notes']
+  }, username, {});
+}
+
 // ── SAVE FILM RATING ──────────────────────────────────────────
 function doSaveRating_(d, username) {
-  var ss  = SpreadsheetApp.openById(getSheetId());
-  var tab = ss.getSheetByName(username) || ss.insertSheet(username);
-
-  if (tab.getLastRow() === 0) {
-    tab.appendRow(["Date","Title","Year","Director","RT Audience","IMDb",
-      "Score /10","Raw /100","Grade",
-      "Plot","Plot Grade","Plot Notes",
-      "Entertainment","Ent Grade","Ent Notes",
-      "Acting","Acting Grade","Acting Notes",
-      "Visuals","Visuals Grade","Visuals Notes",
-      "Pacing","Pacing Grade","Pacing Notes",
-      "Emotional","Emotional Grade","Emotional Notes","Overall Notes"]);
-  }
-
-  var newRow = [d.date,d.title,d.year,d.director,d.rt,d.imdb,
-    d.score10,d.score100,d.grade,
-    d.plot,d.plotGrade,d.plotNotes,
-    d.entertainment,d.entGrade,d.entNotes,
-    d.acting,d.actingGrade,d.actingNotes,
-    d.visuals,d.visualsGrade,d.visualsNotes,
-    d.pacing,d.pacingGrade,d.pacingNotes,
-    d.emotional,d.emotionalGrade,d.emotionalNotes,d.notes];
-
-  var tabData     = tab.getDataRange().getValues();
-  var existingRow = -1;
-  for (var i = 1; i < tabData.length; i++) {
-    if (String(tabData[i][1]).toLowerCase() === String(d.title).toLowerCase()) {
-      existingRow = i + 1; break;
-    }
-  }
+  var tab = getOrCreateSheet_(FILMS_SHEET_NAME, FILMS_HEADER);
+  var rowObj = filmPayloadToSheetRow_(d, username, {});
+  var existingRow = findExistingRow_(tab, FILMS_HEADER, rowObj, function(r) {
+    return categoryKey_(r.user, r.tmdbId, r.title, r.year);
+  });
   if (existingRow > -1) {
-    tab.getRange(existingRow, 1, 1, newRow.length).setValues([newRow]);
+    var existingObj = objectAtSheetRow_(tab, existingRow);
+    rowObj = filmPayloadToSheetRow_(d, username, existingObj);
+    tab.getRange(existingRow, 1, 1, FILMS_HEADER.length).setValues([rowForHeader_(FILMS_HEADER, rowObj)]);
   } else {
-    tab.appendRow(newRow);
+    tab.appendRow(rowForHeader_(FILMS_HEADER, rowObj));
   }
-
-  // Summary tab
-  var sum = ss.getSheetByName('Summary') || ss.insertSheet('Summary');
-  if (sum.getLastRow() === 0)
-    sum.appendRow(['Title','Year','Director','RT Audience','IMDb']);
-
-  var sumData = sum.getDataRange().getValues();
-  var rowIdx  = -1;
-  for (var i = 1; i < sumData.length; i++) {
-    if (sumData[i][0] === d.title) { rowIdx = i + 1; break; }
-  }
-  if (rowIdx === -1) {
-    sum.appendRow([d.title, d.year, d.director, d.rt, d.imdb]);
-    rowIdx  = sum.getLastRow();
-    sumData = sum.getDataRange().getValues();
-  }
-  var headers = sumData[0];
-  var userCol = headers.indexOf(username);
-  if (userCol === -1) {
-    userCol = headers.length;
-    sum.getRange(1, userCol + 1).setValue(username);
-  }
-  sum.getRange(rowIdx, userCol + 1).setValue(d.score10);
-
   return jsonOut_({ ok: true });
 }
 
 // ── GET FILM RATINGS ──────────────────────────────────────────
 function doGetRatings_(username) {
-  var ss  = SpreadsheetApp.openById(getSheetId());
-  var tab = ss.getSheetByName(username);
-  if (!tab) return jsonOut_([]);
-  var rows = tab.getDataRange().getValues();
-  var keys = rows[0];
-  var out  = [];
-  for (var i = 1; i < rows.length; i++) {
-    var obj = {};
-    keys.forEach(function(k, j){ obj[k] = rows[i][j]; });
-    out.push(obj);
-  }
-  return jsonOut_(out);
+  var tab = SpreadsheetApp.openById(getSheetId()).getSheetByName(FILMS_SHEET_NAME);
+  var rows = sheetObjects_(tab).filter(function(r) {
+    return String(r.user || '').toLowerCase() === String(username || '').toLowerCase();
+  });
+  if (!rows.length) return jsonOut_(legacySheetObjects_(username));
+  return jsonOut_(rows.map(filmToApiRow_));
 }
 
 // ── GET FILM SUMMARY ──────────────────────────────────────────
 function doGetSummary_() {
+  var tab = SpreadsheetApp.openById(getSheetId()).getSheetByName(FILMS_SHEET_NAME);
+  var data = sheetObjects_(tab);
+  if (!data.length) return doGetLegacyFilmSummary_();
+
+  var grouped = {};
+  data.forEach(function(r) {
+    var key = r.tmdbId ? 'tmdb|' + r.tmdbId : 'title|' + String(r.title || '').toLowerCase() + '|' + String(r.year || '');
+    if (!grouped[key]) {
+      grouped[key] = { Title: r.title, Year: r.year, scores: [], userScores: {} };
+    }
+    var score = parseFloat(r.score10);
+    if (!isNaN(score) && r.user) {
+      grouped[key].scores.push(score);
+      grouped[key].userScores[r.user] = score;
+    }
+  });
+  return jsonOut_({ rows: Object.keys(grouped).map(function(k){ return grouped[k]; }) });
+}
+
+function doGetLegacyFilmSummary_() {
   var ss  = SpreadsheetApp.openById(getSheetId());
   var sum = ss.getSheetByName('Summary');
   if (!sum) return jsonOut_({ rows: [] });
@@ -559,91 +739,143 @@ function getPlacePhotoDataUrl_(photoReference, key) {
   }
 }
 
+function restaurantToApiRow_(r) {
+  return {
+    'Date': r.date,
+    'Name': r.name,
+    'Address': r.address,
+    'City': r.city,
+    'Cuisine': r.cuisine,
+    'Price': r.price,
+    'Google Rating': r.googleRating,
+    'Score /10': r.score10,
+    'Raw /100': r.raw100,
+    'Grade': r.grade,
+    'Stars': r.stars,
+    'Food': r.food,
+    'Food Grade': r.foodGrade,
+    'Value': r.value,
+    'Value Grade': r.valueGrade,
+    'Service': r.service,
+    'Service Grade': r.serviceGrade,
+    'Atmosphere': r.atmosphere,
+    'Atmosphere Grade': r.atmosphereGrade,
+    'Craving': r.craving,
+    'Craving Grade': r.cravingGrade,
+    'Overall Notes': r.overallNotes,
+    'Place ID': r.placeId
+  };
+}
+
+function restaurantPayloadToSheetRow_(d, username, existing) {
+  var now = new Date().toISOString();
+  existing = existing || {};
+  return {
+    user: username,
+    date: d.date || existing.date || '',
+    name: d.name || existing.name || '',
+    address: d.address || existing.address || '',
+    city: d.city || existing.city || '',
+    cuisine: d.cuisine || existing.cuisine || '',
+    price: d.price || existing.price || '',
+    googleRating: d.googleRating || existing.googleRating || '',
+    score10: d.score10 || existing.score10 || '',
+    raw100: d.score100 || d.raw100 || existing.raw100 || '',
+    grade: d.grade || existing.grade || '',
+    stars: d.stars || existing.stars || '',
+    food: d.food || '',
+    foodGrade: d.foodGrade || '',
+    value: d.value || '',
+    valueGrade: d.valueGrade || '',
+    service: d.service || '',
+    serviceGrade: d.serviceGrade || '',
+    atmosphere: d.atmosphere || '',
+    atmosphereGrade: d.atmosphereGrade || '',
+    craving: d.craving || '',
+    cravingGrade: d.cravingGrade || '',
+    overallNotes: d.notes || d.overallNotes || '',
+    placeId: d.placeId || existing.placeId || '',
+    createdAt: existing.createdAt || now,
+    updatedAt: now
+  };
+}
+
+function legacyRestaurantToSheetRow_(legacy, username) {
+  return restaurantPayloadToSheetRow_({
+    date: legacy['Date'],
+    name: legacy['Name'],
+    address: legacy['Address'],
+    cuisine: legacy['Cuisine'],
+    price: legacy['Price'],
+    googleRating: legacy['Google Rating'],
+    score10: legacy['Score /10'],
+    raw100: legacy['Raw /100'],
+    grade: legacy['Grade'],
+    stars: legacy['Stars'],
+    food: legacy['Food'],
+    foodGrade: legacy['Food Grade'],
+    value: legacy['Value'],
+    valueGrade: legacy['Value Grade'],
+    service: legacy['Service'],
+    serviceGrade: legacy['Service Grade'],
+    atmosphere: legacy['Atmosphere'],
+    atmosphereGrade: legacy['Atmosphere Grade'],
+    craving: legacy['Craving'],
+    cravingGrade: legacy['Craving Grade'],
+    overallNotes: legacy['Overall Notes'],
+    placeId: legacy['Place ID']
+  }, username, {});
+}
+
 // ── SAVE RESTAURANT RATING ────────────────────────────────────
 function doSaveRestaurantRating_(d, username) {
-  var ss      = SpreadsheetApp.openById(getSheetId());
-  var tabName = username + '-Restaurants';
-  var tab     = ss.getSheetByName(tabName) || ss.insertSheet(tabName);
-
-  if (tab.getLastRow() === 0) {
-    tab.appendRow(["Date","Name","Address","Cuisine","Price","Google Rating",
-      "Score /10","Raw /100","Grade","Stars",
-      "Food","Food Grade","Value","Value Grade",
-      "Service","Service Grade","Atmosphere","Atmosphere Grade",
-      "Craving","Craving Grade","Overall Notes","Place ID"]);
-  }
-
-  var newRow = [d.date, d.name, d.address, d.cuisine, d.price, d.googleRating,
-    d.score10, d.score100, d.grade, d.stars,
-    d.food,       d.foodGrade,
-    d.value,      d.valueGrade,
-    d.service,    d.serviceGrade,
-    d.atmosphere, d.atmosphereGrade,
-    d.craving,    d.cravingGrade,
-    d.notes,      d.placeId || ''];
-
-  // Overwrite if already exists
-  var tabData     = tab.getDataRange().getValues();
-  var existingRow = -1;
-  for (var i = 1; i < tabData.length; i++) {
-    if (String(tabData[i][1]).toLowerCase() === String(d.name).toLowerCase() &&
-        String(tabData[i][2]).toLowerCase() === String(d.address || '').toLowerCase()) {
-      existingRow = i + 1; break;
-    }
-  }
+  var tab = getOrCreateSheet_(RESTAURANTS_SHEET_NAME, RESTAURANTS_HEADER);
+  var rowObj = restaurantPayloadToSheetRow_(d, username, {});
+  var existingRow = findExistingRow_(tab, RESTAURANTS_HEADER, rowObj, function(r) {
+    return categoryKey_(r.user, r.placeId, r.name, r.address);
+  });
   if (existingRow > -1) {
-    tab.getRange(existingRow, 1, 1, newRow.length).setValues([newRow]);
+    var existingObj = objectAtSheetRow_(tab, existingRow);
+    rowObj = restaurantPayloadToSheetRow_(d, username, existingObj);
+    tab.getRange(existingRow, 1, 1, RESTAURANTS_HEADER.length).setValues([rowForHeader_(RESTAURANTS_HEADER, rowObj)]);
   } else {
-    tab.appendRow(newRow);
+    tab.appendRow(rowForHeader_(RESTAURANTS_HEADER, rowObj));
   }
-
-  // Restaurant Summary tab
-  var sum = ss.getSheetByName('Restaurant Summary') || ss.insertSheet('Restaurant Summary');
-  if (sum.getLastRow() === 0)
-    sum.appendRow(['Name','Address','Cuisine','Price','Google Rating']);
-
-  var sumData = sum.getDataRange().getValues();
-  var rowIdx  = -1;
-  for (var i = 1; i < sumData.length; i++) {
-    if (String(sumData[i][0]).toLowerCase() === String(d.name).toLowerCase() &&
-        String(sumData[i][1]).toLowerCase() === String(d.address || '').toLowerCase()) {
-      rowIdx = i + 1; break;
-    }
-  }
-  if (rowIdx === -1) {
-    sum.appendRow([d.name, d.address, d.cuisine, d.price, d.googleRating]);
-    rowIdx  = sum.getLastRow();
-    sumData = sum.getDataRange().getValues();
-  }
-  var headers = sumData[0];
-  var userCol = headers.indexOf(username);
-  if (userCol === -1) {
-    userCol = headers.length;
-    sum.getRange(1, userCol + 1).setValue(username);
-  }
-  sum.getRange(rowIdx, userCol + 1).setValue(d.score10);
-
   return jsonOut_({ ok: true });
 }
 
 // ── GET RESTAURANT RATINGS ────────────────────────────────────
 function doGetRestaurantRatings_(username) {
-  var ss  = SpreadsheetApp.openById(getSheetId());
-  var tab = ss.getSheetByName(username + '-Restaurants');
-  if (!tab) return jsonOut_([]);
-  var rows = tab.getDataRange().getValues();
-  var keys = rows[0];
-  var out  = [];
-  for (var i = 1; i < rows.length; i++) {
-    var obj = {};
-    keys.forEach(function(k, j){ obj[k] = rows[i][j]; });
-    out.push(obj);
-  }
-  return jsonOut_(out);
+  var tab = SpreadsheetApp.openById(getSheetId()).getSheetByName(RESTAURANTS_SHEET_NAME);
+  var rows = sheetObjects_(tab).filter(function(r) {
+    return String(r.user || '').toLowerCase() === String(username || '').toLowerCase();
+  });
+  if (!rows.length) return jsonOut_(legacySheetObjects_(username + '-Restaurants'));
+  return jsonOut_(rows.map(restaurantToApiRow_));
 }
 
 // ── GET RESTAURANT SUMMARY ────────────────────────────────────
 function doGetRestaurantSummary_() {
+  var tab = SpreadsheetApp.openById(getSheetId()).getSheetByName(RESTAURANTS_SHEET_NAME);
+  var data = sheetObjects_(tab);
+  if (!data.length) return doGetLegacyRestaurantSummary_();
+
+  var grouped = {};
+  data.forEach(function(r) {
+    var key = r.placeId ? 'place|' + r.placeId : 'name|' + String(r.name || '').toLowerCase() + '|' + String(r.address || '').toLowerCase();
+    if (!grouped[key]) {
+      grouped[key] = { Name: r.name, Address: r.address, scores: [], userScores: {} };
+    }
+    var score = parseFloat(r.score10);
+    if (!isNaN(score) && r.user) {
+      grouped[key].scores.push(score);
+      grouped[key].userScores[r.user] = score;
+    }
+  });
+  return jsonOut_({ rows: Object.keys(grouped).map(function(k){ return grouped[k]; }) });
+}
+
+function doGetLegacyRestaurantSummary_() {
   var ss  = SpreadsheetApp.openById(getSheetId());
   var sum = ss.getSheetByName('Restaurant Summary');
   if (!sum) return jsonOut_({ rows: [] });
@@ -661,4 +893,131 @@ function doGetRestaurantSummary_() {
     rows.push(row);
   }
   return jsonOut_({ rows: rows });
+}
+
+// ══════════════════════════════════════════════════════════════
+//  MANUAL MIGRATION HELPERS
+//  Run these from the Apps Script editor. Dry runs do not edit data.
+// ══════════════════════════════════════════════════════════════
+
+function dryRunMigrateFilms() {
+  return migrateFilms_(true);
+}
+
+function migrateFilms() {
+  return migrateFilms_(false);
+}
+
+function migrateFilms_(dryRun) {
+  var users = getUsers_();
+  var ss = SpreadsheetApp.openById(getSheetId());
+  var tab = dryRun ? null : getOrCreateSheet_(FILMS_SHEET_NAME, FILMS_HEADER);
+  var existing = dryRun ? existingKeysForNamedSheet_(FILMS_SHEET_NAME, function(r) {
+    return categoryKey_(r.user, r.tmdbId, r.title, r.year);
+  }) : existingKeysForSheet_(tab, function(r) {
+    return categoryKey_(r.user, r.tmdbId, r.title, r.year);
+  });
+  var scanned = 0;
+  var inserted = 0;
+  var skipped = 0;
+
+  users.forEach(function(u) {
+    var legacyTab = ss.getSheetByName(u.name);
+    var rows = sheetObjects_(legacyTab);
+    rows.forEach(function(legacy) {
+      scanned++;
+      var rowObj = legacyFilmToSheetRow_(legacy, u.name);
+      if (!rowObj.title) {
+        skipped++;
+        return;
+      }
+      var key = categoryKey_(rowObj.user, rowObj.tmdbId, rowObj.title, rowObj.year);
+      if (existing[key]) {
+        skipped++;
+        return;
+      }
+      inserted++;
+      existing[key] = true;
+      if (!dryRun) {
+        tab.appendRow(rowForHeader_(FILMS_HEADER, rowObj));
+      }
+    });
+  });
+
+  return {
+    dryRun: dryRun,
+    targetSheet: FILMS_SHEET_NAME,
+    scannedLegacyRows: scanned,
+    rowsToInsertOrInserted: inserted,
+    skippedExistingOrBlank: skipped,
+    legacyTabsKept: true
+  };
+}
+
+function dryRunMigrateRestaurants() {
+  return migrateRestaurants_(true);
+}
+
+function migrateRestaurants() {
+  return migrateRestaurants_(false);
+}
+
+function migrateRestaurants_(dryRun) {
+  var users = getUsers_();
+  var ss = SpreadsheetApp.openById(getSheetId());
+  var tab = dryRun ? null : getOrCreateSheet_(RESTAURANTS_SHEET_NAME, RESTAURANTS_HEADER);
+  var existing = dryRun ? existingKeysForNamedSheet_(RESTAURANTS_SHEET_NAME, function(r) {
+    return categoryKey_(r.user, r.placeId, r.name, r.address);
+  }) : existingKeysForSheet_(tab, function(r) {
+    return categoryKey_(r.user, r.placeId, r.name, r.address);
+  });
+  var scanned = 0;
+  var inserted = 0;
+  var skipped = 0;
+
+  users.forEach(function(u) {
+    var legacyTab = ss.getSheetByName(u.name + '-Restaurants');
+    var rows = sheetObjects_(legacyTab);
+    rows.forEach(function(legacy) {
+      scanned++;
+      var rowObj = legacyRestaurantToSheetRow_(legacy, u.name);
+      if (!rowObj.name) {
+        skipped++;
+        return;
+      }
+      var key = categoryKey_(rowObj.user, rowObj.placeId, rowObj.name, rowObj.address);
+      if (existing[key]) {
+        skipped++;
+        return;
+      }
+      inserted++;
+      existing[key] = true;
+      if (!dryRun) {
+        tab.appendRow(rowForHeader_(RESTAURANTS_HEADER, rowObj));
+      }
+    });
+  });
+
+  return {
+    dryRun: dryRun,
+    targetSheet: RESTAURANTS_SHEET_NAME,
+    scannedLegacyRows: scanned,
+    rowsToInsertOrInserted: inserted,
+    skippedExistingOrBlank: skipped,
+    legacyTabsKept: true
+  };
+}
+
+function existingKeysForSheet_(tab, keyFn) {
+  var keys = {};
+  sheetObjects_(tab).forEach(function(r) {
+    keys[keyFn(r)] = true;
+  });
+  return keys;
+}
+
+function existingKeysForNamedSheet_(sheetName, keyFn) {
+  var ss = SpreadsheetApp.openById(getSheetId());
+  var tab = ss.getSheetByName(sheetName);
+  return existingKeysForSheet_(tab, keyFn);
 }
