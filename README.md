@@ -43,15 +43,29 @@ Optional:
 
 ## Data Model
 
-The backend keeps the existing spreadsheet style:
+The backend now uses one tab per rating category:
 
-- `Users` tab stores user names and hashed PINs.
-- Each film user has a personal tab named after the user.
-- Film group data goes into `Summary`.
-- Each restaurant user has a tab named `{UserName}-Restaurants`.
-- Restaurant group data goes into `Restaurant Summary`.
+- `Users` stores user names and PIN hashes: `name`, `pinHash`, `pinSalt`.
+- `Films` stores one row per film rating, with a `user` column plus film metadata, score fields, category scores, notes, `tmdbId`, `posterPath`, timestamps, and genres.
+- `Restaurants` stores one row per restaurant rating, with a `user` column plus restaurant metadata, score fields, category scores, notes, `placeId`, and timestamps.
+
+The old per-user tabs are still supported as a fallback while migrating:
+
+- Film legacy tabs are named after each user.
+- Restaurant legacy tabs are named `{UserName}-Restaurants`.
+- Old `Summary` and `Restaurant Summary` tabs can remain as backups, but the active group summaries are now calculated from `Films` and `Restaurants`.
 
 Legacy `Users` rows with plain PINs are supported for login and can be migrated to hashes by the backend after a successful login.
+
+## Sheet Migration
+
+Do not manually move rows unless the migration helpers fail. Paste and deploy `Code.gs`, then run these functions from the Apps Script editor:
+
+1. Select `dryRunMigrateFilms` and click **Run**. Confirm the returned counts look right.
+2. Select `migrateFilms` and click **Run**. This creates/fills the `Films` tab and leaves old user tabs untouched.
+3. Optional: select `dryRunMigrateRestaurants`, then `migrateRestaurants` to do the same for the `Restaurants` tab.
+
+After migration, new film saves write to `Films`; new restaurant saves write to `Restaurants`. The website still receives the same response shape it used before, so the UI and stats should behave the same.
 
 ## Security Model
 
