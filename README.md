@@ -43,17 +43,19 @@ Optional:
 
 ## Data Model
 
-The backend now uses one tab per rating category:
+The backend now uses database tabs plus visual summary tabs:
 
 - `Users` stores user names and PIN hashes: `name`, `pinHash`, `pinSalt`.
-- `Films` stores one row per film rating, with a `user` column plus film metadata, score fields, category scores, notes, `tmdbId`, `posterPath`, timestamps, and genres.
-- `Restaurants` stores one row per restaurant rating, with a `user` column plus restaurant metadata, score fields, category scores, notes, `placeId`, and timestamps.
+- `Database-Films` stores one row per film rating, with a `user` column plus film metadata, score fields, category scores, notes, `tmdbId`, `posterPath`, timestamps, genres, and runtime.
+- `Summary-Films` stores one row per film for spreadsheet-friendly comparison: title, year, genre, director, movie length, user score columns, and average rating.
+- `Database-Restaurants` stores one row per restaurant rating, with a `user` column plus restaurant metadata, score fields, category scores, notes, `placeId`, and timestamps.
+- `Summary-Restaurants` stores one row per restaurant for group comparison.
 
 The old per-user tabs are still supported as a fallback while migrating:
 
 - Film legacy tabs are named after each user.
 - Restaurant legacy tabs are named `{UserName}-Restaurants`.
-- Old `Summary` and `Restaurant Summary` tabs can remain as backups, but the active group summaries are now calculated from `Films` and `Restaurants`.
+- Old `Summary`, `Films`, `Restaurant Summary`, and `Restaurants` tabs can be renamed by `setupActiveSheetTabs`.
 
 Legacy `Users` rows with plain PINs are supported for login and can be migrated to hashes by the backend after a successful login.
 
@@ -62,10 +64,11 @@ Legacy `Users` rows with plain PINs are supported for login and can be migrated 
 Do not manually move rows unless the migration helpers fail. Paste and deploy `Code.gs`, then run these functions from the Apps Script editor:
 
 1. Select `dryRunMigrateFilms` and click **Run**. Confirm the returned counts look right.
-2. Select `migrateFilms` and click **Run**. This creates/fills the `Films` tab and leaves old user tabs untouched.
+2. Select `migrateFilms` and click **Run**. This creates/fills the film database tab and leaves old user tabs untouched.
 3. Optional: select `dryRunMigrateRestaurants`, then `migrateRestaurants` to do the same for the `Restaurants` tab.
+4. Select `setupActiveSheetTabs` and click **Run**. This renames/formats the active tabs and rebuilds `Summary-Films` and `Summary-Restaurants`.
 
-After migration, new film saves write to `Films`; new restaurant saves write to `Restaurants`. The website still receives the same response shape it used before, so the UI and stats should behave the same.
+After setup, new film saves write to `Database-Films` and rebuild `Summary-Films`; new restaurant saves write to `Database-Restaurants` and rebuild `Summary-Restaurants`. The website still receives the same response shape it used before, so the UI and stats should behave the same.
 
 ## Security Model
 
