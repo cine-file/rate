@@ -670,7 +670,7 @@ table.card-table{width:100%;border-collapse:collapse;margin-bottom:4px;}
 <script>
 const CONFIG = {
   // Public backend endpoint. All sensitive actions are validated in Apps Script.
-  GAS_URL: "https://script.google.com/macros/s/AKfycbxO1VNgelzbuBjpd49rdNTuWL3kBqmQM1LqE0DtGoyNCvr47WoXxT28yuBW-uprJkNilQ/exec",
+  GAS_URL: "https://script.google.com/macros/s/AKfycbzXTffnVTML1LDXcO75NMkG8N3pFSbCOwfrOJdf3Tm7HRGA6SWxQu-OhiCcmvvD_1j5GA/exec",
 };
 const SITE_NAME = "Cine-file";
 </script>
@@ -1971,6 +1971,7 @@ function pushToSheets(raw100, g, overallNote, today){
     tmdbId:  currentMovie.id||"",
     posterPath: currentMovie.poster||currentMovie.poster_path||"",
     genres:  (currentMovie.genres||[]).join(" · "),
+    runtimeMinutes: currentMovie.runtimeMinutes||currentMovie.runtime||"",
     score10: chosenScore10.toFixed(1),
     score100: quickMode ? (chosenScore10*10).toFixed(1) : raw100,
     grade:   g,
