@@ -55,7 +55,7 @@ The old per-user tabs are still supported as a fallback while migrating:
 
 - Film legacy tabs are named after each user.
 - Restaurant legacy tabs are named `{UserName}-Restaurants`.
-- Old `Summary`, `Films`, `Restaurant Summary`, and `Restaurants` tabs can be renamed by `setupActiveSheetTabs`.
+- Old `Summary`, `Films`, `Restaurant Summary`, and `Restaurants` tabs are not used by live website calls. `setupActiveSheetTabs` can absorb rows from old `Films` / `Restaurants` into the proper database tabs before you delete them.
 
 Legacy `Users` rows with plain PINs are supported for login and can be migrated to hashes by the backend after a successful login.
 
@@ -66,7 +66,7 @@ Do not manually move rows unless the migration helpers fail. Paste and deploy `C
 1. Select `dryRunMigrateFilms` and click **Run**. Confirm the returned counts look right.
 2. Select `migrateFilms` and click **Run**. This creates/fills the film database tab and leaves old user tabs untouched.
 3. Optional: select `dryRunMigrateRestaurants`, then `migrateRestaurants` to do the same for the `Restaurants` tab.
-4. Select `setupActiveSheetTabs` and click **Run**. This renames/formats the active tabs and rebuilds `Summary-Films` and `Summary-Restaurants`.
+4. Select `setupActiveSheetTabs` and click **Run**. This formats the active tabs, absorbs accidental rows from old `Films` / `Restaurants`, and rebuilds `Summary-Films` and `Summary-Restaurants`.
 
 After setup, new film saves write to `Database-Films` and rebuild `Summary-Films`; new restaurant saves write to `Database-Restaurants` and rebuild `Summary-Restaurants`. The website still receives the same response shape it used before, so the UI and stats should behave the same.
 
