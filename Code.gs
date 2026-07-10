@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 //  CINE-FILE — Google Apps Script
-//  Version: 2026.07.08-summary-database.1
+//  Version: 2026.07.10-summary-database.2
 //  Runtime: GitHub Pages frontend + Apps Script JSON backend
 //
 //  Version notes:
@@ -10,11 +10,12 @@
 //  - secure-restaurant.4: move ratings into shared Films and Restaurants category tabs with migration helpers.
 //  - secure-restaurant.5: harden category-tab header repair and add film diagnostics.
 //  - summary-database.1: rename active tabs to Summary/Database pairs and keep summary tabs synced.
+//  - summary-database.2: remove legacy tab fallbacks from live reads/writes; absorb old tabs only in setup.
 //
 //  Original by friend, restaurant functions added by Claude
 // ─────────────────────────────────────────────────────────────
 
-const BACKEND_VERSION = '2026.07.08-summary-database.1';
+const BACKEND_VERSION = '2026.07.10-summary-database.2';
 const SESSION_TTL_SECONDS = 6 * 60 * 60;
 
 const FILMS_SHEET_NAME = 'Database-Films';
@@ -681,7 +682,7 @@ function legacyFilmToSheetRow_(legacy, username) {
 
 // ── SAVE FILM RATING ──────────────────────────────────────────
 function doSaveRating_(d, username) {
-  var tab = getOrCreateSheet_(FILMS_SHEET_NAME, FILMS_HEADER, FILMS_LEGACY_SHEET_NAMES);
+  var tab = getOrCreateSheet_(FILMS_SHEET_NAME, FILMS_HEADER);
   var rowObj = filmPayloadToSheetRow_(d, username, {});
   var existingRow = findExistingRow_(tab, FILMS_HEADER, rowObj, function(r) {
     return categoryKey_(r.user, r.tmdbId, r.title, r.year);
@@ -699,19 +700,18 @@ function doSaveRating_(d, username) {
 
 // ── GET FILM RATINGS ──────────────────────────────────────────
 function doGetRatings_(username) {
-  var tab = getExistingSheet_(FILMS_SHEET_NAME, FILMS_LEGACY_SHEET_NAMES);
+  var tab = getExistingSheet_(FILMS_SHEET_NAME);
   var rows = sheetObjects_(tab, FILMS_HEADER).filter(function(r) {
     return String(r.user || '').toLowerCase() === String(username || '').toLowerCase();
   });
-  if (!rows.length) return jsonOut_(legacySheetObjects_(username));
   return jsonOut_(rows.map(filmToApiRow_));
 }
 
 // ── GET FILM SUMMARY ──────────────────────────────────────────
 function doGetSummary_() {
-  var tab = getExistingSheet_(FILMS_SHEET_NAME, FILMS_LEGACY_SHEET_NAMES);
+  var tab = getExistingSheet_(FILMS_SHEET_NAME);
   var data = sheetObjects_(tab, FILMS_HEADER);
-  if (!data.length) return doGetLegacyFilmSummary_();
+  if (!data.length) return jsonOut_({ rows: [] });
 
   var grouped = {};
   data.forEach(function(r) {
@@ -729,7 +729,7 @@ function doGetSummary_() {
 }
 
 function rebuildFilmSummary_() {
-  var dataTab = getExistingSheet_(FILMS_SHEET_NAME, FILMS_LEGACY_SHEET_NAMES);
+  var dataTab = getExistingSheet_(FILMS_SHEET_NAME);
   var data = sheetObjects_(dataTab, FILMS_HEADER);
   var userNames = getSummaryUserNames_(data);
   var header = FILM_SUMMARY_BASE_COLUMNS
@@ -882,7 +882,7 @@ function writeTable_(tab, header, rows) {
 
 function doDebugFilms_(username) {
   var ss = SpreadsheetApp.openById(getSheetId());
-  var tab = ss.getSheetByName(FILMS_SHEET_NAME) || getSheetByAnyName_(ss, FILMS_LEGACY_SHEET_NAMES);
+  var tab = ss.getSheetByName(FILMS_SHEET_NAME);
   var header = tab && tab.getLastRow() > 0
     ? tab.getRange(1, 1, 1, Math.max(tab.getLastColumn(), FILMS_HEADER.length)).getValues()[0]
     : [];
@@ -1085,7 +1085,7 @@ function legacyRestaurantToSheetRow_(legacy, username) {
 
 // ── SAVE RESTAURANT RATING ────────────────────────────────────
 function doSaveRestaurantRating_(d, username) {
-  var tab = getOrCreateSheet_(RESTAURANTS_SHEET_NAME, RESTAURANTS_HEADER, RESTAURANTS_LEGACY_SHEET_NAMES);
+  var tab = getOrCreateSheet_(RESTAURANTS_SHEET_NAME, RESTAURANTS_HEADER);
   var rowObj = restaurantPayloadToSheetRow_(d, username, {});
   var existingRow = findExistingRow_(tab, RESTAURANTS_HEADER, rowObj, function(r) {
     return categoryKey_(r.user, r.placeId, r.name, r.address);
@@ -1103,19 +1103,18 @@ function doSaveRestaurantRating_(d, username) {
 
 // ── GET RESTAURANT RATINGS ────────────────────────────────────
 function doGetRestaurantRatings_(username) {
-  var tab = getExistingSheet_(RESTAURANTS_SHEET_NAME, RESTAURANTS_LEGACY_SHEET_NAMES);
+  var tab = getExistingSheet_(RESTAURANTS_SHEET_NAME);
   var rows = sheetObjects_(tab, RESTAURANTS_HEADER).filter(function(r) {
     return String(r.user || '').toLowerCase() === String(username || '').toLowerCase();
   });
-  if (!rows.length) return jsonOut_(legacySheetObjects_(username + '-Restaurants'));
   return jsonOut_(rows.map(restaurantToApiRow_));
 }
 
 // ── GET RESTAURANT SUMMARY ────────────────────────────────────
 function doGetRestaurantSummary_() {
-  var tab = getExistingSheet_(RESTAURANTS_SHEET_NAME, RESTAURANTS_LEGACY_SHEET_NAMES);
+  var tab = getExistingSheet_(RESTAURANTS_SHEET_NAME);
   var data = sheetObjects_(tab, RESTAURANTS_HEADER);
-  if (!data.length) return doGetLegacyRestaurantSummary_();
+  if (!data.length) return jsonOut_({ rows: [] });
 
   var grouped = {};
   data.forEach(function(r) {
@@ -1133,7 +1132,7 @@ function doGetRestaurantSummary_() {
 }
 
 function rebuildRestaurantSummary_() {
-  var dataTab = getExistingSheet_(RESTAURANTS_SHEET_NAME, RESTAURANTS_LEGACY_SHEET_NAMES);
+  var dataTab = getExistingSheet_(RESTAURANTS_SHEET_NAME);
   var data = sheetObjects_(dataTab, RESTAURANTS_HEADER);
   var userNames = getSummaryUserNames_(data);
   var header = ['Name','Address','Cuisine','Price','Google Rating']
@@ -1203,8 +1202,14 @@ function doGetLegacyRestaurantSummary_() {
 // ══════════════════════════════════════════════════════════════
 
 function setupActiveSheetTabs() {
-  var filmDb = getOrCreateSheet_(FILMS_SHEET_NAME, FILMS_HEADER, FILMS_LEGACY_SHEET_NAMES);
-  var restaurantDb = getOrCreateSheet_(RESTAURANTS_SHEET_NAME, RESTAURANTS_HEADER, RESTAURANTS_LEGACY_SHEET_NAMES);
+  var filmDb = getOrCreateSheet_(FILMS_SHEET_NAME, FILMS_HEADER);
+  var restaurantDb = getOrCreateSheet_(RESTAURANTS_SHEET_NAME, RESTAURANTS_HEADER);
+  var absorbedFilms = absorbLegacyDatabaseRows_(FILMS_LEGACY_SHEET_NAMES, filmDb, FILMS_HEADER, function(r) {
+    return categoryKey_(r.user, r.tmdbId, r.title, r.year);
+  });
+  var absorbedRestaurants = absorbLegacyDatabaseRows_(RESTAURANTS_LEGACY_SHEET_NAMES, restaurantDb, RESTAURANTS_HEADER, function(r) {
+    return categoryKey_(r.user, r.placeId, r.name, r.address);
+  });
   formatSheetAsTable_(filmDb);
   formatSheetAsTable_(restaurantDb);
   var filmSummary = rebuildFilmSummary_();
@@ -1212,14 +1217,35 @@ function setupActiveSheetTabs() {
   var result = {
     version: BACKEND_VERSION,
     databaseFilms: FILMS_SHEET_NAME,
+    absorbedLegacyFilmRows: absorbedFilms,
     summaryFilms: filmSummary,
     databaseRestaurants: RESTAURANTS_SHEET_NAME,
+    absorbedLegacyRestaurantRows: absorbedRestaurants,
     summaryRestaurants: restaurantSummary,
     usersTabKept: true,
     legacyPersonalTabsKept: true
   };
   console.log(JSON.stringify(result, null, 2));
   return result;
+}
+
+function absorbLegacyDatabaseRows_(legacyNames, targetTab, header, keyFn) {
+  var ss = SpreadsheetApp.openById(getSheetId());
+  var existing = existingKeysForSheet_(targetTab, keyFn);
+  var inserted = 0;
+  (legacyNames || []).forEach(function(name) {
+    var legacyTab = ss.getSheetByName(name);
+    if (!legacyTab || legacyTab.getSheetId() === targetTab.getSheetId()) return;
+    var rows = sheetObjects_(legacyTab, header);
+    rows.forEach(function(rowObj) {
+      var key = keyFn(rowObj);
+      if (!key || existing[key]) return;
+      targetTab.appendRow(rowForHeader_(header, rowObj));
+      existing[key] = true;
+      inserted++;
+    });
+  });
+  return inserted;
 }
 
 function dryRunMigrateFilms() {
