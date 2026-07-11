@@ -746,7 +746,10 @@ body.theme-cream .grade-legend,body.theme-gold .grade-legend,
 body.theme-cream .scorer thead th,body.theme-gold .scorer thead th,
 body.theme-cream .round-opt,body.theme-gold .round-opt,
 body.theme-cream .stats-tab,body.theme-gold .stats-tab,
+body.theme-cream .score-mode-toggle,body.theme-gold .score-mode-toggle,
 body.theme-cream .stat-card,body.theme-gold .stat-card,
+body.theme-cream .film-row,body.theme-gold .film-row,
+body.theme-cream .h2h-stat,body.theme-gold .h2h-stat,
 body.theme-cream .group-table th,body.theme-gold .group-table th,
 body.theme-cream .lg-search-field,body.theme-gold .lg-search-field,
 body.theme-cream .lg-dropdown,body.theme-gold .lg-dropdown,
@@ -807,6 +810,7 @@ body.theme-cream .lg-act-btn:hover,body.theme-gold .lg-act-btn:hover{border-colo
 body.theme-cream .stats-section-title,body.theme-gold .stats-section-title,
 body.theme-cream .settings-section-title,body.theme-gold .settings-section-title,
 body.theme-cream .stats-tab.active,body.theme-gold .stats-tab.active,
+body.theme-cream .score-mode-btn.active,body.theme-gold .score-mode-btn.active,
 body.theme-cream .lg-stats-tab.active,body.theme-gold .lg-stats-tab.active,
 body.theme-cream .grade-bar-label,body.theme-gold .grade-bar-label,
 body.theme-cream .lg-grade-bar-label,body.theme-gold .lg-grade-bar-label,
@@ -819,6 +823,75 @@ body.theme-cream .lg-film-row-score,body.theme-gold .lg-film-row-score{color:var
 body.theme-cream .grade-bar-track,body.theme-gold .grade-bar-track{background:var(--theme-panel-2);}
 body.theme-cream .grade-bar-fill,body.theme-gold .grade-bar-fill,
 body.theme-cream .lg-grade-bar-fill,body.theme-gold .lg-grade-bar-fill{background:var(--theme-accent);}
+
+body.theme-cream .stats-section-title{color:#243f38;border-color:#c8bda4;}
+body.theme-cream .stats-section-title[style]{color:#243f38 !important;border-color:#c8bda4 !important;}
+body.theme-cream .stat-card-num,
+body.theme-cream .h2h-stat-num,
+body.theme-cream .lg-stat-card-num{color:#162823;}
+body.theme-cream .stat-card-lbl,
+body.theme-cream .h2h-stat-lbl,
+body.theme-cream .lg-stat-card-lbl,
+body.theme-cream .grade-bar-count,
+body.theme-cream .grade-bar-count[style],
+body.theme-cream .film-row-rank,
+body.theme-cream .lg-film-row-rank,
+body.theme-cream .film-row-year,
+body.theme-cream .lg-film-row-sub,
+body.theme-cream .all-ratings-count,
+body.theme-cream .stats-user-lbl,
+body.theme-cream .score-mode-btn,
+body.theme-cream .group-table .film-title-cell span{color:#5b6f60 !important;}
+body.theme-cream .film-row-title,
+body.theme-cream .lg-film-row-title,
+body.theme-cream .group-table .film-title-cell{color:#182822 !important;}
+body.theme-cream .group-table td[style],
+body.theme-cream .film-row-score[style],
+body.theme-cream .lg-film-row-score[style]{color:#536f5a !important;}
+body.theme-cream .group-table td.tc:not(.empty),
+body.theme-cream .film-row-score,
+body.theme-cream .lg-film-row-score,
+body.theme-cream .cat-bar-val{color:#2d5d4e !important;}
+body.theme-cream .group-table td.tc.empty{color:#a09a88 !important;}
+
+body.theme-gold .stats-section-title{color:#d6b15f;border-color:#4c412e;}
+body.theme-gold .stats-section-title[style]{color:#d6b15f !important;border-color:#4c412e !important;}
+body.theme-gold .stat-card-num,
+body.theme-gold .h2h-stat-num,
+body.theme-gold .lg-stat-card-num{color:#f3ead2;}
+body.theme-gold .stat-card-lbl,
+body.theme-gold .h2h-stat-lbl,
+body.theme-gold .lg-stat-card-lbl,
+body.theme-gold .grade-bar-count,
+body.theme-gold .grade-bar-count[style],
+body.theme-gold .film-row-rank,
+body.theme-gold .lg-film-row-rank,
+body.theme-gold .film-row-year,
+body.theme-gold .lg-film-row-sub,
+body.theme-gold .all-ratings-count,
+body.theme-gold .stats-user-lbl,
+body.theme-gold .score-mode-btn,
+body.theme-gold .group-table .film-title-cell span{color:#a99668 !important;}
+body.theme-gold .film-row-title,
+body.theme-gold .lg-film-row-title,
+body.theme-gold .group-table .film-title-cell{color:#f0ead8 !important;}
+body.theme-gold .group-table td[style],
+body.theme-gold .film-row-score[style],
+body.theme-gold .lg-film-row-score[style]{color:#d6b15f !important;}
+body.theme-gold .group-table td.tc:not(.empty),
+body.theme-gold .film-row-score,
+body.theme-gold .lg-film-row-score,
+body.theme-gold .cat-bar-val{color:#d6b15f !important;}
+body.theme-gold .group-table td.tc.empty{color:#6f6859 !important;}
+
+body.theme-cream .score-mode-btn.active,
+body.theme-gold .score-mode-btn.active{background:var(--theme-panel-2);}
+body.theme-cream .cat-bar-track,
+body.theme-gold .cat-bar-track,
+body.theme-cream .grade-bar-track[style],
+body.theme-gold .grade-bar-track[style]{background:var(--theme-panel-2) !important;}
+body.theme-cream .cat-bar-fill,
+body.theme-gold .cat-bar-fill{background:var(--theme-accent);}
 
 body.theme-cream .mpaa-card,body.theme-gold .mpaa-card{
   background:var(--theme-panel);border-color:var(--theme-accent);box-shadow:0 0 0 1px var(--theme-border),0 18px 70px var(--theme-shadow);color:var(--theme-text);
@@ -840,7 +913,7 @@ body.theme-cream .lg-card *,body.theme-gold .lg-card *{color:var(--theme-text);}
 <script>
 const CONFIG = {
   // Public backend endpoint. All sensitive actions are validated in Apps Script.
-  GAS_URL: "https://script.google.com/macros/s/AKfycbwfRY4_RIqhC5WCZAmAa-4fVeiy-u_wFtdECBcPE7SctEa1fYYhCA1CfaLVxwfiS5f3aA/exec",
+  GAS_URL: "https://script.google.com/macros/s/AKfycbzXTffnVTML1LDXcO75NMkG8N3pFSbCOwfrOJdf3Tm7HRGA6SWxQu-OhiCcmvvD_1j5GA/exec",
 };
 const SITE_NAME = "Cine-file";
 </script>
