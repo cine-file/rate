@@ -20,6 +20,8 @@ The dashboard is intentionally still a single-page app. Screens are shown/hidden
 5. Search/rating/stats actions call Apps Script with that token.
 6. Apps Script validates the token and writes/reads the private Google Sheet.
 
+Each user can change the site theme from the normal navigation bar without admin access. The theme choice is stored locally in the browser, not in Google Sheets.
+
 ## Files
 
 - `index.html` - GitHub Pages frontend.
@@ -51,24 +53,21 @@ The backend now uses database tabs plus visual summary tabs:
 - `Database-Restaurants` stores one row per restaurant rating, with a `user` column plus restaurant metadata, score fields, category scores, notes, `placeId`, and timestamps.
 - `Summary-Restaurants` stores one row per restaurant for group comparison.
 
-The old per-user tabs are still supported as a fallback while migrating:
-
-- Film legacy tabs are named after each user.
-- Restaurant legacy tabs are named `{UserName}-Restaurants`.
-- Old `Summary`, `Films`, `Restaurant Summary`, and `Restaurants` tabs are not used by live website calls. `setupActiveSheetTabs` can absorb rows from old `Films` / `Restaurants` into the proper database tabs before you delete them.
-
 Legacy `Users` rows with plain PINs are supported for login and can be migrated to hashes by the backend after a successful login.
 
-## Sheet Migration
+## Sheet Setup
 
-Do not manually move rows unless the migration helpers fail. Paste and deploy `Code.gs`, then run these functions from the Apps Script editor:
+The active website backend uses only these sheet tabs:
 
-1. Select `dryRunMigrateFilms` and click **Run**. Confirm the returned counts look right.
-2. Select `migrateFilms` and click **Run**. This creates/fills the film database tab and leaves old user tabs untouched.
-3. Optional: select `dryRunMigrateRestaurants`, then `migrateRestaurants` to do the same for the `Restaurants` tab.
-4. Select `setupActiveSheetTabs` and click **Run**. This formats the active tabs, absorbs accidental rows from old `Films` / `Restaurants`, and rebuilds `Summary-Films` and `Summary-Restaurants`.
+- `Database-Films`
+- `Summary-Films`
+- `Database-Restaurants`
+- `Summary-Restaurants`
+- `Users`
 
-After setup, new film saves write to `Database-Films` and rebuild `Summary-Films`; new restaurant saves write to `Database-Restaurants` and rebuild `Summary-Restaurants`. The website still receives the same response shape it used before, so the UI and stats should behave the same.
+Paste and deploy `Code.gs`, then run `setupActiveSheetTabs` from the Apps Script editor. This formats the active tabs and rebuilds `Summary-Films` and `Summary-Restaurants` from the database tabs.
+
+New film saves write to `Database-Films` and rebuild `Summary-Films`; new restaurant saves write to `Database-Restaurants` and rebuild `Summary-Restaurants`. The website still receives the same response shape it used before, so the UI and stats should behave the same.
 
 ## Security Model
 
