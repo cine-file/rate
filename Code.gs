@@ -1,15 +1,16 @@
 // ─────────────────────────────────────────────────────────────
 //  CINE-FILE — Google Apps Script
-//  Version: 2026.07.11-active-tabs-only.1
+//  Version: 2026.07.11-upsert-summary-columns.1
 //  Runtime: GitHub Pages frontend + Apps Script JSON backend
 //
 //  Version notes:
 //  - active-tabs-only.1: remove old migration/debug sheet paths and use only active database/summary tabs.
+//  - upsert-summary-columns.1: enforce database upserts and add RT/IMDb to film summaries.
 //
 //  Original by friend, restaurant functions added by Claude
 // ─────────────────────────────────────────────────────────────
 
-const BACKEND_VERSION = '2026.07.11-active-tabs-only.1';
+const BACKEND_VERSION = '2026.07.11-upsert-summary-columns.1';
 const SESSION_TTL_SECONDS = 6 * 60 * 60;
 
 const FILMS_SHEET_NAME = 'Database-Films';
@@ -17,7 +18,7 @@ const RESTAURANTS_SHEET_NAME = 'Database-Restaurants';
 const FILMS_SUMMARY_SHEET_NAME = 'Summary-Films';
 const RESTAURANTS_SUMMARY_SHEET_NAME = 'Summary-Restaurants';
 
-const FILM_SUMMARY_BASE_COLUMNS = ['Title','Year','Genre','Director','Movie length'];
+const FILM_SUMMARY_BASE_COLUMNS = ['Title','Year','Genre','Director','Movie length','RT Audience','IMDb'];
 const FILM_SUMMARY_AVERAGE_COLUMN = 'Average Rating';
 const FILM_SUMMARY_USER_ORDER = ['Michael','Megan','Stephen','Hannah','Chace','Natasha'];
 const SUMMARY_DISPLAY_NAMES = {};
@@ -508,27 +509,59 @@ function objectAtSheetRow_(tab, rowNumber) {
 }
 
 function findExistingRow_(tab, header, rowObj, keyFn) {
+  var rows = findExistingRows_(tab, header, rowObj, keyFn);
+  return rows.length ? rows[0] : -1;
+}
+
+function findExistingRows_(tab, header, rowObj, keyFn) {
   var values = tab.getDataRange().getValues();
-  if (values.length < 2) return -1;
+  if (values.length < 2) return [];
   var keys = values[0].map(function(k){ return String(k || '').trim(); });
   if (header && header.length && keys[0] !== header[0]) {
     keys = header.slice();
   }
   var target = keyFn(rowObj);
+  var rows = [];
   for (var i = 1; i < values.length; i++) {
     var obj = {};
     keys.forEach(function(k, j){ if (k) obj[k] = values[i][j]; });
-    if (keyFn(obj) === target) return i + 1;
+    if (keyFn(obj) === target) rows.push(i + 1);
   }
-  return -1;
+  return rows;
+}
+
+function normalizeKeyPart_(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .replace(/[^\w\s.-]/g, '');
 }
 
 function categoryKey_(user, primaryId, name, yearOrAddress) {
-  var id = String(primaryId || '').trim();
-  if (id) return String(user || '').toLowerCase() + '|id|' + id;
-  return String(user || '').toLowerCase() + '|name|' +
-    String(name || '').trim().toLowerCase() + '|' +
-    String(yearOrAddress || '').trim().toLowerCase();
+  var userKey = normalizeKeyPart_(user);
+  var id = normalizeKeyPart_(primaryId);
+  if (id) return userKey + '|id|' + id;
+  return userKey + '|name|' + normalizeKeyPart_(name) + '|' + normalizeKeyPart_(yearOrAddress);
+}
+
+function filmGroupKey_(r) {
+  var title = normalizeKeyPart_(r.title || r.Title);
+  var year = normalizeKeyPart_(r.year || r.Year);
+  if (title || year) return 'title|' + title + '|' + year;
+  return 'tmdb|' + normalizeKeyPart_(r.tmdbId || r['TMDB ID']);
+}
+
+function restaurantGroupKey_(r) {
+  var placeId = normalizeKeyPart_(r.placeId || r['Place ID']);
+  if (placeId) return 'place|' + placeId;
+  return 'name|' + normalizeKeyPart_(r.name || r.Name) + '|' + normalizeKeyPart_(r.address || r.Address);
+}
+
+function deleteExtraRows_(tab, rows) {
+  rows.slice(1).sort(function(a, b){ return b - a; }).forEach(function(rowNumber) {
+    tab.deleteRow(rowNumber);
+  });
 }
 
 function filmToApiRow_(r) {
@@ -601,7 +634,7 @@ function filmPayloadToSheetRow_(d, username, existing) {
     emotionalGrade: d.emotionalGrade || '',
     emotionalNotes: d.emotionalNotes || '',
     overallNotes: d.notes || d.overallNotes || '',
-    tmdbId: d.tmdbId || existing.tmdbId || '',
+    tmdbId: d.tmdbId || d.id || existing.tmdbId || '',
     posterPath: d.posterPath || existing.posterPath || '',
     genres: d.genres || existing.genres || '',
     runtimeMinutes: d.runtimeMinutes || d.runtime || existing.runtimeMinutes || '',
@@ -614,13 +647,20 @@ function filmPayloadToSheetRow_(d, username, existing) {
 function doSaveRating_(d, username) {
   var tab = getOrCreateSheet_(FILMS_SHEET_NAME, FILMS_HEADER);
   var rowObj = filmPayloadToSheetRow_(d, username, {});
-  var existingRow = findExistingRow_(tab, FILMS_HEADER, rowObj, function(r) {
+  var existingRows = findExistingRows_(tab, FILMS_HEADER, rowObj, function(r) {
     return categoryKey_(r.user, r.tmdbId, r.title, r.year);
   });
+  if (!existingRows.length) {
+    existingRows = findExistingRows_(tab, FILMS_HEADER, rowObj, function(r) {
+      return categoryKey_(r.user, '', r.title, r.year);
+    });
+  }
+  var existingRow = existingRows.length ? existingRows[0] : -1;
   if (existingRow > -1) {
     var existingObj = objectAtSheetRow_(tab, existingRow);
     rowObj = filmPayloadToSheetRow_(d, username, existingObj);
     tab.getRange(existingRow, 1, 1, FILMS_HEADER.length).setValues([rowForHeader_(FILMS_HEADER, rowObj)]);
+    deleteExtraRows_(tab, existingRows);
   } else {
     tab.appendRow(rowForHeader_(FILMS_HEADER, rowObj));
   }
@@ -645,7 +685,7 @@ function doGetSummary_() {
 
   var grouped = {};
   data.forEach(function(r) {
-    var key = r.tmdbId ? 'tmdb|' + r.tmdbId : 'title|' + String(r.title || '').toLowerCase() + '|' + String(r.year || '');
+    var key = filmGroupKey_(r);
     if (!grouped[key]) {
       grouped[key] = { Title: r.title, Year: r.year, scores: [], userScores: {} };
     }
@@ -669,7 +709,7 @@ function rebuildFilmSummary_() {
 
   var grouped = {};
   data.forEach(function(r) {
-    var key = r.tmdbId ? 'tmdb|' + r.tmdbId : 'title|' + String(r.title || '').toLowerCase() + '|' + String(r.year || '');
+    var key = filmGroupKey_(r);
     if (!grouped[key]) {
       grouped[key] = {
         title: r.title,
@@ -677,6 +717,8 @@ function rebuildFilmSummary_() {
         genre: r.genres || '',
         director: r.director || '',
         runtimeMinutes: r.runtimeMinutes || '',
+        rtAudience: r.rtAudience || '',
+        imdb: r.imdb || '',
         tmdbId: r.tmdbId || '',
         scoresByUser: {}
       };
@@ -684,6 +726,8 @@ function rebuildFilmSummary_() {
     grouped[key].genre = grouped[key].genre || r.genres || '';
     grouped[key].director = grouped[key].director || r.director || '';
     grouped[key].runtimeMinutes = grouped[key].runtimeMinutes || r.runtimeMinutes || '';
+    grouped[key].rtAudience = grouped[key].rtAudience || r.rtAudience || '';
+    grouped[key].imdb = grouped[key].imdb || r.imdb || '';
     var score = parseFloat(r.score10);
     if (!isNaN(score) && r.user) grouped[key].scoresByUser[String(r.user)] = score;
   });
@@ -703,7 +747,7 @@ function rebuildFilmSummary_() {
     var avg = numericScores.length
       ? Number((numericScores.reduce(function(a,b){ return a + b; }, 0) / numericScores.length).toFixed(1))
       : '';
-    return [g.title, g.year, g.genre, g.director, formatRuntime_(g.runtimeMinutes)]
+    return [g.title, g.year, g.genre, g.director, formatRuntime_(g.runtimeMinutes), g.rtAudience, g.imdb]
       .concat(scores)
       .concat([avg]);
   }).sort(function(a, b) {
@@ -926,7 +970,7 @@ function restaurantPayloadToSheetRow_(d, username, existing) {
     craving: d.craving || '',
     cravingGrade: d.cravingGrade || '',
     overallNotes: d.notes || d.overallNotes || '',
-    placeId: d.placeId || existing.placeId || '',
+    placeId: d.placeId || d.place_id || d.id || existing.placeId || '',
     createdAt: existing.createdAt || now,
     updatedAt: now
   };
@@ -936,13 +980,20 @@ function restaurantPayloadToSheetRow_(d, username, existing) {
 function doSaveRestaurantRating_(d, username) {
   var tab = getOrCreateSheet_(RESTAURANTS_SHEET_NAME, RESTAURANTS_HEADER);
   var rowObj = restaurantPayloadToSheetRow_(d, username, {});
-  var existingRow = findExistingRow_(tab, RESTAURANTS_HEADER, rowObj, function(r) {
+  var existingRows = findExistingRows_(tab, RESTAURANTS_HEADER, rowObj, function(r) {
     return categoryKey_(r.user, r.placeId, r.name, r.address);
   });
+  if (!existingRows.length) {
+    existingRows = findExistingRows_(tab, RESTAURANTS_HEADER, rowObj, function(r) {
+      return categoryKey_(r.user, '', r.name, r.address);
+    });
+  }
+  var existingRow = existingRows.length ? existingRows[0] : -1;
   if (existingRow > -1) {
     var existingObj = objectAtSheetRow_(tab, existingRow);
     rowObj = restaurantPayloadToSheetRow_(d, username, existingObj);
     tab.getRange(existingRow, 1, 1, RESTAURANTS_HEADER.length).setValues([rowForHeader_(RESTAURANTS_HEADER, rowObj)]);
+    deleteExtraRows_(tab, existingRows);
   } else {
     tab.appendRow(rowForHeader_(RESTAURANTS_HEADER, rowObj));
   }
@@ -967,7 +1018,7 @@ function doGetRestaurantSummary_() {
 
   var grouped = {};
   data.forEach(function(r) {
-    var key = r.placeId ? 'place|' + r.placeId : 'name|' + String(r.name || '').toLowerCase() + '|' + String(r.address || '').toLowerCase();
+    var key = restaurantGroupKey_(r);
     if (!grouped[key]) {
       grouped[key] = { Name: r.name, Address: r.address, scores: [], userScores: {} };
     }
@@ -991,7 +1042,7 @@ function rebuildRestaurantSummary_() {
 
   var grouped = {};
   data.forEach(function(r) {
-    var key = r.placeId ? 'place|' + r.placeId : 'name|' + String(r.name || '').toLowerCase() + '|' + String(r.address || '').toLowerCase();
+    var key = restaurantGroupKey_(r);
     if (!grouped[key]) {
       grouped[key] = {
         name: r.name,
