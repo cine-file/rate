@@ -840,7 +840,7 @@ body.theme-cream .lg-card *,body.theme-gold .lg-card *{color:var(--theme-text);}
 <script>
 const CONFIG = {
   // Public backend endpoint. All sensitive actions are validated in Apps Script.
-  GAS_URL: "https://script.google.com/macros/s/AKfycbwfRY4_RIqhC5WCZAmAa-4fVeiy-u_wFtdECBcPE7SctEa1fYYhCA1CfaLVxwfiS5f3aA/exec",
+  GAS_URL: "https://script.google.com/macros/s/AKfycbzXTffnVTML1LDXcO75NMkG8N3pFSbCOwfrOJdf3Tm7HRGA6SWxQu-OhiCcmvvD_1j5GA/exec",
 };
 const SITE_NAME = "Cine-file";
 </script>
@@ -1473,7 +1473,7 @@ function goEditScores(){
 function updateQuickScore(val){
   const score = (parseInt(val)/2).toFixed(1);
   document.getElementById('quick-score-display').textContent = score;
-  document.getElementById('quick-score-grade').textContent = grade(parseFloat(score)*10);
+  document.getElementById('quick-score-grade').textContent = grade(parseFloat(score));
   const pct = (val/20*100).toFixed(1);
   document.getElementById('quick-slider').style.setProperty('--pct', pct+'%');
 }
@@ -3360,7 +3360,7 @@ function lgConfirmRound(){
 function lgUpdateQuick(val){
   const score = (parseInt(val)/2).toFixed(1);
   document.getElementById('lg-quick-display').textContent = score;
-  document.getElementById('lg-quick-grade').textContent = grade(parseFloat(score)*10);
+  document.getElementById('lg-quick-grade').textContent = grade(parseFloat(score));
   const pct = (val/20*100).toFixed(1);
   document.getElementById('lg-quick-slider').style.setProperty('--pct', pct+'%');
 }
