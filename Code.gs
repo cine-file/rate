@@ -1,16 +1,18 @@
 // ─────────────────────────────────────────────────────────────
 //  CINE-FILE — Google Apps Script
-//  Version: 2026.07.11-upsert-summary-columns.1
+//  Version: 2026.07.25-decimal-score-group-search.1
 //  Runtime: GitHub Pages frontend + Apps Script JSON backend
 //
 //  Version notes:
 //  - active-tabs-only.1: remove old migration/debug sheet paths and use only active database/summary tabs.
 //  - upsert-summary-columns.1: enforce database upserts and add RT/IMDb to film summaries.
+//  - decimal-score-group-search.1: supports tenth-point scoring in the frontend and
+//    includes RT/IMDb metadata in the authenticated group-summary API response.
 //
 //  Original by friend, restaurant functions added by Claude
 // ─────────────────────────────────────────────────────────────
 
-const BACKEND_VERSION = '2026.07.11-upsert-summary-columns.1';
+const BACKEND_VERSION = '2026.07.25-decimal-score-group-search.1';
 const SESSION_TTL_SECONDS = 6 * 60 * 60;
 
 const FILMS_SHEET_NAME = 'Database-Films';
@@ -687,8 +689,17 @@ function doGetSummary_() {
   data.forEach(function(r) {
     var key = filmGroupKey_(r);
     if (!grouped[key]) {
-      grouped[key] = { Title: r.title, Year: r.year, scores: [], userScores: {} };
+      grouped[key] = {
+        Title: r.title,
+        Year: r.year,
+        rt: r.rtAudience || '',
+        imdb: r.imdb || '',
+        scores: [],
+        userScores: {}
+      };
     }
+    grouped[key].rt = grouped[key].rt || r.rtAudience || '';
+    grouped[key].imdb = grouped[key].imdb || r.imdb || '';
     var score = parseFloat(r.score10);
     if (!isNaN(score) && r.user) {
       grouped[key].scores.push(score);
