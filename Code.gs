@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 //  CINE-FILE — Google Apps Script
-//  Version: 2026.07.25-decimal-score-group-search.1
+//  Version: 2026.07.25-tv-season-ratings.2
 //  Runtime: GitHub Pages frontend + Apps Script JSON backend
 //
 //  Version notes:
@@ -8,17 +8,25 @@
 //  - upsert-summary-columns.1: enforce database upserts and add RT/IMDb to film summaries.
 //  - decimal-score-group-search.1: supports tenth-point scoring in the frontend and
 //    includes RT/IMDb metadata in the authenticated group-summary API response.
+//  - wishlist-theme-details.1: adds authenticated personal Future-Films and
+//    Future-Restaurants lists, removed automatically when their owner rates an item.
+//  - tv-season-ratings.1: adds TV season and optional overall-series ratings.
 //
 //  Original by friend, restaurant functions added by Claude
 // ─────────────────────────────────────────────────────────────
 
-const BACKEND_VERSION = '2026.07.25-decimal-score-group-search.1';
+const BACKEND_VERSION = '2026.07.25-tv-season-ratings.2';
 const SESSION_TTL_SECONDS = 6 * 60 * 60;
 
 const FILMS_SHEET_NAME = 'Database-Films';
 const RESTAURANTS_SHEET_NAME = 'Database-Restaurants';
 const FILMS_SUMMARY_SHEET_NAME = 'Summary-Films';
 const RESTAURANTS_SUMMARY_SHEET_NAME = 'Summary-Restaurants';
+const FUTURE_FILMS_SHEET_NAME = 'Future-Films';
+const FUTURE_RESTAURANTS_SHEET_NAME = 'Future-Restaurants';
+const TV_SHEET_NAME = 'Database-TV';
+const TV_SUMMARY_SHEET_NAME = 'Summary-TV';
+const FUTURE_TV_SHEET_NAME = 'Future-TV';
 
 const FILM_SUMMARY_BASE_COLUMNS = ['Title','Year','Genre','Director','Movie length','RT Audience','IMDb'];
 const FILM_SUMMARY_AVERAGE_COLUMN = 'Average Rating';
@@ -43,6 +51,34 @@ const RESTAURANTS_HEADER = [
   'food','foodGrade','value','valueGrade',
   'service','serviceGrade','atmosphere','atmosphereGrade',
   'craving','cravingGrade','overallNotes','placeId','createdAt','updatedAt'
+];
+
+const FUTURE_FILMS_HEADER = [
+  'user','title','year','director','runtimeMinutes','rtAudience','imdb',
+  'tmdbId','posterPath','genres','createdAt','updatedAt'
+];
+
+const FUTURE_RESTAURANTS_HEADER = [
+  'user','name','address','city','cuisine','price','googleRating',
+  'placeId','createdAt','updatedAt'
+];
+
+const TV_HEADER = [
+  'user','date','entryType','seriesTitle','seriesYear','seasonNumber','seasonName',
+  'episodeCount','creator','genres','imdb','tmdbTvId','posterPath',
+  'score10','raw100','grade',
+  'plot','plotGrade','plotNotes',
+  'entertainment','entGrade','entNotes',
+  'acting','actingGrade','actingNotes',
+  'visuals','visualsGrade','visualsNotes',
+  'pacing','pacingGrade','pacingNotes',
+  'emotional','emotionalGrade','emotionalNotes',
+  'overallNotes','createdAt','updatedAt'
+];
+
+const FUTURE_TV_HEADER = [
+  'user','seriesTitle','seriesYear','creator','genres','imdb','tmdbTvId',
+  'posterPath','createdAt','updatedAt'
 ];
 
 function getScriptProps() {
@@ -233,10 +269,24 @@ function doPost(e) {
     if (action === 'saveRating')             return doSaveRating_(d.payload || d, username);
     if (action === 'getRatings')             return doGetRatings_(username);
     if (action === 'getSummary')             return doGetSummary_();
+    if (action === 'getFutureFilms')         return doGetFutureFilms_(username);
+    if (action === 'addFutureFilm')          return doAddFutureFilm_(d.payload || d, username);
+    if (action === 'deleteFutureFilm')       return doDeleteFutureFilm_(d.payload || d, username);
+    if (action === 'searchTv')                return doSearchTv_(d);
+    if (action === 'getTvDetails')            return doGetTvDetails_(d);
+    if (action === 'saveTvRating')            return doSaveTvRating_(d.payload || d, username);
+    if (action === 'getTvRatings')            return doGetTvRatings_(username);
+    if (action === 'getTvSummary')            return doGetTvSummary_();
+    if (action === 'getFutureTv')             return doGetFutureTv_(username);
+    if (action === 'addFutureTv')             return doAddFutureTv_(d.payload || d, username);
+    if (action === 'deleteFutureTv')          return doDeleteFutureTv_(d.payload || d, username);
     if (action === 'searchRestaurants')      return doSearchRestaurants_(d);
     if (action === 'saveRestaurantRating')   return doSaveRestaurantRating_(d.payload || d, username);
     if (action === 'getRestaurantRatings')   return doGetRestaurantRatings_(username);
     if (action === 'getRestaurantSummary')   return doGetRestaurantSummary_();
+    if (action === 'getFutureRestaurants')   return doGetFutureRestaurants_(username);
+    if (action === 'addFutureRestaurant')    return doAddFutureRestaurant_(d.payload || d, username);
+    if (action === 'deleteFutureRestaurant') return doDeleteFutureRestaurant_(d.payload || d, username);
 
     return jsonOut_({ error: 'Unknown action: ' + action });
   } catch(err) {
@@ -566,6 +616,237 @@ function deleteExtraRows_(tab, rows) {
   });
 }
 
+// ── WISHLIST HELPERS ──────────────────────────────────────────
+function futureFilmPayloadToSheetRow_(d, username, existing) {
+  var now = new Date().toISOString();
+  existing = existing || {};
+  var genres = d.genres || existing.genres || '';
+  if (Array.isArray(genres)) genres = genres.join(' · ');
+  return {
+    user: username,
+    title: d.title || existing.title || '',
+    year: d.year || existing.year || '',
+    director: d.director || existing.director || '',
+    runtimeMinutes: d.runtimeMinutes || d.runtime || existing.runtimeMinutes || '',
+    rtAudience: d.rt || d.rtAudience || existing.rtAudience || '',
+    imdb: d.imdb || existing.imdb || '',
+    tmdbId: d.tmdbId || d['TMDB ID'] || d.id || existing.tmdbId || '',
+    posterPath: d.posterPath || d['Poster Path'] || d.poster || d.poster_path || existing.posterPath || '',
+    genres: genres,
+    createdAt: existing.createdAt || now,
+    updatedAt: now
+  };
+}
+
+function futureRestaurantPayloadToSheetRow_(d, username, existing) {
+  var now = new Date().toISOString();
+  existing = existing || {};
+  return {
+    user: username,
+    name: d.name || existing.name || '',
+    address: d.address || existing.address || '',
+    city: d.city || existing.city || '',
+    cuisine: d.cuisine || existing.cuisine || '',
+    price: d.price || existing.price || '',
+    googleRating: d.googleRating || d.rating || existing.googleRating || '',
+    placeId: d.placeId || d['Place ID'] || d.place_id || d.id || existing.placeId || '',
+    createdAt: existing.createdAt || now,
+    updatedAt: now
+  };
+}
+
+function categoryRowsForPayload_(tab, header, rowObj, idField, nameField, detailField) {
+  var rows = findExistingRows_(tab, header, rowObj, function(r) {
+    return categoryKey_(r.user, r[idField], r[nameField], r[detailField]);
+  });
+  if (!rows.length) {
+    rows = findExistingRows_(tab, header, rowObj, function(r) {
+      return categoryKey_(r.user, '', r[nameField], r[detailField]);
+    });
+  }
+  return rows;
+}
+
+function userHasRatedFilm_(rowObj, username) {
+  var tab = getExistingSheet_(FILMS_SHEET_NAME);
+  if (!tab) return false;
+  var candidate = {
+    user: username,
+    tmdbId: rowObj.tmdbId,
+    title: rowObj.title,
+    year: rowObj.year
+  };
+  return categoryRowsForPayload_(tab, FILMS_HEADER, candidate, 'tmdbId', 'title', 'year').length > 0;
+}
+
+function userHasRatedRestaurant_(rowObj, username) {
+  var tab = getExistingSheet_(RESTAURANTS_SHEET_NAME);
+  if (!tab) return false;
+  var candidate = {
+    user: username,
+    placeId: rowObj.placeId,
+    name: rowObj.name,
+    address: rowObj.address
+  };
+  return categoryRowsForPayload_(tab, RESTAURANTS_HEADER, candidate, 'placeId', 'name', 'address').length > 0;
+}
+
+function removeFutureFilm_(rowObj, username) {
+  var tab = getExistingSheet_(FUTURE_FILMS_SHEET_NAME);
+  if (!tab) return;
+  var candidate = {
+    user: username,
+    tmdbId: rowObj.tmdbId,
+    title: rowObj.title,
+    year: rowObj.year
+  };
+  categoryRowsForPayload_(tab, FUTURE_FILMS_HEADER, candidate, 'tmdbId', 'title', 'year')
+    .sort(function(a, b){ return b - a; })
+    .forEach(function(rowNumber){ tab.deleteRow(rowNumber); });
+}
+
+function removeFutureRestaurant_(rowObj, username) {
+  var tab = getExistingSheet_(FUTURE_RESTAURANTS_SHEET_NAME);
+  if (!tab) return;
+  var candidate = {
+    user: username,
+    placeId: rowObj.placeId,
+    name: rowObj.name,
+    address: rowObj.address
+  };
+  categoryRowsForPayload_(tab, FUTURE_RESTAURANTS_HEADER, candidate, 'placeId', 'name', 'address')
+    .sort(function(a, b){ return b - a; })
+    .forEach(function(rowNumber){ tab.deleteRow(rowNumber); });
+}
+
+function futureFilmToApiRow_(r, groupStats) {
+  var stats = groupStats[filmGroupKey_(r)] || { scores: [] };
+  var scores = stats.scores || [];
+  var avg = scores.length
+    ? Number((scores.reduce(function(a, b){ return a + b; }, 0) / scores.length).toFixed(1))
+    : '';
+  return {
+    'Title': r.title,
+    'Year': r.year,
+    'Director': r.director,
+    'Movie length': r.runtimeMinutes,
+    'RT Audience': r.rtAudience,
+    'IMDb': r.imdb,
+    'TMDB ID': r.tmdbId,
+    'Poster Path': r.posterPath,
+    'Genres': r.genres,
+    'Group Average': avg,
+    'Group Rating Count': scores.length
+  };
+}
+
+function futureRestaurantToApiRow_(r, groupStats) {
+  var stats = groupStats[restaurantGroupKey_(r)] || { scores: [] };
+  var scores = stats.scores || [];
+  var avg = scores.length
+    ? Number((scores.reduce(function(a, b){ return a + b; }, 0) / scores.length).toFixed(1))
+    : '';
+  return {
+    'Name': r.name,
+    'Address': r.address,
+    'City': r.city,
+    'Cuisine': r.cuisine,
+    'Price': r.price,
+    'Google Rating': r.googleRating,
+    'Place ID': r.placeId,
+    'Group Average': avg,
+    'Group Rating Count': scores.length
+  };
+}
+
+function filmGroupStats_() {
+  var tab = getExistingSheet_(FILMS_SHEET_NAME);
+  var grouped = {};
+  sheetObjects_(tab, FILMS_HEADER).forEach(function(r) {
+    var key = filmGroupKey_(r);
+    if (!grouped[key]) grouped[key] = { scores: [] };
+    var score = parseFloat(r.score10);
+    if (!isNaN(score)) grouped[key].scores.push(score);
+  });
+  return grouped;
+}
+
+function restaurantGroupStats_() {
+  var tab = getExistingSheet_(RESTAURANTS_SHEET_NAME);
+  var grouped = {};
+  sheetObjects_(tab, RESTAURANTS_HEADER).forEach(function(r) {
+    var key = restaurantGroupKey_(r);
+    if (!grouped[key]) grouped[key] = { scores: [] };
+    var score = parseFloat(r.score10);
+    if (!isNaN(score)) grouped[key].scores.push(score);
+  });
+  return grouped;
+}
+
+function doAddFutureFilm_(d, username) {
+  var tab = getOrCreateSheet_(FUTURE_FILMS_SHEET_NAME, FUTURE_FILMS_HEADER);
+  var rowObj = futureFilmPayloadToSheetRow_(d, username, {});
+  if (userHasRatedFilm_(rowObj, username)) {
+    return jsonOut_({ ok: false, error: 'You have already rated this film.' });
+  }
+  var rows = categoryRowsForPayload_(tab, FUTURE_FILMS_HEADER, rowObj, 'tmdbId', 'title', 'year');
+  if (rows.length) {
+    var existing = objectAtSheetRow_(tab, rows[0]);
+    rowObj = futureFilmPayloadToSheetRow_(d, username, existing);
+    tab.getRange(rows[0], 1, 1, FUTURE_FILMS_HEADER.length).setValues([rowForHeader_(FUTURE_FILMS_HEADER, rowObj)]);
+    deleteExtraRows_(tab, rows);
+  } else {
+    tab.appendRow(rowForHeader_(FUTURE_FILMS_HEADER, rowObj));
+  }
+  return jsonOut_({ ok: true });
+}
+
+function doDeleteFutureFilm_(d, username) {
+  removeFutureFilm_(futureFilmPayloadToSheetRow_(d, username, {}), username);
+  return jsonOut_({ ok: true });
+}
+
+function doGetFutureFilms_(username) {
+  var tab = getExistingSheet_(FUTURE_FILMS_SHEET_NAME);
+  var rows = sheetObjects_(tab, FUTURE_FILMS_HEADER).filter(function(r) {
+    return String(r.user || '').toLowerCase() === String(username || '').toLowerCase();
+  });
+  var stats = filmGroupStats_();
+  return jsonOut_(rows.map(function(r){ return futureFilmToApiRow_(r, stats); }));
+}
+
+function doAddFutureRestaurant_(d, username) {
+  var tab = getOrCreateSheet_(FUTURE_RESTAURANTS_SHEET_NAME, FUTURE_RESTAURANTS_HEADER);
+  var rowObj = futureRestaurantPayloadToSheetRow_(d, username, {});
+  if (userHasRatedRestaurant_(rowObj, username)) {
+    return jsonOut_({ ok: false, error: 'You have already rated this restaurant.' });
+  }
+  var rows = categoryRowsForPayload_(tab, FUTURE_RESTAURANTS_HEADER, rowObj, 'placeId', 'name', 'address');
+  if (rows.length) {
+    var existing = objectAtSheetRow_(tab, rows[0]);
+    rowObj = futureRestaurantPayloadToSheetRow_(d, username, existing);
+    tab.getRange(rows[0], 1, 1, FUTURE_RESTAURANTS_HEADER.length).setValues([rowForHeader_(FUTURE_RESTAURANTS_HEADER, rowObj)]);
+    deleteExtraRows_(tab, rows);
+  } else {
+    tab.appendRow(rowForHeader_(FUTURE_RESTAURANTS_HEADER, rowObj));
+  }
+  return jsonOut_({ ok: true });
+}
+
+function doDeleteFutureRestaurant_(d, username) {
+  removeFutureRestaurant_(futureRestaurantPayloadToSheetRow_(d, username, {}), username);
+  return jsonOut_({ ok: true });
+}
+
+function doGetFutureRestaurants_(username) {
+  var tab = getExistingSheet_(FUTURE_RESTAURANTS_SHEET_NAME);
+  var rows = sheetObjects_(tab, FUTURE_RESTAURANTS_HEADER).filter(function(r) {
+    return String(r.user || '').toLowerCase() === String(username || '').toLowerCase();
+  });
+  var stats = restaurantGroupStats_();
+  return jsonOut_(rows.map(function(r){ return futureRestaurantToApiRow_(r, stats); }));
+}
+
 function filmToApiRow_(r) {
   return {
     'Date': r.date,
@@ -666,6 +947,7 @@ function doSaveRating_(d, username) {
   } else {
     tab.appendRow(rowForHeader_(FILMS_HEADER, rowObj));
   }
+  removeFutureFilm_(rowObj, username);
   rebuildFilmSummary_();
   return jsonOut_({ ok: true });
 }
@@ -856,6 +1138,232 @@ function writeTable_(tab, header, rows) {
 }
 
 // ══════════════════════════════════════════════════════════════
+//  TV — SEASONS + OPTIONAL OVERALL SERIES RATINGS
+// ══════════════════════════════════════════════════════════════
+function tvGroupKey_(r) {
+  var id = normalizeKeyPart_(r.tmdbTvId || r['TMDB TV ID']);
+  var type = normalizeKeyPart_(r.entryType || r.Type || 'season');
+  var season = type === 'overall' ? 'overall' : String(r.seasonNumber || r.Season || '');
+  return (id ? 'tv|' + id : 'tvtitle|' + normalizeKeyPart_(r.seriesTitle || r.Series)) + '|' + type + '|' + season;
+}
+
+function tvPayloadToSheetRow_(d, username, existing) {
+  var now = new Date().toISOString();
+  existing = existing || {};
+  var genres = d.genres || existing.genres || '';
+  if (Array.isArray(genres)) genres = genres.join(' · ');
+  var entryType = String(d.entryType || existing.entryType || 'season').toLowerCase() === 'overall' ? 'overall' : 'season';
+  return {
+    user: username,
+    date: d.date || existing.date || '',
+    entryType: entryType,
+    seriesTitle: d.seriesTitle || d.name || existing.seriesTitle || '',
+    seriesYear: d.seriesYear || d.year || existing.seriesYear || '',
+    seasonNumber: entryType === 'overall' ? '' : (d.seasonNumber || existing.seasonNumber || ''),
+    seasonName: entryType === 'overall' ? 'Overall Series' : (d.seasonName || existing.seasonName || ''),
+    episodeCount: entryType === 'overall' ? '' : (d.episodeCount || existing.episodeCount || ''),
+    creator: d.creator || existing.creator || '',
+    genres: genres,
+    imdb: d.imdb || existing.imdb || '',
+    tmdbTvId: d.tmdbTvId || d.id || existing.tmdbTvId || '',
+    posterPath: d.posterPath || d.poster || d.poster_path || existing.posterPath || '',
+    score10: d.score10 || existing.score10 || '',
+    raw100: d.score100 || d.raw100 || existing.raw100 || '',
+    grade: d.grade || existing.grade || '',
+    plot: d.plot || '', plotGrade: d.plotGrade || '', plotNotes: d.plotNotes || '',
+    entertainment: d.entertainment || '', entGrade: d.entGrade || '', entNotes: d.entNotes || '',
+    acting: d.acting || '', actingGrade: d.actingGrade || '', actingNotes: d.actingNotes || '',
+    visuals: d.visuals || '', visualsGrade: d.visualsGrade || '', visualsNotes: d.visualsNotes || '',
+    pacing: d.pacing || '', pacingGrade: d.pacingGrade || '', pacingNotes: d.pacingNotes || '',
+    emotional: d.emotional || '', emotionalGrade: d.emotionalGrade || '', emotionalNotes: d.emotionalNotes || '',
+    overallNotes: d.notes || d.overallNotes || '',
+    createdAt: existing.createdAt || now,
+    updatedAt: now
+  };
+}
+
+function tvToApiRow_(r) {
+  return {
+    'Date': r.date, 'Type': r.entryType, 'Series': r.seriesTitle, 'Year': r.seriesYear,
+    'Season': r.seasonNumber, 'Season Name': r.seasonName, 'Episodes': r.episodeCount,
+    'Creator': r.creator, 'Genres': r.genres, 'IMDb': r.imdb, 'TMDB TV ID': r.tmdbTvId,
+    'Poster Path': r.posterPath, 'Score /10': r.score10, 'Raw /100': r.raw100, 'Grade': r.grade,
+    'Plot': r.plot, 'Entertainment': r.entertainment, 'Acting': r.acting, 'Visuals': r.visuals,
+    'Pacing': r.pacing, 'Emotional': r.emotional, 'Overall Notes': r.overallNotes
+  };
+}
+
+function doSearchTv_(d) {
+  var url = 'https://api.themoviedb.org/3/search/tv?api_key=' + getTmdbKey() +
+    '&query=' + encodeURIComponent(d.query || '') + '&include_adult=false';
+  var data = fetchJson_(url);
+  var results = (data.results || []).slice(0, 7).map(function(r) {
+    return { id:r.id, name:r.name, year:(r.first_air_date || '').slice(0,4), poster_path:r.poster_path || '' };
+  });
+  return jsonOut_({ results: results });
+}
+
+function doGetTvDetails_(d) {
+  var url = 'https://api.themoviedb.org/3/tv/' + encodeURIComponent(d.id) +
+    '?api_key=' + getTmdbKey() + '&append_to_response=external_ids';
+  var data = fetchJson_(url);
+  var imdb = '';
+  var imdbId = data.external_ids && data.external_ids.imdb_id;
+  if (imdbId && getOmdbKey()) {
+    try {
+      var omdb = fetchJson_('https://www.omdbapi.com/?apikey=' + getOmdbKey() + '&i=' + encodeURIComponent(imdbId));
+      imdb = omdb.imdbRating && omdb.imdbRating !== 'N/A' ? omdb.imdbRating : '';
+    } catch(e) {}
+  }
+  var creators = (data.created_by || []).map(function(p){ return p.name; }).join(', ');
+  var seasons = (data.seasons || []).filter(function(s){ return Number(s.season_number) > 0; }).map(function(s) {
+    return {
+      seasonNumber:s.season_number, seasonName:s.name || ('Season ' + s.season_number),
+      episodeCount:s.episode_count || '', year:(s.air_date || '').slice(0,4),
+      poster:s.poster_path || data.poster_path || ''
+    };
+  });
+  return jsonOut_({
+    id:data.id, seriesTitle:data.name, seriesYear:(data.first_air_date || '').slice(0,4),
+    creator:creators, genres:(data.genres || []).map(function(g){ return g.name; }),
+    imdb:imdb, poster:data.poster_path || '', seasons:seasons
+  });
+}
+
+function doSaveTvRating_(d, username) {
+  var tab = getOrCreateSheet_(TV_SHEET_NAME, TV_HEADER);
+  var rowObj = tvPayloadToSheetRow_(d, username, {});
+  var rows = findExistingRows_(tab, TV_HEADER, rowObj, function(r) {
+    return String(r.user || '').toLowerCase() + '|' + tvGroupKey_(r);
+  });
+  if (rows.length) {
+    var existing = objectAtSheetRow_(tab, rows[0]);
+    rowObj = tvPayloadToSheetRow_(d, username, existing);
+    tab.getRange(rows[0], 1, 1, TV_HEADER.length).setValues([rowForHeader_(TV_HEADER, rowObj)]);
+    deleteExtraRows_(tab, rows);
+  } else {
+    tab.appendRow(rowForHeader_(TV_HEADER, rowObj));
+  }
+  removeFutureTv_(rowObj, username);
+  rebuildTvSummary_();
+  return jsonOut_({ ok:true });
+}
+
+function doGetTvRatings_(username) {
+  var tab = getExistingSheet_(TV_SHEET_NAME);
+  var rows = sheetObjects_(tab, TV_HEADER).filter(function(r) {
+    return String(r.user || '').toLowerCase() === String(username || '').toLowerCase();
+  });
+  return jsonOut_(rows.map(tvToApiRow_));
+}
+
+function doGetTvSummary_() {
+  var tab = getExistingSheet_(TV_SHEET_NAME);
+  var data = sheetObjects_(tab, TV_HEADER);
+  var grouped = {};
+  data.forEach(function(r) {
+    var key = tvGroupKey_(r);
+    if (!grouped[key]) grouped[key] = {
+      'Series':r.seriesTitle, 'Year':r.seriesYear, 'Type':r.entryType, 'Season':r.seasonNumber,
+      'Season Name':r.seasonName, 'Episodes':r.episodeCount, 'Creator':r.creator,
+      'Genre':r.genres, 'IMDb':r.imdb,
+      scores:[], userScores:{}
+    };
+    var score = parseFloat(r.score10);
+    if (!isNaN(score) && r.user) {
+      grouped[key].scores.push(score);
+      grouped[key].userScores[summaryDisplayName_(r.user)] = score;
+    }
+  });
+  return jsonOut_({ rows:Object.keys(grouped).map(function(key){ return grouped[key]; }) });
+}
+
+function rebuildTvSummary_() {
+  var data = sheetObjects_(getExistingSheet_(TV_SHEET_NAME), TV_HEADER);
+  var users = getSummaryUserNames_(data);
+  var header = ['Series','Year','Type','Season','Season Name','Episodes','Creator','Genre','IMDb']
+    .concat(users.map(summaryDisplayName_)).concat([FILM_SUMMARY_AVERAGE_COLUMN]);
+  var grouped = {};
+  data.forEach(function(r) {
+    var key = tvGroupKey_(r);
+    if (!grouped[key]) grouped[key] = r;
+  });
+  var rows = Object.keys(grouped).map(function(key) {
+    var sample = grouped[key];
+    var scoresByUser = {};
+    data.filter(function(r){ return tvGroupKey_(r) === key; }).forEach(function(r){ scoresByUser[r.user] = r.score10; });
+    var scores = users.map(function(user){ return scoresByUser[user] === undefined ? '' : Number(scoresByUser[user]); });
+    var numeric = scores.filter(function(score){ return score !== '' && !isNaN(score); });
+    var avg = numeric.length ? Number((numeric.reduce(function(a,b){ return a+b; },0) / numeric.length).toFixed(1)) : '';
+    return [sample.seriesTitle,sample.seriesYear,sample.entryType,sample.seasonNumber,sample.seasonName,
+      sample.episodeCount,sample.creator,sample.genres,sample.imdb].concat(scores).concat([avg]);
+  }).sort(function(a,b){ return String(a[0]).localeCompare(String(b[0])); });
+  writeTable_(getOrCreateSummarySheet_(TV_SUMMARY_SHEET_NAME), header, rows);
+  return { sheet:TV_SUMMARY_SHEET_NAME, rows:rows.length };
+}
+
+function futureTvPayloadToSheetRow_(d, username, existing) {
+  var now = new Date().toISOString();
+  existing = existing || {};
+  var genres = d.genres || existing.genres || '';
+  if (Array.isArray(genres)) genres = genres.join(' · ');
+  return {
+    user:username, seriesTitle:d.seriesTitle || d.name || existing.seriesTitle || '',
+    seriesYear:d.seriesYear || d.year || existing.seriesYear || '', creator:d.creator || existing.creator || '',
+    genres:genres, imdb:d.imdb || existing.imdb || '', tmdbTvId:d.tmdbTvId || d.id || d['TMDB TV ID'] || existing.tmdbTvId || '',
+    posterPath:d.posterPath || d.poster || d['Poster Path'] || existing.posterPath || '',
+    createdAt:existing.createdAt || now, updatedAt:now
+  };
+}
+
+function removeFutureTv_(rowObj, username) {
+  var tab = getExistingSheet_(FUTURE_TV_SHEET_NAME);
+  if (!tab) return;
+  var target = String(username).toLowerCase() + '|' + normalizeKeyPart_(rowObj.tmdbTvId || rowObj.seriesTitle);
+  var matchingRows = [];
+  sheetObjects_(tab, FUTURE_TV_HEADER).forEach(function(r, index) {
+    var key = String(r.user || '').toLowerCase() + '|' + normalizeKeyPart_(r.tmdbTvId || r.seriesTitle);
+    if (key === target) matchingRows.push(index + 2);
+  });
+  matchingRows.sort(function(a, b){ return b - a; }).forEach(function(rowNumber) {
+    tab.deleteRow(rowNumber);
+  });
+}
+
+function doAddFutureTv_(d, username) {
+  var tab = getOrCreateSheet_(FUTURE_TV_SHEET_NAME, FUTURE_TV_HEADER);
+  var rowObj = futureTvPayloadToSheetRow_(d, username, {});
+  var ratingTab = getExistingSheet_(TV_SHEET_NAME);
+  var existingRows = ratingTab ? findExistingRows_(ratingTab, TV_HEADER,
+    { user:username, tmdbTvId:rowObj.tmdbTvId, seriesTitle:rowObj.seriesTitle }, function(r) {
+      return String(r.user || '').toLowerCase() + '|' + normalizeKeyPart_(r.tmdbTvId || r.seriesTitle);
+    }) : [];
+  if (existingRows.length) return jsonOut_({ ok:false, error:'You have already rated this TV series.' });
+  var rows = findExistingRows_(tab, FUTURE_TV_HEADER, rowObj, function(r) {
+    return String(r.user || '').toLowerCase() + '|' + normalizeKeyPart_(r.tmdbTvId || r.seriesTitle);
+  });
+  if (rows.length) {
+    tab.getRange(rows[0], 1, 1, FUTURE_TV_HEADER.length).setValues([rowForHeader_(FUTURE_TV_HEADER, futureTvPayloadToSheetRow_(d, username, objectAtSheetRow_(tab, rows[0])))]);
+    deleteExtraRows_(tab, rows);
+  } else tab.appendRow(rowForHeader_(FUTURE_TV_HEADER, rowObj));
+  return jsonOut_({ ok:true });
+}
+
+function doDeleteFutureTv_(d, username) {
+  removeFutureTv_(futureTvPayloadToSheetRow_(d, username, {}), username);
+  return jsonOut_({ ok:true });
+}
+
+function doGetFutureTv_(username) {
+  var rows = sheetObjects_(getExistingSheet_(FUTURE_TV_SHEET_NAME), FUTURE_TV_HEADER).filter(function(r) {
+    return String(r.user || '').toLowerCase() === String(username || '').toLowerCase();
+  });
+  return jsonOut_(rows.map(function(r) {
+    return {'Series':r.seriesTitle,'Year':r.seriesYear,'Creator':r.creator,'Genres':r.genres,'IMDb':r.imdb,'TMDB TV ID':r.tmdbTvId,'Poster Path':r.posterPath};
+  }));
+}
+
+// ══════════════════════════════════════════════════════════════
 //  LE GUIDE — RESTAURANT FUNCTIONS
 // ══════════════════════════════════════════════════════════════
 
@@ -1008,6 +1516,7 @@ function doSaveRestaurantRating_(d, username) {
   } else {
     tab.appendRow(rowForHeader_(RESTAURANTS_HEADER, rowObj));
   }
+  removeFutureRestaurant_(rowObj, username);
   rebuildRestaurantSummary_();
   return jsonOut_({ ok: true });
 }
@@ -1090,16 +1599,30 @@ function rebuildRestaurantSummary_() {
 function setupActiveSheetTabs() {
   var filmDb = getOrCreateSheet_(FILMS_SHEET_NAME, FILMS_HEADER);
   var restaurantDb = getOrCreateSheet_(RESTAURANTS_SHEET_NAME, RESTAURANTS_HEADER);
+  var futureFilms = getOrCreateSheet_(FUTURE_FILMS_SHEET_NAME, FUTURE_FILMS_HEADER);
+  var futureRestaurants = getOrCreateSheet_(FUTURE_RESTAURANTS_SHEET_NAME, FUTURE_RESTAURANTS_HEADER);
+  var tvDb = getOrCreateSheet_(TV_SHEET_NAME, TV_HEADER);
+  var futureTv = getOrCreateSheet_(FUTURE_TV_SHEET_NAME, FUTURE_TV_HEADER);
   formatSheetAsTable_(filmDb);
   formatSheetAsTable_(restaurantDb);
+  formatSheetAsTable_(futureFilms);
+  formatSheetAsTable_(futureRestaurants);
+  formatSheetAsTable_(tvDb);
+  formatSheetAsTable_(futureTv);
   var filmSummary = rebuildFilmSummary_();
   var restaurantSummary = rebuildRestaurantSummary_();
+  var tvSummary = rebuildTvSummary_();
   var result = {
     version: BACKEND_VERSION,
     databaseFilms: FILMS_SHEET_NAME,
     summaryFilms: filmSummary,
     databaseRestaurants: RESTAURANTS_SHEET_NAME,
     summaryRestaurants: restaurantSummary,
+    futureFilms: FUTURE_FILMS_SHEET_NAME,
+    futureRestaurants: FUTURE_RESTAURANTS_SHEET_NAME,
+    databaseTv: TV_SHEET_NAME,
+    summaryTv: tvSummary,
+    futureTv: FUTURE_TV_SHEET_NAME,
     usersTabKept: true
   };
   console.log(JSON.stringify(result, null, 2));
