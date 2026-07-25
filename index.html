@@ -342,7 +342,7 @@ table.card-table{width:100%;border-collapse:collapse;margin-bottom:4px;}
   .nav-logo{order:1;flex:1 1 auto;min-width:112px;}
   .nav-user{order:2;gap:6px;justify-content:flex-end;max-width:calc(100% - 122px);}
   .nav-user-name{max-width:72px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .nav-links{order:3;width:100%;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;}
+  .nav-links{order:3;width:100%;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;}
   .nav-btn{padding:8px 4px;font-size:11px;text-align:center;}
   .theme-select{max-width:78px;padding:4px 5px;}
   .mpaa-card{padding:28px 22px;}
@@ -707,11 +707,13 @@ body.theme-cream .nav-switch:hover,body.theme-gold .nav-switch:hover{border-colo
 
 body.theme-cream #screen-home,body.theme-cream #screen-pin,body.theme-cream #screen-search,body.theme-cream #screen-score,body.theme-cream #screen-round,
 body.theme-cream #screen-stats,body.theme-cream #screen-settings,body.theme-cream #screen-quick,
+body.theme-cream #screen-tv-search,body.theme-cream #screen-tv-select,body.theme-cream #screen-tv-stats,
 body.theme-cream #screen-lg-search,body.theme-cream #screen-lg-score,body.theme-cream #screen-lg-round,body.theme-cream #screen-lg-stats,body.theme-cream #screen-lg-quick{
   background:radial-gradient(ellipse at 50% -10%,#fffaf0 0%,#f4efe4 72%);
 }
 body.theme-gold #screen-home,body.theme-gold #screen-pin,body.theme-gold #screen-search,body.theme-gold #screen-score,body.theme-gold #screen-round,
 body.theme-gold #screen-stats,body.theme-gold #screen-settings,body.theme-gold #screen-quick,
+body.theme-gold #screen-tv-search,body.theme-gold #screen-tv-select,body.theme-gold #screen-tv-stats,
 body.theme-gold #screen-lg-search,body.theme-gold #screen-lg-score,body.theme-gold #screen-lg-round,body.theme-gold #screen-lg-stats,body.theme-gold #screen-lg-quick{
   background:radial-gradient(ellipse at 50% -10%,#252a30 0%,#17191c 72%);
 }
@@ -1003,7 +1005,8 @@ body.theme-cream .rating-detail-meta,body.theme-gold .rating-detail-meta{color:v
 body.theme-cream .rank-stat-num,body.theme-gold .rank-stat-num,
 body.theme-cream .rating-detail-title,body.theme-gold .rating-detail-title,
 body.theme-cream .rating-detail-score,body.theme-gold .rating-detail-score,
-body.theme-cream .rating-detail-grade,body.theme-gold .rating-detail-grade{color:var(--theme-text) !important;}
+body.theme-cream .rating-detail-grade,body.theme-gold .rating-detail-grade,
+body.theme-cream .rating-detail-secondary-value,body.theme-gold .rating-detail-secondary-value{color:var(--theme-text) !important;}
 body.theme-cream #already-rated-modal>div,body.theme-gold #already-rated-modal>div,
 body.theme-cream #lg-already-rated-modal>div,body.theme-gold #lg-already-rated-modal>div{background:var(--theme-panel) !important;border-color:var(--theme-border) !important;}
 body.theme-cream #already-rated-modal div[style*="background"],body.theme-gold #already-rated-modal div[style*="background"],
@@ -1032,8 +1035,11 @@ body.theme-cream #admin-modal .pin-error,body.theme-gold #admin-modal .pin-error
 .rating-detail-title{font:32px 'Bebas Neue',sans-serif;color:#e8f8e8;line-height:1;}
 .rating-detail-meta{margin-top:7px;color:#4a7a4a;font-size:13px;font-style:italic;}
 .rating-detail-scores{display:flex;gap:12px;margin:20px 0;}
+.rating-detail-secondary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:-8px 0 20px;}
+.rating-detail-secondary .rating-detail-score-box:last-child:nth-child(odd){grid-column:1 / -1;}
 .rating-detail-score-box{flex:1;padding:13px;background:#0b1f0b;border:1px solid #224422;text-align:center;}
 .rating-detail-score,.rating-detail-grade{font:32px 'Bebas Neue',sans-serif;color:#fff;line-height:1;}
+.rating-detail-secondary-value{font:16px 'Barlow',sans-serif;color:#e8f8e8;line-height:1.35;min-height:22px;word-break:break-word;}
 .rating-detail-label{margin-top:4px;color:#4a7a4a;font:9px 'Barlow Condensed',sans-serif;letter-spacing:.18em;text-transform:uppercase;}
 .rating-detail-list{border-top:1px solid #1a3a1a;margin-top:14px;}
 .rating-detail-line{display:flex;justify-content:space-between;gap:14px;padding:8px 0;border-bottom:1px solid #142814;font-size:13px;}
@@ -1051,6 +1057,48 @@ body.theme-cream .settings-add-btn,body.theme-cream .config-save-btn,
 body.theme-gold .settings-add-btn,body.theme-gold .config-save-btn{background:var(--theme-panel-2) !important;border-color:var(--theme-accent) !important;color:var(--theme-accent) !important;}
 body.theme-cream .settings-add-btn:hover,body.theme-cream .config-save-btn:hover,
 body.theme-gold .settings-add-btn:hover,body.theme-gold .config-save-btn:hover{background:var(--theme-accent) !important;color:var(--theme-bg) !important;}
+body.theme-cream .quick-slider,body.theme-gold .quick-slider,
+body.theme-cream .lg-quick-slider,body.theme-gold .lg-quick-slider{background:linear-gradient(to right,var(--theme-accent) 0%,var(--theme-accent) var(--pct,50%),var(--theme-panel-2) var(--pct,50%),var(--theme-panel-2) 100%);}
+body.theme-cream .quick-slider::-webkit-slider-thumb,body.theme-gold .quick-slider::-webkit-slider-thumb,
+body.theme-cream .lg-quick-slider::-webkit-slider-thumb,body.theme-gold .lg-quick-slider::-webkit-slider-thumb{background:var(--theme-accent);border-color:var(--theme-bg-2);}
+body.theme-cream .quick-slider::-moz-range-thumb,body.theme-gold .quick-slider::-moz-range-thumb,
+body.theme-cream .lg-quick-slider::-moz-range-thumb,body.theme-gold .lg-quick-slider::-moz-range-thumb{background:var(--theme-accent);border-color:var(--theme-bg-2);}
+body.theme-cream .quick-note-lbl,body.theme-gold .quick-note-lbl{color:var(--theme-muted) !important;}
+body.theme-cream #screen-score .movie-title-big,body.theme-gold #screen-score .movie-title-big,
+body.theme-cream #screen-score .movie-meta-line,body.theme-gold #screen-score .movie-meta-line,
+body.theme-cream #screen-score .movie-meta-line span,body.theme-gold #screen-score .movie-meta-line span,
+body.theme-cream #screen-score .total-num,body.theme-gold #screen-score .total-num{color:var(--theme-accent) !important;}
+body.theme-cream .s-sub,body.theme-gold .s-sub{color:var(--theme-muted) !important;}
+
+/* Wishlist */
+#screen-wishlist{background:#060908;}
+.wishlist-search-wrap{position:relative;margin-bottom:12px;}
+.wishlist-dropdown{position:relative;display:none;z-index:5;background:#0b120b;border:1px solid #1e3a1e;border-radius:2px;overflow:hidden;}
+.wishlist-dropdown.open{display:block;}
+.wishlist-result{display:flex;align-items:center;gap:12px;width:100%;padding:10px 12px;background:transparent;border:0;border-bottom:1px solid #142814;color:#c0e0c0;text-align:left;cursor:pointer;font:13px 'Barlow',sans-serif;}
+.wishlist-result:last-child{border-bottom:0;}
+.wishlist-result:hover{background:#0f1c0f;}
+.wishlist-result-title{font-weight:600;flex:1;}
+.wishlist-add{padding:6px 10px;background:#142414;border:1px solid #2e6a2e;border-radius:2px;color:#a0e0a0;font:11px 'Barlow Condensed',sans-serif;letter-spacing:.12em;text-transform:uppercase;}
+.wishlist-items{display:flex;flex-direction:column;gap:8px;}
+.wishlist-item{display:flex;align-items:center;gap:14px;padding:12px 14px;background:#0b120b;border:1px solid #1a3a1a;border-radius:2px;}
+.wishlist-item-main{flex:1;min-width:0;}
+.wishlist-item-title{font-size:14px;font-weight:600;color:#c0e0c0;}
+.wishlist-item-meta{margin-top:3px;font-size:12px;color:#4a7a4a;}
+.wishlist-item-score{font-family:'Bebas Neue',sans-serif;font-size:25px;color:#80d080;line-height:1;text-align:right;}
+.wishlist-item-score span{display:block;font:9px 'Barlow Condensed',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#3d6a3d;}
+.wishlist-remove{padding:6px 9px;background:transparent;border:1px solid #3a1a1a;border-radius:2px;color:#a06060;cursor:pointer;font:11px 'Barlow Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase;}
+body.theme-cream #screen-wishlist,body.theme-gold #screen-wishlist{background:var(--theme-bg);}
+body.theme-cream .wishlist-dropdown,body.theme-gold .wishlist-dropdown,
+body.theme-cream .wishlist-item,body.theme-gold .wishlist-item{background:var(--theme-panel);border-color:var(--theme-border);color:var(--theme-muted);}
+body.theme-cream .wishlist-result,body.theme-gold .wishlist-result{background:var(--theme-panel);border-color:var(--theme-border);color:var(--theme-text);}
+body.theme-cream .wishlist-result:hover,body.theme-gold .wishlist-result:hover{background:var(--theme-panel-2);}
+body.theme-cream .wishlist-add,body.theme-gold .wishlist-add{background:var(--theme-panel-2);border-color:var(--theme-accent);color:var(--theme-accent);}
+body.theme-cream .wishlist-item-title,body.theme-gold .wishlist-item-title{color:var(--theme-text);}
+body.theme-cream .wishlist-item-meta,body.theme-gold .wishlist-item-meta,
+body.theme-cream .wishlist-item-score span,body.theme-gold .wishlist-item-score span{color:var(--theme-muted);}
+body.theme-cream .wishlist-item-score,body.theme-gold .wishlist-item-score{color:var(--theme-accent);}
+body.theme-cream .wishlist-remove,body.theme-gold .wishlist-remove{border-color:var(--theme-border);color:var(--theme-muted);}
 
 </style>
 </head>
@@ -1062,7 +1110,7 @@ body.theme-gold .settings-add-btn:hover,body.theme-gold .config-save-btn:hover{b
 <script>
 const CONFIG = {
   // Public backend endpoint. All sensitive actions are validated in Apps Script.
-  GAS_URL: "https://script.google.com/macros/s/AKfycbwfRY4_RIqhC5WCZAmAa-4fVeiy-u_wFtdECBcPE7SctEa1fYYhCA1CfaLVxwfiS5f3aA/exec",
+  GAS_URL: "https://script.google.com/macros/s/AKfycbzXTffnVTML1LDXcO75NMkG8N3pFSbCOwfrOJdf3Tm7HRGA6SWxQu-OhiCcmvvD_1j5GA/exec",
 };
 const SITE_NAME = "Cine-file";
 </script>
@@ -1074,14 +1122,16 @@ const SITE_NAME = "Cine-file";
   <div class="nav-logo" id="nav-logo-text" onclick="lgMode?lgGoHome():goHome()">Cine-file</div>
   <div class="nav-links" id="nav-film-links">
     <button class="nav-btn" id="nav-home"     onclick="goHome()">Home</button>
-    <button class="nav-btn" id="nav-rate"     onclick="showScreen('search')">Rate</button>
-    <button class="nav-btn" id="nav-stats"    onclick="goStats()">Stats</button>
+    <button class="nav-btn" id="nav-rate"     onclick="goActiveRate()">Rate</button>
+    <button class="nav-btn" id="nav-stats"    onclick="goActiveStats()">Stats</button>
+    <button class="nav-btn" id="nav-wishlist" onclick="goWishlist(activeCategory==='tv'?'tv':'film')">Wishlist</button>
     <button class="nav-btn" id="nav-settings" onclick="promptAdminPin()">Settings</button>
   </div>
   <div class="nav-links" id="nav-lg-links" style="display:none">
     <button class="nav-btn" id="nav-lg-home"  onclick="lgGoHome()">Home</button>
     <button class="nav-btn" id="nav-lg-rate"  onclick="showScreen('lg-search')">Rate</button>
     <button class="nav-btn" id="nav-lg-stats" onclick="lgGoStats()">Stats</button>
+    <button class="nav-btn" id="nav-lg-wishlist" onclick="goWishlist('restaurant')">Wishlist</button>
     <button class="nav-btn" id="nav-lg-back"  onclick="goHome()">← Cine-file</button>
   </div>
   <div class="nav-user">
@@ -1108,6 +1158,11 @@ const SITE_NAME = "Cine-file";
         <div class="home-card-icon">🎬</div>
         <div class="home-card-title">Film</div>
         <div class="home-card-sub">Rate a movie</div>
+      </div>
+      <div class="home-card" onclick="startRating('tv')">
+        <div class="home-card-icon">📺</div>
+        <div class="home-card-title">TV</div>
+        <div class="home-card-sub">Rate a season or series</div>
       </div>
       <div class="home-card restaurant" onclick="startRating('restaurant')">
         <div class="home-card-icon">⭐</div>
@@ -1186,11 +1241,51 @@ const SITE_NAME = "Cine-file";
 </div>
 
 <!-- ══════════════════════════════════════
+     TV SEARCH + SERIES SELECT
+══════════════════════════════════════ -->
+<div id="screen-tv-search" class="screen">
+  <div class="search-inner">
+    <div class="s-eyebrow">Rate TV</div>
+    <h1 class="s-title">Find a Series</h1>
+    <p class="s-sub">Search for the show you watched.</p>
+    <div class="search-wrap">
+      <div class="search-field">
+        <span class="search-icon">📺</span>
+        <input id="tv-search-input" type="text" placeholder="Type a series title..." autocomplete="off"/>
+        <span class="search-spinner" id="tv-spinner">⟳</span>
+      </div>
+      <div class="dropdown" id="tv-dropdown"></div>
+    </div>
+  </div>
+</div>
+
+<div id="screen-tv-select" class="screen">
+  <div class="inner">
+    <button class="back-btn" onclick="showScreen('tv-search')">← Back to Search</button>
+    <div class="movie-header">
+      <img id="tv-select-poster" src="" alt="" style="display:none" class="score-poster"/>
+      <div>
+        <div class="movie-title-big" id="tv-select-title"></div>
+        <div class="movie-meta-line" id="tv-select-meta"></div>
+      </div>
+    </div>
+    <div class="stats-section">
+      <div class="stats-section-title">Overall Series</div>
+      <div id="tv-overall-option"></div>
+    </div>
+    <div class="stats-section">
+      <div class="stats-section-title">Seasons</div>
+      <div class="wishlist-items" id="tv-season-options"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
      QUICK RATING
 ══════════════════════════════════════ -->
 <div id="screen-quick" class="screen">
   <div class="quick-box">
-    <button class="back-btn" style="margin-bottom:24px" onclick="showScreen('search')">← Back to Search</button>
+    <button class="back-btn" style="margin-bottom:24px" onclick="goBackToActiveSearch()">← Back to Search</button>
     <div class="quick-movie-title" id="quick-title"></div>
     <div class="quick-movie-sub" id="quick-sub"></div>
 
@@ -1213,7 +1308,7 @@ const SITE_NAME = "Cine-file";
     </div>
 
     <div class="quick-note-wrap">
-      <label class="quick-note-lbl">Notes (optional)</label>
+      <label class="quick-note-lbl" id="quick-note-label">Notes (optional)</label>
       <textarea id="quick-note" class="note-inp" style="min-height:68px" placeholder="Any thoughts on the film..."></textarea>
     </div>
 
@@ -1226,7 +1321,7 @@ const SITE_NAME = "Cine-file";
 ══════════════════════════════════════ -->
 <div id="screen-score" class="screen">
   <div class="inner">
-    <button class="back-btn" onclick="showScreen('search')">← Back to Search</button>
+    <button class="back-btn" onclick="goBackToActiveSearch()">← Back to Search</button>
     <div class="movie-header">
       <img id="score-poster" src="" alt="" style="display:none" class="score-poster"/>
       <div>
@@ -1263,7 +1358,7 @@ const SITE_NAME = "Cine-file";
       <textarea id="overall-note" class="note-inp overall-note" placeholder="Final thoughts on the film..."></textarea>
     </div>
     <div class="btn-row">
-      <button class="btn-sec" onclick="showScreen('search')">Cancel</button>
+      <button class="btn-sec" onclick="goBackToActiveSearch()">Cancel</button>
       <button class="btn-pri" onclick="goRound()">Next: Choose Final Score →</button>
     </div>
   </div>
@@ -1297,7 +1392,7 @@ const SITE_NAME = "Cine-file";
 <div id="screen-result" class="screen">
   <div class="mpaa-card">
     <div class="stamp-top">
-      <div class="stamp-sm">The Following Film Has Been Officially Reviewed By</div>
+      <div class="stamp-sm" id="rating-stamp-subject">The Following Film Has Been Officially Reviewed By</div>
       <div class="stamp-logo">CINE-FILE</div>
       <div class="stamp-sm">And Has Received the Following Rating</div>
     </div>
@@ -1586,6 +1681,40 @@ const SITE_NAME = "Cine-file";
   </div>
 </div>
 
+<div id="screen-tv-stats" class="screen">
+  <div class="inner">
+    <div class="stats-tabs">
+      <button class="stats-tab active" id="tv-tab-season" onclick="setTvStatsType('season')">Seasons</button>
+      <button class="stats-tab" id="tv-tab-overall" onclick="setTvStatsType('overall')">Overall Shows</button>
+    </div>
+    <div id="tv-stats-content"><div class="stats-loading">Loading your TV ratings...</div></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     WISHLIST
+══════════════════════════════════════ -->
+<div id="screen-wishlist" class="screen">
+  <div class="inner">
+    <div class="s-eyebrow">Saved for Later</div>
+    <h1 class="s-title" id="wishlist-title">Film Wishlist</h1>
+    <p class="s-sub" id="wishlist-sub">Search for films you want to watch.</p>
+    <div class="wishlist-search-wrap">
+      <div class="search-field">
+        <span class="search-icon" id="wishlist-search-icon">🎬</span>
+        <input id="wishlist-search-input" type="search" placeholder="Search for a film to save..." autocomplete="off"/>
+        <span class="search-spinner" id="wishlist-spinner">⟳</span>
+      </div>
+      <div class="wishlist-dropdown" id="wishlist-dropdown"></div>
+    </div>
+    <div class="settings-msg" id="wishlist-msg"></div>
+    <div class="stats-section" style="margin-top:28px">
+      <div class="stats-section-title" id="wishlist-list-title">Your Saved Films</div>
+      <div class="wishlist-items" id="wishlist-items"></div>
+    </div>
+  </div>
+</div>
+
 <!-- ══════════════════════════════════════
      SETTINGS
 ══════════════════════════════════════ -->
@@ -1671,7 +1800,7 @@ const SITE_NAME = "Cine-file";
     </div>
     <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
       <button onclick="closeAlreadyRated()" style="padding:11px 24px;background:transparent;border:1px solid #1e3a1e;border-radius:2px;color:#4a7a4a;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:0.12em;text-transform:uppercase;">← Back to Search</button>
-      <button onclick="proceedToRate()" style="padding:11px 24px;background:#142414;border:1px solid #2e6a2e;border-radius:2px;color:#a0e0a0;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:0.12em;text-transform:uppercase;">Re-rate This Film</button>
+      <button id="re-rate-button" onclick="proceedToRate()" style="padding:11px 24px;background:#142414;border:1px solid #2e6a2e;border-radius:2px;color:#a0e0a0;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:0.12em;text-transform:uppercase;">Re-rate This Film</button>
     </div>
   </div>
 </div>
@@ -1732,6 +1861,15 @@ const FILM_CATS = [
   {id:"emotional",     label:"Emotional Impact",     w:0.10, prompt:"How much did the movie make you feel something? Fear, laughs, tension, sadness, awe."},
 ];
 
+const TV_CATS = [
+  {id:"plot",          label:"Story & Concept",        w:0.20, prompt:"How strong was the season or series story, premise, and payoff?"},
+  {id:"entertainment", label:"Entertainment Value",    w:0.25, prompt:"How engaging, memorable, and worth continuing was it?"},
+  {id:"acting",        label:"Performances & Cast",    w:0.18, prompt:"How effective were the performances, characters, and chemistry?"},
+  {id:"visuals",       label:"Production & Direction", w:0.15, prompt:"How good were the visuals, music, direction, and technical work?"},
+  {id:"pacing",        label:"Pacing",                 w:0.12, prompt:"Did the season or series use its episodes well?"},
+  {id:"emotional",     label:"Impact",                 w:0.10, prompt:"How much did it make you feel, think, or want to discuss it?"}
+];
+
 // Restaurant categories ready to drop in when needed
 const RESTAURANT_CATS = [
   {id:"food",      label:"Food & Taste",    w:0.35, prompt:"How good was the food? Flavor, quality, seasoning, memorability."},
@@ -1771,6 +1909,7 @@ let chosenScore10 = null;
 let ratingDate    = "";
 let currentUser   = null; // {name}
 let pendingMode   = null; // "film" or "restaurant"
+let activeCategory = 'film';
 
 // ── PERSISTENCE ──────────────────────────────────────────────
 // ── USER / SESSION STORAGE ───────────────────────────────────
@@ -2098,6 +2237,153 @@ function saveConfig(){
   syncUsersFromSheets();
 }
 
+// ── WISHLIST ─────────────────────────────────────────────────
+let wishlistMode = 'film';
+let wishlistSearchTimer = null;
+let wishlistResults = [];
+let wishlistItems = [];
+
+function goWishlist(mode){
+  wishlistMode = ['film','restaurant','tv'].includes(mode) ? mode : 'film';
+  showScreen('wishlist');
+  renderWishlistMode();
+  loadWishlist();
+}
+
+function renderWishlistMode(){
+  const films = wishlistMode === 'film';
+  const tv = wishlistMode === 'tv';
+  document.getElementById('wishlist-title').textContent = films ? 'Film Wishlist' : (tv ? 'TV Wishlist' : 'Restaurant Wishlist');
+  document.getElementById('wishlist-sub').textContent = films ? 'Search for films you want to watch.' : (tv ? 'Search for series you want to watch.' : 'Search for restaurants you want to try.');
+  document.getElementById('wishlist-search-icon').textContent = films ? '🎬' : (tv ? '📺' : '🍽️');
+  document.getElementById('wishlist-search-input').placeholder = films ? 'Search for a film to save...' : (tv ? 'Search for a series to save...' : 'Search for a restaurant to save...');
+  document.getElementById('wishlist-list-title').textContent = films ? 'Your Saved Films' : (tv ? 'Your Saved Series' : 'Your Saved Restaurants');
+  document.getElementById('wishlist-search-input').value = '';
+  document.getElementById('wishlist-dropdown').classList.remove('open');
+  document.getElementById('wishlist-msg').textContent = '';
+}
+
+async function loadWishlist(){
+  const list = document.getElementById('wishlist-items');
+  if(!currentUser || !getSessionToken()){
+    list.innerHTML = '<div class="stats-empty">Log in to view your wishlist.</div>';
+    return;
+  }
+  list.innerHTML = '<div class="stats-loading">Loading your saved items...</div>';
+  try{
+    const action = wishlistMode === 'film' ? 'getFutureFilms' : (wishlistMode === 'tv' ? 'getFutureTv' : 'getFutureRestaurants');
+    const data = await apiCall(action, {token:getSessionToken()});
+    wishlistItems = Array.isArray(data) ? data : [];
+    renderWishlistItems();
+  }catch(e){
+    list.innerHTML = '<div class="stats-empty">Could not load your wishlist.</div>';
+  }
+}
+
+function renderWishlistItems(){
+  const list = document.getElementById('wishlist-items');
+  const films = wishlistMode === 'film';
+  const tv = wishlistMode === 'tv';
+  if(!wishlistItems.length){
+    list.innerHTML = '<div class="stats-empty">No saved ' + (films ? 'films' : (tv ? 'series' : 'restaurants')) + ' yet.</div>';
+    return;
+  }
+  list.innerHTML = wishlistItems.map(function(item, index){
+    const title = films ? item['Title'] : (tv ? item['Series'] : item['Name']);
+    const meta = films
+      ? [item['Year'], item['Director'] && 'Dir. ' + item['Director'], item['Movie length'], item['IMDb'] && 'IMDb ' + item['IMDb'], item['RT Audience'] && 'RT ' + item['RT Audience']].filter(Boolean).join(' · ')
+      : (tv ? [item['Year'], item['Creator'] && 'Created by ' + item['Creator'], item['IMDb'] && 'IMDb ' + item['IMDb']].filter(Boolean).join(' · ') : [item['Cuisine'], item['Address'], item['Google Rating'] && 'Google ' + item['Google Rating']].filter(Boolean).join(' · '));
+    const average = item['Group Average'];
+    const count = Number(item['Group Rating Count'] || 0);
+    return '<div class="wishlist-item">' +
+      '<div class="wishlist-item-main"><div class="wishlist-item-title">' + escHtml(String(title || '')) + '</div><div class="wishlist-item-meta">' + escHtml(meta) + '</div></div>' +
+      (tv ? '' : '<div class="wishlist-item-score">' + (average === '' || average == null ? '—' : Number(average).toFixed(1)) + '<span>' + (count ? 'group avg (' + count + ')' : 'not rated yet') + '</span></div>') +
+      '<button class="wishlist-remove" onclick="removeWishlistItem(' + index + ')">Remove</button>' +
+    '</div>';
+  }).join('');
+}
+
+async function removeWishlistItem(index){
+  const item = wishlistItems[index];
+  if(!item) return;
+  try{
+    const action = wishlistMode === 'film' ? 'deleteFutureFilm' : (wishlistMode === 'tv' ? 'deleteFutureTv' : 'deleteFutureRestaurant');
+    await apiCall(action, {token:getSessionToken(), payload:item});
+    wishlistItems.splice(index, 1);
+    renderWishlistItems();
+  }catch(e){
+    const msg = document.getElementById('wishlist-msg');
+    msg.textContent = e.message || 'Could not remove saved item.';
+    msg.className = 'settings-msg err';
+  }
+}
+
+async function searchWishlist(query){
+  const dropdown = document.getElementById('wishlist-dropdown');
+  const spinner = document.getElementById('wishlist-spinner');
+  if(!query){ dropdown.classList.remove('open'); return; }
+  spinner.classList.add('visible');
+  try{
+    const action = wishlistMode === 'film' ? 'searchMovies' : (wishlistMode === 'tv' ? 'searchTv' : 'searchRestaurants');
+    const data = await apiCall(action, {token:getSessionToken(), query:query});
+    wishlistResults = (data.results || data || []).slice(0, 7);
+    renderWishlistResults();
+  }catch(e){
+    dropdown.classList.remove('open');
+  }
+  spinner.classList.remove('visible');
+}
+
+function renderWishlistResults(){
+  const dropdown = document.getElementById('wishlist-dropdown');
+  const films = wishlistMode === 'film';
+  const tv = wishlistMode === 'tv';
+  if(!wishlistResults.length){ dropdown.classList.remove('open'); return; }
+  dropdown.innerHTML = wishlistResults.map(function(item, index){
+    const title = films ? item.title : (tv ? item.name : item.name);
+    const meta = films ? (item.year || String(item.release_date || '').slice(0,4)) : (tv ? item.year : [item.cuisine, item.address].filter(Boolean).join(' · '));
+    return '<button class="wishlist-result" onclick="addWishlistResult(' + index + ')"><span class="wishlist-result-title">' + escHtml(String(title || '')) + '<br><small>' + escHtml(String(meta || '')) + '</small></span><span class="wishlist-add">Save</span></button>';
+  }).join('');
+  dropdown.classList.add('open');
+}
+
+async function addWishlistResult(index){
+  const item = wishlistResults[index];
+  if(!item) return;
+  const dropdown = document.getElementById('wishlist-dropdown');
+  const msg = document.getElementById('wishlist-msg');
+  dropdown.classList.remove('open');
+  msg.textContent = 'Saving...'; msg.className = 'settings-msg';
+  try{
+    let payload = item;
+    let action = 'addFutureFilm';
+    if(wishlistMode === 'film'){
+      payload = await apiCall('getMovieDetails', {token:getSessionToken(), id:item.id});
+    } else if(wishlistMode === 'tv'){
+      action = 'addFutureTv';
+      payload = await apiCall('getTvDetails', {token:getSessionToken(), id:item.id});
+    } else {
+      action = 'addFutureRestaurant';
+    }
+    await apiCall(action, {token:getSessionToken(), payload:payload});
+    msg.textContent = 'Saved to your wishlist.'; msg.className = 'settings-msg';
+    document.getElementById('wishlist-search-input').value = '';
+    await loadWishlist();
+  }catch(e){
+    msg.textContent = e.message || 'Could not save item.'; msg.className = 'settings-msg err';
+  }
+}
+
+document.getElementById('wishlist-search-input').addEventListener('input', function(){
+  const query = this.value.trim();
+  clearTimeout(wishlistSearchTimer);
+  if(!query){ document.getElementById('wishlist-dropdown').classList.remove('open'); return; }
+  wishlistSearchTimer = setTimeout(function(){ searchWishlist(query); }, 320);
+});
+document.getElementById('wishlist-search-input').addEventListener('blur', function(){
+  setTimeout(function(){ document.getElementById('wishlist-dropdown').classList.remove('open'); }, 160);
+});
+
 // ── SEARCH ───────────────────────────────────────────────────
 let searchTimer=null;
 
@@ -2251,7 +2537,15 @@ function loadDemo(){
 // ── LOAD MOVIE INTO SCORE SCREEN ─────────────────────────────
 function loadMovie(movie){
   currentMovie=movie; scores={}; notes={};
+  const isTv = activeCategory === 'tv';
   document.getElementById("search-input").value="";
+  document.getElementById('quick-note').placeholder = isTv ? 'Any thoughts on the season or series...' : 'Any thoughts on the film...';
+  document.getElementById('overall-note').placeholder = isTv ? 'Final thoughts on the season or series...' : 'Final thoughts on the film...';
+  document.getElementById('quick-note-label').textContent = 'Notes (optional)';
+  document.getElementById('rating-stamp-subject').textContent = isTv
+    ? 'The Following Television Rating Has Been Officially Reviewed By'
+    : 'The Following Film Has Been Officially Reviewed By';
+  document.getElementById('re-rate-button').textContent = isTv ? 'Re-rate This TV Entry' : 'Re-rate This Film';
   document.getElementById("score-title").textContent=movie.title;
   document.getElementById("score-meta").innerHTML=
     [movie.year,
@@ -2284,9 +2578,10 @@ function loadMovie(movie){
       [movie.year, movie.director && `Dir. ${movie.director}`,
        (movie.rt&&movie.rt!=='—') && `RT: ${movie.rt}`,
        movie.imdb && `IMDb: ${movie.imdb}`].filter(Boolean).join(' · ');
-    document.getElementById('quick-slider').value = 50;
+    const suggested = currentMovie.suggestedScore10 == null ? 5 : Number(currentMovie.suggestedScore10);
+    document.getElementById('quick-slider').value = Math.max(0,Math.min(100,Math.round(suggested*10)));
     document.getElementById('quick-note').value = '';
-    updateQuickScore(50);
+    updateQuickScore(document.getElementById('quick-slider').value);
     showScreen('quick');
   } else {
     showScreen("score");
@@ -2428,6 +2723,7 @@ function generateCard(){
 
 // ── GOOGLE SHEETS ─────────────────────────────────────────────
 function pushToSheets(raw100, g, overallNote, today){
+  if(activeCategory === 'tv') return pushTvToSheets(raw100, g, overallNote, today);
   _ratingsCache = null;
   if(!CONFIG.GAS_URL || !getSessionToken()) return;
   const row={
@@ -2467,6 +2763,10 @@ function pushToSheets(raw100, g, overallNote, today){
 async function loadRankReveal(){
   const reveal=document.getElementById("rank-reveal");
   const stats =document.getElementById("rank-stats");
+  if(activeCategory === 'tv'){
+    reveal.style.display='none';
+    return;
+  }
   reveal.style.display="none";
   if(!CONFIG.GAS_URL||!currentUser) return;
   try{
@@ -2601,13 +2901,18 @@ function closeRatingDetail(event){
   document.getElementById('rating-detail-modal').classList.remove('open');
 }
 
-function openRatingDetail({eyebrow,title,meta,score,grade: ratingGrade,lines}){
+function openRatingDetail({eyebrow,title,meta,score,grade: ratingGrade,lines,secondaryBoxes=[]}){
   document.getElementById('rating-detail-eyebrow').textContent=eyebrow;
   document.getElementById('rating-detail-title').textContent=title;
   document.getElementById('rating-detail-meta').textContent=meta.filter(Boolean).join(' · ');
   document.getElementById('rating-detail-scores').innerHTML=`
     <div class="rating-detail-score-box"><div class="rating-detail-score">${Number(score).toFixed(1)}</div><div class="rating-detail-label">out of 10</div></div>
     <div class="rating-detail-score-box"><div class="rating-detail-grade">${escHtml(ratingGrade)}</div><div class="rating-detail-label">Grade</div></div>`;
+  document.querySelectorAll('#rating-detail-modal .rating-detail-secondary').forEach(el=>el.remove());
+  document.getElementById('rating-detail-scores').insertAdjacentHTML('afterend', secondaryBoxes.length ? `
+    <div class="rating-detail-secondary">${secondaryBoxes.map(box=>`
+      <div class="rating-detail-score-box"><div class="rating-detail-secondary-value">${escHtml(box.value)}</div><div class="rating-detail-label">${escHtml(box.label)}</div></div>
+    `).join('')}</div>` : '');
   document.getElementById('rating-detail-list').innerHTML=lines.map(line=>`
     <div class="rating-detail-line"><span>${escHtml(line.label)}</span><strong>${escHtml(line.value)}</strong></div>`).join('');
   document.getElementById('rating-detail-modal').classList.add('open');
@@ -2622,11 +2927,20 @@ function showMyRatedFilm(title){
     ['Visuals & Production','Visuals'],['Pacing','Pacing'],['Emotional Impact','Emotional']
   ].filter(([,key])=>rating[key]!==''&&rating[key]!=null&&Number(rating[key])>0)
    .map(([label,key])=>({label,value:Number(rating[key]).toFixed(1)}));
-  if(rating['Notes']) lines.push({label:'Notes',value:String(rating['Notes'])});
+  if(rating['Overall Notes']) lines.push({label:'Notes',value:String(rating['Overall Notes'])});
+  const group=(_statsData.summary?.rows||[]).find(r=>String(r.Title||'').toLowerCase()===String(title||'').toLowerCase());
+  const others=Object.entries(group?.userScores||{})
+    .filter(([name])=>name!==currentUser?.name)
+    .map(([name,value])=>name+' '+Number(value).toFixed(1));
   openRatingDetail({
     eyebrow:'Your rating', title:String(rating['Title']||''),
     meta:[rating['Year'],rating['Date']&&`Rated ${rating['Date']}`],
-    score, grade:rating['Grade']||grade(score), lines
+    score, grade:grade(score), lines,
+    secondaryBoxes:[
+      {label:'IMDb',value:String(rating['IMDb']||'—')},
+      {label:'RT Audience',value:String(rating['RT Audience']||'—')},
+      {label:'Other ratings',value:others.length?others.join(' · '):'No one else has rated it yet'}
+    ]
   });
 }
 
@@ -3441,6 +3755,175 @@ function showImageOverlay(dataUrl){
 }
 
 // ══════════════════════════════════════════════════════════════
+//  TV — SEARCH, SEASON SELECT, AND STATS
+// ══════════════════════════════════════════════════════════════
+let tvSearchTimer = null;
+let tvCurrentSeries = null;
+let tvRatingsCache = [];
+let tvStatsType = 'season';
+let tvStatsData = {ratings:[], summary:{rows:[]}};
+
+document.getElementById('tv-search-input').addEventListener('input', function(){
+  const query = this.value.trim();
+  clearTimeout(tvSearchTimer);
+  if(!query){ document.getElementById('tv-dropdown').classList.remove('open'); return; }
+  document.getElementById('tv-spinner').classList.add('visible');
+  tvSearchTimer = setTimeout(function(){ searchTv(query); }, 320);
+});
+document.getElementById('tv-search-input').addEventListener('blur', function(){
+  setTimeout(function(){ document.getElementById('tv-dropdown').classList.remove('open'); }, 160);
+});
+
+async function searchTv(query){
+  try{
+    const data = await apiCall('searchTv', {token:getSessionToken(), query:query});
+    const results = (data.results || []).slice(0,7);
+    const dropdown = document.getElementById('tv-dropdown');
+    dropdown.innerHTML = results.map(function(show){
+      return '<button class="drop-item" onclick="pickTvSeries(' + Number(show.id) + ')">' +
+        (show.poster_path ? '<img class="drop-poster" src="https://image.tmdb.org/t/p/w92' + escHtml(show.poster_path) + '" alt="">' : '<div class="drop-poster"></div>') +
+        '<div><div class="drop-title">' + escHtml(show.name) + '</div><div class="drop-year">' + escHtml(show.year || '') + '</div></div></button>';
+    }).join('');
+    dropdown.classList.toggle('open', !!results.length);
+  }catch(e){}
+  document.getElementById('tv-spinner').classList.remove('visible');
+}
+
+async function pickTvSeries(id){
+  document.getElementById('tv-dropdown').classList.remove('open');
+  document.getElementById('tv-spinner').classList.add('visible');
+  try{
+    const values = await Promise.all([
+      apiCall('getTvDetails', {token:getSessionToken(), id:id}),
+      apiCall('getTvRatings', {token:getSessionToken()})
+    ]);
+    tvCurrentSeries = values[0];
+    tvRatingsCache = Array.isArray(values[1]) ? values[1] : [];
+    renderTvSeriesSelect();
+    showScreen('tv-select');
+  }catch(e){}
+  document.getElementById('tv-spinner').classList.remove('visible');
+}
+
+function renderTvSeriesSelect(){
+  const series = tvCurrentSeries;
+  if(!series) return;
+  document.getElementById('tv-select-title').textContent = series.seriesTitle;
+  document.getElementById('tv-select-meta').textContent = [series.seriesYear,series.creator && 'Created by ' + series.creator,series.imdb && 'IMDb: ' + series.imdb].filter(Boolean).join(' · ');
+  const poster = document.getElementById('tv-select-poster');
+  if(series.poster){ poster.src='https://image.tmdb.org/t/p/w200' + series.poster; poster.style.display='block'; }
+  else poster.style.display='none';
+  const seasons = tvRatingsCache.filter(function(r){ return String(r['TMDB TV ID'])===String(series.id) && r['Type']==='season'; });
+  const average = seasons.length ? seasons.reduce(function(sum,r){ return sum + Number(r['Score /10']||0); },0) / seasons.length : null;
+  const manual = tvRatingsCache.find(function(r){ return String(r['TMDB TV ID'])===String(series.id) && r['Type']==='overall'; });
+  document.getElementById('tv-overall-option').innerHTML =
+    '<div class="wishlist-item"><div class="wishlist-item-main"><div class="wishlist-item-title">Overall Series</div><div class="wishlist-item-meta">' +
+    (manual ? 'Your manual overall rating: ' + Number(manual['Score /10']).toFixed(1) : (average !== null ? 'Season-average placeholder: ' + average.toFixed(1) : 'No seasons rated yet')) +
+    '</div></div><button class="wishlist-add" onclick="startTvRating(\'overall\')">' + (manual ? 'Re-rate' : 'Rate Overall') + '</button></div>';
+  document.getElementById('tv-season-options').innerHTML = (series.seasons || []).map(function(season){
+    const rated = tvRatingsCache.find(function(r){ return String(r['TMDB TV ID'])===String(series.id) && r['Type']==='season' && String(r['Season'])===String(season.seasonNumber); });
+    return '<div class="wishlist-item"><div class="wishlist-item-main"><div class="wishlist-item-title">' + escHtml(season.seasonName) + '</div><div class="wishlist-item-meta">' +
+      [season.year,season.episodeCount && season.episodeCount + ' episodes',rated && 'Your rating: ' + Number(rated['Score /10']).toFixed(1)].filter(Boolean).join(' · ') +
+      '</div></div><button class="wishlist-add" onclick="startTvRating(\'season\',' + Number(season.seasonNumber) + ')">' + (rated ? 'Re-rate' : 'Rate Season') + '</button></div>';
+  }).join('') || '<div class="stats-empty">No standard seasons are available for this series.</div>';
+}
+
+function startTvRating(entryType, seasonNumber){
+  const series = tvCurrentSeries;
+  if(!series) return;
+  const season = (series.seasons || []).find(function(s){ return Number(s.seasonNumber)===Number(seasonNumber); });
+  const existing = tvRatingsCache.find(function(r){
+    return String(r['TMDB TV ID'])===String(series.id) && r['Type']===entryType &&
+      (entryType==='overall' || String(r['Season'])===String(seasonNumber));
+  });
+  const seasonRatings = tvRatingsCache.filter(function(r){ return String(r['TMDB TV ID'])===String(series.id) && r['Type']==='season'; });
+  const suggested = entryType==='overall' && !existing && seasonRatings.length
+    ? seasonRatings.reduce(function(sum,r){ return sum+Number(r['Score /10']||0); },0)/seasonRatings.length : null;
+  const item = {
+    id:series.id, tmdbTvId:series.id, entryType:entryType, seriesTitle:series.seriesTitle, seriesYear:series.seriesYear,
+    seasonNumber:entryType==='overall' ? '' : season.seasonNumber,
+    seasonName:entryType==='overall' ? 'Overall Series' : season.seasonName,
+    episodeCount:entryType==='overall' ? '' : season.episodeCount,
+    title:series.seriesTitle + (entryType==='overall' ? ' — Overall' : ' — ' + season.seasonName),
+    year:entryType==='overall' ? series.seriesYear : (season.year || series.seriesYear),
+    director:series.creator, creator:series.creator, genres:series.genres || [], imdb:series.imdb || '',
+    poster:entryType==='overall' ? series.poster : (season.poster || series.poster), suggestedScore10:suggested
+  };
+  _pendingMovie = item;
+  if(existing){
+    document.getElementById('ar-title').textContent = item.title;
+    document.getElementById('ar-score').textContent = Number(existing['Score /10']||0).toFixed(1);
+    document.getElementById('ar-grade').textContent = grade(Number(existing['Score /10']||0));
+    document.getElementById('ar-date').textContent = existing['Date'] ? 'Rated on ' + existing['Date'] : '';
+    document.getElementById('already-rated-modal').style.display='flex';
+  } else loadMovie(item);
+}
+
+async function pushTvToSheets(raw100, ratingGrade, overallNote, today){
+  tvRatingsCache = [];
+  const row = {
+    date:today, entryType:currentMovie.entryType, seriesTitle:currentMovie.seriesTitle, seriesYear:currentMovie.seriesYear,
+    seasonNumber:currentMovie.seasonNumber, seasonName:currentMovie.seasonName, episodeCount:currentMovie.episodeCount,
+    creator:currentMovie.creator, genres:(currentMovie.genres || []).join(' · '), imdb:currentMovie.imdb || '',
+    tmdbTvId:currentMovie.tmdbTvId, posterPath:currentMovie.poster || '', score10:chosenScore10.toFixed(1),
+    score100:quickMode ? (chosenScore10*10).toFixed(1) : raw100, grade:ratingGrade,
+    plot:quickMode?'':scores.plot||'', plotGrade:quickMode?'':gradeFromRaw(scores.plot||0), plotNotes:quickMode?'':notes.plot||'',
+    entertainment:quickMode?'':scores.entertainment||'', entGrade:quickMode?'':gradeFromRaw(scores.entertainment||0), entNotes:quickMode?'':notes.entertainment||'',
+    acting:quickMode?'':scores.acting||'', actingGrade:quickMode?'':gradeFromRaw(scores.acting||0), actingNotes:quickMode?'':notes.acting||'',
+    visuals:quickMode?'':scores.visuals||'', visualsGrade:quickMode?'':gradeFromRaw(scores.visuals||0), visualsNotes:quickMode?'':notes.visuals||'',
+    pacing:quickMode?'':scores.pacing||'', pacingGrade:quickMode?'':gradeFromRaw(scores.pacing||0), pacingNotes:quickMode?'':notes.pacing||'',
+    emotional:quickMode?'':scores.emotional||'', emotionalGrade:quickMode?'':gradeFromRaw(scores.emotional||0), emotionalNotes:quickMode?'':notes.emotional||'',
+    notes:overallNote
+  };
+  try{
+    await apiCall('saveTvRating', {token:getSessionToken(), payload:row});
+    document.getElementById('sheet-msg').textContent='✓ Added to Google Sheets';
+    document.getElementById('sheet-msg').className='sheet-msg';
+  }catch(e){
+    document.getElementById('sheet-msg').textContent=e.message || 'Sheets sync failed';
+    document.getElementById('sheet-msg').className='sheet-msg err';
+  }
+}
+
+async function goTvStats(){
+  showScreen('tv-stats');
+  const content=document.getElementById('tv-stats-content');
+  if(!CONFIG.GAS_URL || !currentUser || !getSessionToken()){
+    content.innerHTML='<div class="stats-empty">Connect Google Sheets and log in to see your TV stats.</div>';
+    return;
+  }
+  content.innerHTML='<div class="stats-loading">Loading your TV ratings...</div>';
+  try{
+    const data=await Promise.all([apiCall('getTvRatings',{token:getSessionToken()}),apiCall('getTvSummary',{token:getSessionToken()})]);
+    tvStatsData={ratings:data[0]||[],summary:data[1]||{rows:[]}};
+    renderTvStats();
+  }catch(e){ content.innerHTML='<div class="stats-empty">Could not load TV ratings.</div>'; }
+}
+
+function setTvStatsType(type){
+  tvStatsType=type;
+  document.getElementById('tv-tab-season').classList.toggle('active',type==='season');
+  document.getElementById('tv-tab-overall').classList.toggle('active',type==='overall');
+  renderTvStats();
+}
+
+function renderTvStats(){
+  const content=document.getElementById('tv-stats-content');
+  const ratings=(tvStatsData.ratings||[]).filter(function(r){ return r['Type']===tvStatsType; });
+  const label=tvStatsType==='season'?'Seasons':'Overall Shows';
+  if(!ratings.length){ content.innerHTML='<div class="stats-empty">No ' + label.toLowerCase() + ' rated yet.</div>'; return; }
+  const sorted=ratings.slice().sort(function(a,b){ return Number(b['Score /10']||0)-Number(a['Score /10']||0); });
+  const avg=sorted.reduce(function(sum,r){ return sum+Number(r['Score /10']||0); },0)/sorted.length;
+  content.innerHTML='<div class="stats-section"><div class="stats-section-title">My ' + label + '</div><div class="stats-grid">' +
+    '<div class="stat-card"><div class="stat-card-num">' + ratings.length + '</div><div class="stat-card-lbl">' + label + ' Rated</div></div>' +
+    '<div class="stat-card"><div class="stat-card-num">' + avg.toFixed(1) + '</div><div class="stat-card-lbl">Average /10</div></div>' +
+    '<div class="stat-card"><div class="stat-card-num">' + Number(sorted[0]['Score /10']).toFixed(1) + '</div><div class="stat-card-lbl">Highest</div></div></div></div>' +
+    '<div class="stats-section"><div class="stats-section-title">Top ' + Math.min(5,sorted.length) + ' ' + label + '</div><div class="film-list">' +
+    sorted.slice(0,5).map(function(r,i){ return '<div class="film-row"><div class="film-row-rank">#' + (i+1) + '</div><div class="film-row-title">' + escHtml(r['Series']) + (r['Type']==='season' ? ' — ' + escHtml(r['Season Name'] || 'Season ' + r['Season']) : '') + '</div><div class="film-row-year">' + escHtml(r['Year'] || '') + '</div><div class="film-row-score">' + Number(r['Score /10']).toFixed(1) + '</div></div>'; }).join('') +
+    '</div></div>';
+}
+
+// ══════════════════════════════════════════════════════════════
 //  LE GUIDE — RESTAURANT RATING SYSTEM
 // ══════════════════════════════════════════════════════════════
 
@@ -3519,6 +4002,20 @@ function startRating(mode){
     }
     return;
   }
+  if(mode === 'tv'){
+    activeCategory = 'tv';
+    CATS = TV_CATS;
+    setLgMode(false);
+    if(currentUser && getSessionToken()){
+      updateNavUser();
+      showScreen('tv-search');
+    } else {
+      showScreen('pin');
+      renderPinScreen();
+    }
+    return;
+  }
+  activeCategory = 'film';
   CATS = FILM_CATS;
   setLgMode(false);
   if(currentUser && getSessionToken()){
@@ -3528,6 +4025,21 @@ function startRating(mode){
     showScreen('pin');
     renderPinScreen();
   }
+}
+
+function goActiveRate(){
+  if(activeCategory === 'tv') showScreen('tv-search');
+  else showScreen('search');
+}
+
+function goBackToActiveSearch(){
+  if(activeCategory === 'tv') showScreen('tv-search');
+  else showScreen('search');
+}
+
+function goActiveStats(){
+  if(activeCategory === 'tv') goTvStats();
+  else goStats();
 }
 
 function lgGoHome(){
@@ -4264,20 +4776,26 @@ function showScreen(id){
   document.getElementById('screen-'+id).classList.add('active');
   window.scrollTo(0,0);
 
-  const isLg = id.startsWith('lg-');
-  setLgMode(isLg && id!=='lg-result'? true : lgMode);
+  const isWishlist = id === 'wishlist';
+  const isLg = id.startsWith('lg-') || (isWishlist && wishlistMode === 'restaurant');
+  setLgMode(isLg && id!=='lg-result' ? true : (isWishlist ? false : lgMode));
 
   if(!isLg){
-    ['home','search','stats','settings'].forEach(n=>{
+    ['home','rate','stats','wishlist','settings'].forEach(n=>{
       const b=document.getElementById('nav-'+n);
-      if(b) b.classList.toggle('active',n===id||(id==='score'&&n==='search')||(id==='round'&&n==='search')||(id==='result'&&n==='search'));
+      if(b) b.classList.toggle('active',
+        n===id ||
+        ((id==='search'||id==='score'||id==='round'||id==='result'||id==='quick'||id==='tv-search'||id==='tv-select')&&n==='rate') ||
+        ((id==='stats'||id==='tv-stats')&&n==='stats')
+      );
     });
   } else {
-    ['lg-home','lg-rate','lg-stats','lg-back'].forEach(n=>{
+    ['lg-home','lg-rate','lg-stats','lg-wishlist','lg-back'].forEach(n=>{
       const b=document.getElementById('nav-'+n);
       if(b) b.classList.toggle('active',
         (n==='lg-rate'&&(id==='lg-search'||id==='lg-score'||id==='lg-round'||id==='lg-quick'))||
-        (n==='lg-stats'&&id==='lg-stats')
+        (n==='lg-stats'&&id==='lg-stats')||
+        (n==='lg-wishlist'&&id==='wishlist')
       );
     });
   }
