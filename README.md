@@ -6,9 +6,10 @@ This folder merges the latest restaurant UI work with the secure GitHub Pages + 
 
 Cine-file is a small private ratings dashboard for a group of friends. GitHub Pages serves the public frontend at the normal site URL, while Google Apps Script acts as the private backend that reads/writes a Google Sheet.
 
-The app currently has two rating areas:
+The app currently has three rating areas:
 
 - **Cine-file / Film** - movie search, full category rating, quick rating, generated rating card, already-rated detection, personal stats, group stats, and head-to-head stats.
+- **Cine-file / TV** - series search, season ratings, optional manual overall-series ratings, generated rating cards, separate season/overall stats, and a TV wishlist.
 - **Le Guide / Restaurant** - restaurant search, full category rating, quick rating, generated restaurant card, already-rated detection, personal restaurant stats, and group restaurant stats.
 
 The dashboard is intentionally still a single-page app. Screens are shown/hidden with CSS classes rather than separate routes. The main user flow is:
@@ -54,6 +55,11 @@ The backend now uses database tabs plus visual summary tabs:
 - `Summary-Films` stores one row per film for spreadsheet-friendly comparison: title, year, genre, director, movie length, RT Audience score, IMDb score, user score columns, and average rating.
 - `Database-Restaurants` stores one row per restaurant rating, with a `user` column plus restaurant metadata, score fields, category scores, notes, `placeId`, and timestamps.
 - `Summary-Restaurants` stores one row per restaurant for group comparison.
+- `Future-Films` is one shared database tab with one row per saved film and a `user` column. It contains the film metadata needed by the wishlist plus the TMDB ID.
+- `Future-Restaurants` is one shared database tab with one row per saved restaurant and a `user` column. It contains restaurant metadata plus the Google Place ID.
+- `Database-TV` stores one row per user TV rating. It distinguishes `season` and `overall` entries using `entryType`, plus series metadata, season metadata, scores, category scores, and notes.
+- `Summary-TV` stores one row per comparable TV unit: either a specific season or an optional overall-series rating.
+- `Future-TV` is one shared database tab with one row per saved series and a `user` column.
 
 Legacy `Users` rows with plain PINs are supported for login and can be migrated to hashes by the backend after a successful login.
 
@@ -65,6 +71,11 @@ The active website backend uses only these sheet tabs:
 - `Summary-Films`
 - `Database-Restaurants`
 - `Summary-Restaurants`
+- `Future-Films`
+- `Future-Restaurants`
+- `Database-TV`
+- `Summary-TV`
+- `Future-TV`
 - `Users`
 
 Paste and deploy `Code.gs`, then run `setupActiveSheetTabs` from the Apps Script editor. This formats the active tabs and rebuilds `Summary-Films` and `Summary-Restaurants` from the database tabs.
@@ -75,6 +86,26 @@ The backend upserts ratings instead of appending duplicates:
 
 - Rating the same film again updates that user's `Database-Films` row and replaces that user's score in the existing `Summary-Films` row.
 - Rating the same restaurant again updates that user's `Database-Restaurants` row and replaces that user's score in the existing `Summary-Restaurants` row.
+
+## Wishlist
+
+The navigation label is **Wishlist** so it works for films, TV, restaurants, and future categories. It stays within the category selected from Home: choose Film, TV, or Le Guide first. The authenticated backend searches, adds, lists, and removes saved items.
+
+- Saved items are personal, but the sheets are shared database tabs. Each row belongs to a user through its `user` column; no per-user future tabs are created.
+- A user cannot save an item they have already rated.
+- When a user saves a rating, the backend removes that matching item from that user's future tab. It does not remove other users' saved entries.
+- Each saved film shows its metadata plus the group's average rating when friends have already rated it. Saved restaurants show the group average when available.
+- Run `setupActiveSheetTabs` once after deploying this version to create and format `Future-Films`, `Future-Restaurants`, and `Future-TV`.
+
+## TV Ratings
+
+TV uses **TV** as the category label. Search for a series, then choose either a specific season or **Overall Series**.
+
+- Seasons are the normal rating unit. A show such as *Survivor* can have independent entries for each season.
+- Overall Series is optional and always stored separately from season ratings.
+- The overall choice shows the current user's average across their rated seasons as a placeholder when they have not supplied a manual overall score. That calculated value is not stored as an overall rating.
+- TV stats have separate **Seasons** and **Overall Shows** views. They never mix those two entry types in the same ranking or average.
+- Saving a season or overall TV rating removes that series from that user's `Future-TV` list.
 
 ## Scoring and Grades
 
@@ -105,7 +136,8 @@ Grade bands are:
 
 ## Stats Behavior
 
-- **My Stats** has clickable rating rows and a search box for opening any of the current user's saved film ratings.
+- **My Stats** has clickable rating rows and a search box for opening any of the current user's saved film ratings. Rating detail cards calculate the grade from the stored final `/10` score, so old incorrect grade text does not affect the display.
+- Rating detail cards show the user's score and grade, IMDb, RT Audience, and other users' scores when available.
 - **Group Stats** includes a film search that shows the current user's score when available, each group member's score, the group average, IMDb, and RT Audience.
 - **Group Rankings** and all three Head-to-Head lists initially show five rows with an option to expand the full list.
 - Film group data is returned by the authenticated `getSummary` action from `Database-Films`; the frontend does not read legacy sheet tabs.
@@ -145,4 +177,4 @@ Restaurant thumbnails are fetched server-side and returned as small data URLs so
 6. Deploy a new web app version.
 7. Confirm `CONFIG.GAS_URL` in `index.html` points to the deployed `/exec` URL.
 
-Run `setupActiveSheetTabs` only when setting up the active tabs, rebuilding summary tabs, or repairing their formatting. A normal frontend-only change does not require it. A `Code.gs` change does require a new Apps Script deployment for the live GitHub Pages site to use it.
+Run `setupActiveSheetTabs` when setting up the active tabs, after deploying a version that adds new tabs, rebuilding summary tabs, or repairing formatting. This TV version creates `Database-TV`, `Summary-TV`, and `Future-TV`. A normal frontend-only change does not require it. A `Code.gs` change does require a new Apps Script deployment for the live GitHub Pages site to use it.
