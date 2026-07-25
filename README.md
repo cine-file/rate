@@ -22,6 +22,8 @@ The dashboard is intentionally still a single-page app. Screens are shown/hidden
 
 Each user can change the site theme from the normal navigation bar without admin access. The theme choice is stored locally in the browser, not in Google Sheets.
 
+The default theme for a browser that has not selected one is **Gold**. The available themes are Gold, Light, and Classic.
+
 ## Files
 
 - `index.html` - GitHub Pages frontend.
@@ -49,7 +51,7 @@ The backend now uses database tabs plus visual summary tabs:
 
 - `Users` stores user names and PIN hashes: `name`, `pinHash`, `pinSalt`.
 - `Database-Films` stores one row per film rating, with a `user` column plus film metadata, score fields, category scores, notes, `tmdbId`, `posterPath`, timestamps, genres, and runtime.
-- `Summary-Films` stores one row per film for spreadsheet-friendly comparison: title, year, genre, director, movie length, user score columns, and average rating.
+- `Summary-Films` stores one row per film for spreadsheet-friendly comparison: title, year, genre, director, movie length, RT Audience score, IMDb score, user score columns, and average rating.
 - `Database-Restaurants` stores one row per restaurant rating, with a `user` column plus restaurant metadata, score fields, category scores, notes, `placeId`, and timestamps.
 - `Summary-Restaurants` stores one row per restaurant for group comparison.
 
@@ -68,6 +70,45 @@ The active website backend uses only these sheet tabs:
 Paste and deploy `Code.gs`, then run `setupActiveSheetTabs` from the Apps Script editor. This formats the active tabs and rebuilds `Summary-Films` and `Summary-Restaurants` from the database tabs.
 
 New film saves write to `Database-Films` and rebuild `Summary-Films`; new restaurant saves write to `Database-Restaurants` and rebuild `Summary-Restaurants`. The website still receives the same response shape it used before, so the UI and stats should behave the same.
+
+The backend upserts ratings instead of appending duplicates:
+
+- Rating the same film again updates that user's `Database-Films` row and replaces that user's score in the existing `Summary-Films` row.
+- Rating the same restaurant again updates that user's `Database-Restaurants` row and replaces that user's score in the existing `Summary-Restaurants` row.
+
+## Scoring and Grades
+
+Final ratings use a 0.0–10.0 scale with one decimal place.
+
+- Quick rating sliders allow every tenth from `0.0` through `10.0`.
+- Full ratings accept category scores out of 100, calculate the weighted result, then derive one final deterministic score out of 10. There is no manual half-point rounding decision.
+- Stored final scores and summary averages are displayed to one decimal place.
+
+Grade bands are:
+
+| Score | Grade |
+| --- | --- |
+| 10.0 | S |
+| 9.5–9.9 | A+ |
+| 9.0–9.4 | A |
+| 8.5–8.9 | A- |
+| 8.0–8.4 | B+ |
+| 7.5–7.9 | B |
+| 7.0–7.4 | B- |
+| 6.5–6.9 | C+ |
+| 6.0–6.4 | C |
+| 5.5–5.9 | C- |
+| 5.0–5.4 | D+ |
+| 4.5–4.9 | D |
+| 4.0–4.4 | D- |
+| Below 4.0 | F |
+
+## Stats Behavior
+
+- **My Stats** has clickable rating rows and a search box for opening any of the current user's saved film ratings.
+- **Group Stats** includes a film search that shows the current user's score when available, each group member's score, the group average, IMDb, and RT Audience.
+- **Group Rankings** and all three Head-to-Head lists initially show five rows with an option to expand the full list.
+- Film group data is returned by the authenticated `getSummary` action from `Database-Films`; the frontend does not read legacy sheet tabs.
 
 ## Security Model
 
@@ -103,3 +144,5 @@ Restaurant thumbnails are fetched server-side and returned as small data URLs so
 5. Confirm Script Properties are set.
 6. Deploy a new web app version.
 7. Confirm `CONFIG.GAS_URL` in `index.html` points to the deployed `/exec` URL.
+
+Run `setupActiveSheetTabs` only when setting up the active tabs, rebuilding summary tabs, or repairing their formatting. A normal frontend-only change does not require it. A `Code.gs` change does require a new Apps Script deployment for the live GitHub Pages site to use it.
