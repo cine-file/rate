@@ -700,7 +700,7 @@ body.theme-cream .nav.lg-mode .nav-btn:hover,body.theme-gold .nav.lg-mode .nav-b
 body.theme-cream .nav-btn.active,body.theme-gold .nav-btn.active,
 body.theme-cream .nav.lg-mode .nav-btn.active,body.theme-gold .nav.lg-mode .nav-btn.active{color:var(--theme-accent);border-bottom-color:var(--theme-accent);}
 body.theme-cream .nav-user-name,body.theme-gold .nav-user-name,
-body.theme-cream .nav.lg-mode .nav-user-name,body.theme-gold .nav.lg-mode .nav-user-name{color:var(--theme-accent-2);}
+body.theme-cream .nav.lg-mode .nav-user-name,body.theme-gold .nav.lg-mode .nav-user-name{color:var(--theme-accent);}
 body.theme-cream .nav-switch,body.theme-gold .nav-switch,
 body.theme-cream .theme-select,body.theme-gold .theme-select{background:var(--theme-panel);border-color:var(--theme-border);color:var(--theme-muted);}
 body.theme-cream .nav-switch:hover,body.theme-gold .nav-switch:hover{border-color:var(--theme-accent);color:var(--theme-accent);}
@@ -993,6 +993,65 @@ body.theme-cream .lg-card,body.theme-gold .lg-card{background:var(--theme-panel)
 body.theme-cream .lg-info-box,body.theme-gold .lg-info-box{background:var(--theme-bg-2);border-color:var(--theme-border);}
 body.theme-cream .lg-card *,body.theme-gold .lg-card *{color:var(--theme-text);}
 
+/* Theme coverage for generated result, modal, and stats detail surfaces. */
+body.theme-cream .rank-reveal,body.theme-gold .rank-reveal,
+body.theme-cream .rating-detail-card,body.theme-gold .rating-detail-card{background:var(--theme-panel);border-color:var(--theme-border);box-shadow:0 18px 60px var(--theme-shadow);}
+body.theme-cream .rank-reveal-title,body.theme-gold .rank-reveal-title,
+body.theme-cream .rank-stat-lbl,body.theme-gold .rank-stat-lbl,
+body.theme-cream .rating-detail-eyebrow,body.theme-gold .rating-detail-eyebrow,
+body.theme-cream .rating-detail-meta,body.theme-gold .rating-detail-meta{color:var(--theme-muted) !important;}
+body.theme-cream .rank-stat-num,body.theme-gold .rank-stat-num,
+body.theme-cream .rating-detail-title,body.theme-gold .rating-detail-title,
+body.theme-cream .rating-detail-score,body.theme-gold .rating-detail-score,
+body.theme-cream .rating-detail-grade,body.theme-gold .rating-detail-grade{color:var(--theme-text) !important;}
+body.theme-cream #already-rated-modal>div,body.theme-gold #already-rated-modal>div,
+body.theme-cream #lg-already-rated-modal>div,body.theme-gold #lg-already-rated-modal>div{background:var(--theme-panel) !important;border-color:var(--theme-border) !important;}
+body.theme-cream #already-rated-modal div[style*="background"],body.theme-gold #already-rated-modal div[style*="background"],
+body.theme-cream #lg-already-rated-modal div[style*="background"],body.theme-gold #lg-already-rated-modal div[style*="background"]{background:var(--theme-bg-2) !important;border-color:var(--theme-border) !important;}
+body.theme-cream #already-rated-modal [style*="color:"],body.theme-gold #already-rated-modal [style*="color:"],
+body.theme-cream #lg-already-rated-modal [style*="color:"],body.theme-gold #lg-already-rated-modal [style*="color:"]{color:var(--theme-text) !important;}
+body.theme-cream #already-rated-modal button[style],body.theme-gold #already-rated-modal button[style],
+body.theme-cream #lg-already-rated-modal button[style],body.theme-gold #lg-already-rated-modal button[style]{border-color:var(--theme-border) !important;color:var(--theme-muted) !important;}
+body.theme-cream #already-rated-modal button[style*="background:#142414"],body.theme-gold #already-rated-modal button[style*="background:#142414"],
+body.theme-cream #lg-already-rated-modal button[style*="background:#3a0a0e"],body.theme-gold #lg-already-rated-modal button[style*="background:#3a0a0e"]{background:var(--theme-accent) !important;border-color:var(--theme-accent) !important;color:var(--theme-bg) !important;}
+body.theme-cream #admin-modal [style*="color:"],body.theme-gold #admin-modal [style*="color:"]{color:var(--theme-accent) !important;}
+body.theme-cream #admin-modal .pin-error,body.theme-gold #admin-modal .pin-error{color:#a84d4d !important;}
+.stats-search{width:100%;padding:11px 14px;background:#0b120b;border:1px solid #1e3a1e;border-radius:2px;color:#c0e0c0;font:14px 'Barlow',sans-serif;outline:none;}
+.stats-search:focus{border-color:#4a9a4a;}
+.stats-search-results{margin-top:10px;display:flex;flex-direction:column;gap:6px;}
+.stats-search-result{display:flex;align-items:center;gap:12px;width:100%;padding:10px 12px;background:#0b120b;border:1px solid #1a3a1a;border-radius:2px;color:#c0e0c0;text-align:left;cursor:pointer;font:13px 'Barlow',sans-serif;}
+.stats-search-result:hover{border-color:#4a9a4a;background:#0f1c0f;}
+.stats-search-result-title{flex:1;font-weight:600;}
+.stats-search-result-score{font-family:'Bebas Neue',sans-serif;font-size:20px;color:#80d080;}
+.stats-extra-row{display:none;}
+.stats-extra-row.open{display:table-row;}
+.rating-detail-overlay{display:none;position:fixed;inset:0;z-index:1000;align-items:center;justify-content:center;padding:24px;background:rgba(0,0,0,.72);}
+.rating-detail-overlay.open{display:flex;}
+.rating-detail-card{max-width:520px;width:100%;max-height:calc(100vh - 48px);overflow:auto;padding:30px;background:#0b120b;border:1px solid #2a5a2a;border-radius:3px;color:#e8f8e8;}
+.rating-detail-eyebrow{font:10px 'Barlow Condensed',sans-serif;letter-spacing:.28em;text-transform:uppercase;color:#4a9a4a;margin-bottom:8px;}
+.rating-detail-title{font:32px 'Bebas Neue',sans-serif;color:#e8f8e8;line-height:1;}
+.rating-detail-meta{margin-top:7px;color:#4a7a4a;font-size:13px;font-style:italic;}
+.rating-detail-scores{display:flex;gap:12px;margin:20px 0;}
+.rating-detail-score-box{flex:1;padding:13px;background:#0b1f0b;border:1px solid #224422;text-align:center;}
+.rating-detail-score,.rating-detail-grade{font:32px 'Bebas Neue',sans-serif;color:#fff;line-height:1;}
+.rating-detail-label{margin-top:4px;color:#4a7a4a;font:9px 'Barlow Condensed',sans-serif;letter-spacing:.18em;text-transform:uppercase;}
+.rating-detail-list{border-top:1px solid #1a3a1a;margin-top:14px;}
+.rating-detail-line{display:flex;justify-content:space-between;gap:14px;padding:8px 0;border-bottom:1px solid #142814;font-size:13px;}
+.rating-detail-line strong{font-family:'Bebas Neue',sans-serif;font-size:18px;}
+.film-row[role="button"]{cursor:pointer;}
+body.theme-cream .stats-search,body.theme-gold .stats-search,
+body.theme-cream .stats-search-result,body.theme-gold .stats-search-result{background:var(--theme-bg-2);border-color:var(--theme-border);color:var(--theme-text);}
+body.theme-cream .stats-search-result:hover,body.theme-gold .stats-search-result:hover{background:var(--theme-panel-2);border-color:var(--theme-accent);}
+body.theme-cream .stats-search-result-score,body.theme-gold .stats-search-result-score{color:var(--theme-accent);}
+body.theme-cream .rating-detail-score-box,body.theme-gold .rating-detail-score-box{background:var(--theme-bg-2);border-color:var(--theme-border);}
+body.theme-cream .rating-detail-label,body.theme-gold .rating-detail-label{color:var(--theme-muted);}
+body.theme-cream .rating-detail-list,body.theme-gold .rating-detail-list,
+body.theme-cream .rating-detail-line,body.theme-gold .rating-detail-line{border-color:var(--theme-border);}
+body.theme-cream .settings-add-btn,body.theme-cream .config-save-btn,
+body.theme-gold .settings-add-btn,body.theme-gold .config-save-btn{background:var(--theme-panel-2) !important;border-color:var(--theme-accent) !important;color:var(--theme-accent) !important;}
+body.theme-cream .settings-add-btn:hover,body.theme-cream .config-save-btn:hover,
+body.theme-gold .settings-add-btn:hover,body.theme-gold .config-save-btn:hover{background:var(--theme-accent) !important;color:var(--theme-bg) !important;}
+
 </style>
 </head>
 <body>
@@ -1003,7 +1062,7 @@ body.theme-cream .lg-card *,body.theme-gold .lg-card *{color:var(--theme-text);}
 <script>
 const CONFIG = {
   // Public backend endpoint. All sensitive actions are validated in Apps Script.
-  GAS_URL: "https://script.google.com/macros/s/AKfycbwfRY4_RIqhC5WCZAmAa-4fVeiy-u_wFtdECBcPE7SctEa1fYYhCA1CfaLVxwfiS5f3aA/exec",
+  GAS_URL: "https://script.google.com/macros/s/AKfycbzXTffnVTML1LDXcO75NMkG8N3pFSbCOwfrOJdf3Tm7HRGA6SWxQu-OhiCcmvvD_1j5GA/exec",
 };
 const SITE_NAME = "Cine-file";
 </script>
@@ -1141,7 +1200,7 @@ const SITE_NAME = "Cine-file";
 
     <div class="quick-slider-wrap">
       <input type="range" class="quick-slider" id="quick-slider"
-        min="0" max="20" value="10" step="1"
+        min="0" max="100" value="50" step="1"
         oninput="updateQuickScore(this.value)"/>
     </div>
     <div class="quick-ticks">
@@ -1224,7 +1283,7 @@ const SITE_NAME = "Cine-file";
         <span class="round-raw-num" id="round-raw-num"></span>
         <span class="round-raw-grade" id="round-raw-grade"></span>
       </div>
-      <div class="round-raw-sub">out of 100 · Pick the /10 score that feels right</div>
+      <div class="round-raw-sub">out of 100 · Your final /10 score is calculated automatically</div>
     </div>
     <p class="round-prompt">Round up or down based on your overall feel:</p>
     <div class="round-options" id="round-options"></div>
@@ -1368,7 +1427,7 @@ const SITE_NAME = "Cine-file";
         <span class="round-raw-num" id="lg-round-raw-num" style="color:#F5ECD7"></span>
         <span class="round-raw-grade" id="lg-round-raw-grade" style="color:#C41E3A"></span>
       </div>
-      <div class="round-raw-sub" style="color:#6a3a3a">out of 100 · Pick the /10 score that feels right</div>
+      <div class="round-raw-sub" style="color:#6a3a3a">out of 100 · Your final /10 score is calculated automatically</div>
     </div>
     <p class="round-prompt" style="color:#8a4a4a">Round up or down based on your overall feel:</p>
     <div class="round-options" id="lg-round-options"></div>
@@ -1389,7 +1448,7 @@ const SITE_NAME = "Cine-file";
     <div class="quick-score-lbl" style="color:#8a4a4a">out of 10</div>
     <div class="quick-slider-wrap">
       <input type="range" class="lg-quick-slider" id="lg-quick-slider"
-        min="0" max="20" value="10" step="1" oninput="lgUpdateQuick(this.value)"/>
+        min="0" max="100" value="50" step="1" oninput="lgUpdateQuick(this.value)"/>
     </div>
     <div class="quick-ticks" style="color:#6a3a3a">
       <span>0</span><span>2</span><span>4</span><span>6</span><span>8</span><span>10</span>
@@ -1617,6 +1676,18 @@ const SITE_NAME = "Cine-file";
   </div>
 </div>
 
+<!-- Rating details opened from My Stats and Group Stats -->
+<div class="rating-detail-overlay" id="rating-detail-modal" onclick="closeRatingDetail(event)">
+  <div class="rating-detail-card" onclick="event.stopPropagation()">
+    <div class="rating-detail-eyebrow" id="rating-detail-eyebrow">Your rating</div>
+    <div class="rating-detail-title" id="rating-detail-title"></div>
+    <div class="rating-detail-meta" id="rating-detail-meta"></div>
+    <div class="rating-detail-scores" id="rating-detail-scores"></div>
+    <div class="rating-detail-list" id="rating-detail-list"></div>
+    <button class="view-all-btn" onclick="closeRatingDetail()">Close</button>
+  </div>
+</div>
+
 <!-- ══════════════════════════════════════
      JAVASCRIPT
 ══════════════════════════════════════ -->
@@ -1634,16 +1705,16 @@ function goEditScores(){
 }
 
 function updateQuickScore(val){
-  const score = (parseInt(val)/2).toFixed(1);
+  const score = (Number(val)/10).toFixed(1);
   document.getElementById('quick-score-display').textContent = score;
   document.getElementById('quick-score-grade').textContent = grade(parseFloat(score));
-  const pct = (val/20*100).toFixed(1);
+  const pct = Number(val).toFixed(1);
   document.getElementById('quick-slider').style.setProperty('--pct', pct+'%');
 }
 
 function submitQuickRating(){
   const val = document.getElementById('quick-slider').value;
-  chosenScore10 = parseFloat((parseInt(val)/2).toFixed(1));
+  chosenScore10 = Number((Number(val)/10).toFixed(1));
   scores = {}; notes = {};
   ratingDate = new Date().toISOString().slice(0,10);
   // Store note so generateCard can access it
@@ -1676,7 +1747,6 @@ let CATS = FILM_CATS; // active category set
 function grade(s) {
   s = Number(s);
   if(!isFinite(s)) return "F";
-  if(s > 10) s = s / 10;
   if(s >= 10)return"S";
   if(s >= 9.5)return"A+"; if(s >= 9.0)return"A";  if(s >= 8.5)return"A-";
   if(s >= 8.0)return"B+"; if(s >= 7.5)return"B";  if(s >= 7.0)return"B-";
@@ -1684,20 +1754,14 @@ function grade(s) {
   if(s >= 5.0)return"D+"; if(s >= 4.5)return"D";  if(s >= 4.0)return"D-";
   return"F";
 }
+function gradeFromRaw(raw){ return grade(Number(raw)/10); }
 function calcTotal(){
   return CATS.reduce((s,c)=>s+Number(document.getElementById("inp-"+c.id)?.value||0)*c.w,0);
 }
 function escHtml(s){
   return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
 }
-function toHalf(n){ return Math.round(n*2)/2; }
-function halfOptions(raw){
-  // Return the two nearest half-increment /10 options
-  const scaled = raw / 10;
-  const floor  = Math.floor(scaled*2)/2;
-  const ceil   = Math.min(10, floor + 0.5);
-  return floor === ceil ? [floor] : [floor, ceil];
-}
+function scoreToTenth(raw){ return Number((Number(raw||0) / 10).toFixed(1)); }
 
 // ── STATE ────────────────────────────────────────────────────
 let currentMovie  = null;
@@ -1791,8 +1855,8 @@ function normalizeTheme(theme){
   return ["classic","cream","gold"].includes(theme) ? theme : "classic";
 }
 function getStoredTheme(){
-  try{ return normalizeTheme(localStorage.getItem(THEME_KEY) || "classic"); }
-  catch(e){ return "classic"; }
+  try{ return normalizeTheme(localStorage.getItem(THEME_KEY) || "gold"); }
+  catch(e){ return "gold"; }
 }
 function applyTheme(theme){
   theme = normalizeTheme(theme);
@@ -2157,7 +2221,7 @@ async function checkAlreadyRated(movie){
     const sc = parseFloat(existing["Score /10"]||0);
     const raw100 = parseFloat(existing["Raw /100"]||0);
     document.getElementById("ar-score").textContent = sc.toFixed(1);
-    document.getElementById("ar-grade").textContent = raw100 ? grade(raw100) : existing["Grade"]||"—";
+    document.getElementById("ar-grade").textContent = raw100 ? gradeFromRaw(raw100) : existing["Grade"]||"—";
     document.getElementById("ar-date").textContent = existing["Date"] ? `Rated on ${existing["Date"]}` : "";
     document.getElementById("already-rated-modal").style.display="flex";
   } else {
@@ -2205,7 +2269,7 @@ function loadMovie(movie){
       <td class="td-prompt">${c.prompt}</td>
       <td class="tc">
         <input class="score-inp" id="inp-${c.id}" type="number" min="0" max="100"
-          placeholder="—" oninput="updateTotal()"/>
+          step="0.1" placeholder="—" oninput="updateTotal()"/>
       </td>
       <td class="tc td-grade" id="grade-${c.id}">—</td>
       <td><textarea class="note-inp" id="note-${c.id}" rows="2" placeholder="Optional..."></textarea></td>
@@ -2220,9 +2284,9 @@ function loadMovie(movie){
       [movie.year, movie.director && `Dir. ${movie.director}`,
        (movie.rt&&movie.rt!=='—') && `RT: ${movie.rt}`,
        movie.imdb && `IMDb: ${movie.imdb}`].filter(Boolean).join(' · ');
-    document.getElementById('quick-slider').value = 10;
+    document.getElementById('quick-slider').value = 50;
     document.getElementById('quick-note').value = '';
-    updateQuickScore(10);
+    updateQuickScore(50);
     showScreen('quick');
   } else {
     showScreen("score");
@@ -2233,12 +2297,12 @@ function updateTotal(){
   CATS.forEach(c=>{
     const v=document.getElementById("inp-"+c.id)?.value;
     const el=document.getElementById("grade-"+c.id);
-    if(v!==""&&v!==null&&!isNaN(v)){el.textContent=grade(v);el.classList.add("filled");}
+    if(v!==""&&v!==null&&!isNaN(v)){el.textContent=gradeFromRaw(v);el.classList.add("filled");}
     else{el.textContent="—";el.classList.remove("filled");}
   });
   const t=calcTotal();
-  document.getElementById("total-num").textContent=t.toFixed(2);
-  document.getElementById("total-grade").textContent=grade(t);
+  document.getElementById("total-num").textContent=t.toFixed(1);
+  document.getElementById("total-grade").textContent=gradeFromRaw(t);
 }
 
 // ── ROUNDING SCREEN ───────────────────────────────────────────
@@ -2248,18 +2312,17 @@ function goRound(){
     notes[c.id] =document.getElementById("note-"+c.id)?.value||"";
   });
   const raw=calcTotal();
-  const g  =grade(raw);
-  chosenScore10=null;
+  chosenScore10=scoreToTenth(raw);
+  const g  =grade(chosenScore10);
   document.getElementById("round-movie-name").textContent=currentMovie.title.toUpperCase();
-  document.getElementById("round-raw-num").textContent=raw.toFixed(2);
+  document.getElementById("round-raw-num").textContent=raw.toFixed(1);
   document.getElementById("round-raw-grade").textContent=g;
-  const opts=halfOptions(raw);
-  document.getElementById("round-options").innerHTML=opts.map(o=>`
-    <div class="round-opt" onclick="selectRound(${o}, this)">
-      <div class="round-opt-num">${o.toFixed(1)}</div>
+  document.getElementById("round-options").innerHTML=`
+    <div class="round-opt selected">
+      <div class="round-opt-num">${chosenScore10.toFixed(1)}</div>
       <div class="round-opt-label">out of 10</div>
-    </div>`).join("");
-  document.getElementById("round-confirm").disabled=true;
+    </div>`;
+  document.getElementById("round-confirm").disabled=false;
   showScreen("round");
 }
 
@@ -2281,7 +2344,7 @@ function generateCard(){
   const raw=quickMode && chosenScore10 != null
     ? chosenScore10 * 10
     : CATS.reduce((s,c)=>s+(scores[c.id]||0)*c.w,0);
-  const g  =grade(raw);
+  const g  =grade(chosenScore10);
   const overallNote=document.getElementById("overall-note").value||"";
   const today=new Date().toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"});
 
@@ -2341,7 +2404,7 @@ function generateCard(){
         <td class="ct-name">${c.label}</td>
         <td class="tc ct-dim">${Math.round(c.w*100)}%</td>
         <td class="tc ct-score">${scores[c.id]||"—"}</td>
-        <td class="tc ct-grade">${scores[c.id]?grade(scores[c.id]):"—"}</td>
+        <td class="tc ct-grade">${scores[c.id]?gradeFromRaw(scores[c.id]):"—"}</td>
         <td class="ct-note">${escHtml(notes[c.id]||"")}</td>
       </tr>`).join("");
   }
@@ -2359,7 +2422,7 @@ function generateCard(){
   showScreen("result");
 
   // Push to sheets and load rank
-  pushToSheets(raw.toFixed(2), g, overallNote, today);
+  pushToSheets(raw.toFixed(1), g, overallNote, today);
   loadRankReveal();
 }
 
@@ -2381,12 +2444,12 @@ function pushToSheets(raw100, g, overallNote, today){
     score10: chosenScore10.toFixed(1),
     score100: quickMode ? (chosenScore10*10).toFixed(1) : raw100,
     grade:   g,
-    plot:         quickMode?"":scores.plot||"",         plotGrade:    quickMode?"":grade(scores.plot||0),     plotNotes:    quickMode?"":notes.plot||"",
-    entertainment:quickMode?"":scores.entertainment||"",entGrade:     quickMode?"":grade(scores.entertainment||0),entNotes: quickMode?"":notes.entertainment||"",
-    acting:       quickMode?"":scores.acting||"",       actingGrade:  quickMode?"":grade(scores.acting||0),   actingNotes:  quickMode?"":notes.acting||"",
-    visuals:      quickMode?"":scores.visuals||"",      visualsGrade: quickMode?"":grade(scores.visuals||0),  visualsNotes: quickMode?"":notes.visuals||"",
-    pacing:       quickMode?"":scores.pacing||"",       pacingGrade:  quickMode?"":grade(scores.pacing||0),   pacingNotes:  quickMode?"":notes.pacing||"",
-    emotional:    quickMode?"":scores.emotional||"",    emotionalGrade:quickMode?"":grade(scores.emotional||0),emotionalNotes:quickMode?"":notes.emotional||"",
+    plot:         quickMode?"":scores.plot||"",         plotGrade:    quickMode?"":gradeFromRaw(scores.plot||0),     plotNotes:    quickMode?"":notes.plot||"",
+    entertainment:quickMode?"":scores.entertainment||"",entGrade:     quickMode?"":gradeFromRaw(scores.entertainment||0),entNotes: quickMode?"":notes.entertainment||"",
+    acting:       quickMode?"":scores.acting||"",       actingGrade:  quickMode?"":gradeFromRaw(scores.acting||0),   actingNotes:  quickMode?"":notes.acting||"",
+    visuals:      quickMode?"":scores.visuals||"",      visualsGrade: quickMode?"":gradeFromRaw(scores.visuals||0),  visualsNotes: quickMode?"":notes.visuals||"",
+    pacing:       quickMode?"":scores.pacing||"",       pacingGrade:  quickMode?"":gradeFromRaw(scores.pacing||0),  pacingNotes:  quickMode?"":notes.pacing||"",
+    emotional:    quickMode?"":scores.emotional||"",    emotionalGrade:quickMode?"":gradeFromRaw(scores.emotional||0),emotionalNotes:quickMode?"":notes.emotional||"",
     notes: overallNote,
   };
   apiCall("saveRating", {token: getSessionToken(), payload: row})
@@ -2420,8 +2483,8 @@ async function loadRankReveal(){
     const myScore =chosenScore10;
     const rank    =scores10.filter(s=>s>myScore).length+1;
     const total   =scores10.length;
-    const g       =grade(quickMode && chosenScore10 != null ? chosenScore10 * 10 : CATS.reduce((s,c)=>s+(scores[c.id]||0)*c.w,0));
-    const gradeCount=ratings.filter(r=>grade(parseFloat(r["Raw /100"]||0))===g).length;
+    const g       =grade(chosenScore10);
+    const gradeCount=ratings.filter(r=>grade(parseFloat(r["Score /10"]||0))===g).length;
 
     // Group average for this film from summary tab
     let groupHtml = "";
@@ -2526,6 +2589,96 @@ function renderCurrentTab(){
   if(_statsTab==='h2h')   renderH2H(_statsData.summary);
 }
 
+function toggleStatsRows(className, btn){
+  const rows=document.querySelectorAll('.'+className);
+  const open=[...rows].some(row=>row.classList.contains('open'));
+  rows.forEach(row=>row.classList.toggle('open',!open));
+  btn.textContent=open ? btn.dataset.label : 'Show Less ↑';
+}
+
+function closeRatingDetail(event){
+  if(event && event.target!==document.getElementById('rating-detail-modal')) return;
+  document.getElementById('rating-detail-modal').classList.remove('open');
+}
+
+function openRatingDetail({eyebrow,title,meta,score,grade: ratingGrade,lines}){
+  document.getElementById('rating-detail-eyebrow').textContent=eyebrow;
+  document.getElementById('rating-detail-title').textContent=title;
+  document.getElementById('rating-detail-meta').textContent=meta.filter(Boolean).join(' · ');
+  document.getElementById('rating-detail-scores').innerHTML=`
+    <div class="rating-detail-score-box"><div class="rating-detail-score">${Number(score).toFixed(1)}</div><div class="rating-detail-label">out of 10</div></div>
+    <div class="rating-detail-score-box"><div class="rating-detail-grade">${escHtml(ratingGrade)}</div><div class="rating-detail-label">Grade</div></div>`;
+  document.getElementById('rating-detail-list').innerHTML=lines.map(line=>`
+    <div class="rating-detail-line"><span>${escHtml(line.label)}</span><strong>${escHtml(line.value)}</strong></div>`).join('');
+  document.getElementById('rating-detail-modal').classList.add('open');
+}
+
+function showMyRatedFilm(title){
+  const rating=(_statsData.ratings||[]).find(r=>String(r['Title']||'').toLowerCase()===String(title||'').toLowerCase());
+  if(!rating) return;
+  const score=parseFloat(rating['Score /10']||0);
+  const lines=[
+    ['Plot & Concept','Plot'],['Entertainment Value','Entertainment'],['Acting & Characters','Acting'],
+    ['Visuals & Production','Visuals'],['Pacing','Pacing'],['Emotional Impact','Emotional']
+  ].filter(([,key])=>rating[key]!==''&&rating[key]!=null&&Number(rating[key])>0)
+   .map(([label,key])=>({label,value:Number(rating[key]).toFixed(1)}));
+  if(rating['Notes']) lines.push({label:'Notes',value:String(rating['Notes'])});
+  openRatingDetail({
+    eyebrow:'Your rating', title:String(rating['Title']||''),
+    meta:[rating['Year'],rating['Date']&&`Rated ${rating['Date']}`],
+    score, grade:rating['Grade']||grade(score), lines
+  });
+}
+
+function searchMyRatedFilm(query){
+  const holder=document.getElementById('my-film-search-results');
+  if(!holder) return;
+  const term=String(query||'').trim().toLowerCase();
+  if(!term){ holder.innerHTML=''; return; }
+  const matches=(_statsData.ratings||[]).filter(r=>String(r['Title']||'').toLowerCase().includes(term)).slice(0,8);
+  holder.innerHTML=matches.length ? matches.map(r=>`
+    <button class="stats-search-result" data-title="${escHtml(String(r['Title']||''))}" onclick="showMyRatedFilm(this.dataset.title)">
+      <span class="stats-search-result-title">${escHtml(String(r['Title']||''))}${r['Year']?' ('+escHtml(String(r['Year']))+')':''}</span>
+      <span class="stats-search-result-score">${parseFloat(r['Score /10']||0).toFixed(1)}</span>
+    </button>`).join('') : '<div class="stats-empty">You have not rated a matching film.</div>';
+}
+
+function showGroupFilm(title){
+  const row=(_statsData.summary?.rows||[]).find(r=>String(r.Title||'').toLowerCase()===String(title||'').toLowerCase());
+  if(!row) return;
+  const scores=(row.scores||[]).map(Number).filter(Number.isFinite);
+  const avg=scores.length?scores.reduce((a,b)=>a+b,0)/scores.length:0;
+  const mine=row.userScores?.[currentUser?.name];
+  const lines=[];
+  if(mine!=null) lines.push({label:'Your rating',value:Number(mine).toFixed(1)});
+  lines.push({label:'Group average',value:avg.toFixed(1)});
+  if(row.imdb) lines.push({label:'IMDb',value:String(row.imdb)});
+  if(row.rt) lines.push({label:'RT Audience',value:String(row.rt)});
+  Object.entries(row.userScores||{}).sort(([a],[b])=>a.localeCompare(b)).forEach(([name,value])=>{
+    if(name!==currentUser?.name) lines.push({label:name,value:Number(value).toFixed(1)});
+  });
+  openRatingDetail({
+    eyebrow:'Group rating', title:String(row.Title||''), meta:[row.Year, `${scores.length} rating${scores.length===1?'':'s'}`],
+    score:mine!=null?Number(mine):avg, grade:grade(mine!=null?Number(mine):avg), lines
+  });
+}
+
+function searchGroupFilm(query){
+  const holder=document.getElementById('group-film-search-results');
+  if(!holder) return;
+  const term=String(query||'').trim().toLowerCase();
+  if(!term){ holder.innerHTML=''; return; }
+  const matches=(_statsData.summary?.rows||[]).filter(r=>String(r.Title||'').toLowerCase().includes(term)).slice(0,8);
+  holder.innerHTML=matches.length ? matches.map(r=>{
+    const scores=(r.scores||[]).map(Number).filter(Number.isFinite);
+    const avg=scores.length?scores.reduce((a,b)=>a+b,0)/scores.length:0;
+    return `<button class="stats-search-result" data-title="${escHtml(String(r.Title||''))}" onclick="showGroupFilm(this.dataset.title)">
+      <span class="stats-search-result-title">${escHtml(String(r.Title||''))}${r.Year?' ('+escHtml(String(r.Year))+')':''}</span>
+      <span class="stats-search-result-score">${avg.toFixed(1)}</span>
+    </button>`;
+  }).join('') : '<div class="stats-empty">No matching film has been rated by the group.</div>';
+}
+
 // ── MY STATS TAB ──────────────────────────────────────────────────
 function renderMyStats(ratings, summary){
   const container = document.getElementById('stats-content');
@@ -2538,8 +2691,8 @@ function renderMyStats(ratings, summary){
   const gradeCounts={};
   GRADES.forEach(g=>gradeCounts[g]=0);
   ratings.forEach(r=>{
-    const raw=parseFloat(r["Raw /100"]||0);
-    if(raw>0) gradeCounts[grade(raw)]=(gradeCounts[grade(raw)]||0)+1;
+    const score10=parseFloat(r["Score /10"]||0);
+    if(score10>0) gradeCounts[grade(score10)]=(gradeCounts[grade(score10)]||0)+1;
   });
   const maxGrade=Math.max(...Object.values(gradeCounts),1);
 
@@ -2599,7 +2752,7 @@ function renderMyStats(ratings, summary){
       <div class="stats-section-title">Your Top 5 Films</div>
       <div class="film-list">
         ${top5.map((r,i)=>`
-          <div class="film-row">
+          <div class="film-row" role="button" tabindex="0" data-title="${escHtml(String(r["Title"]||""))}" onclick="showMyRatedFilm(this.dataset.title)">
             <div class="film-row-rank">#${i+1}</div>
             <div class="film-row-title">${escHtml(String(r["Title"]||""))}</div>
             <div class="film-row-year">${r["Year"]||""}</div>
@@ -2611,7 +2764,7 @@ function renderMyStats(ratings, summary){
         <div class="all-ratings-count">${ratings.length} films · best to worst · showing ${scoreL}</div>
         <div class="film-list">
           ${sorted.map((r,i)=>`
-            <div class="film-row">
+            <div class="film-row" role="button" tabindex="0" data-title="${escHtml(String(r["Title"]||""))}" onclick="showMyRatedFilm(this.dataset.title)">
               <div class="film-row-rank">#${i+1}</div>
               <div class="film-row-title">${escHtml(String(r["Title"]||""))}</div>
               <div class="film-row-year">${r["Year"]||""}</div>
@@ -2626,7 +2779,7 @@ function renderMyStats(ratings, summary){
       <div class="stats-section-title">Recently Rated</div>
       <div class="film-list">
         ${recent5.map(r=>`
-          <div class="film-row">
+          <div class="film-row" role="button" tabindex="0" data-title="${escHtml(String(r["Title"]||""))}" onclick="showMyRatedFilm(this.dataset.title)">
             <div class="film-row-title">${escHtml(String(r["Title"]||""))}</div>
             <div class="film-row-year">${r["Year"]||""}</div>
             <div class="film-row-score">${(useRaw?parseFloat(r["Raw /100"]||0):parseFloat(r["Score /10"]||0)).toFixed(1)}</div>
@@ -2645,6 +2798,12 @@ function renderMyStats(ratings, summary){
             <div class="cat-bar-val">${val}</div>
           </div>`).join("")}
       </div>
+    </div>
+
+    <div class="stats-section">
+      <div class="stats-section-title">Find a Rated Film</div>
+      <input class="stats-search" id="my-film-search" type="search" placeholder="Search your rated films" oninput="searchMyRatedFilm(this.value)"/>
+      <div class="stats-search-results" id="my-film-search-results"></div>
     </div>`;
 }
 
@@ -2708,6 +2867,12 @@ function renderGroupStats(summary){
       </div>
     </div>
 
+    <div class="stats-section">
+      <div class="stats-section-title">Find a Group Rating</div>
+      <input class="stats-search" id="group-film-search" type="search" placeholder="Search films rated by the group" oninput="searchGroupFilm(this.value)"/>
+      <div class="stats-search-results" id="group-film-search-results"></div>
+    </div>
+
     <!-- Group Rankings table -->
     <div class="stats-section">
       <div class="stats-section-title">Group Rankings — ${sorted.length} Films</div>
@@ -2724,7 +2889,7 @@ function renderGroupStats(summary){
           <tbody>
             ${sorted.map((r,i)=>{
               const avg=(r.scores.reduce((x,y)=>x+y,0)/r.scores.length).toFixed(1);
-              return `<tr>
+              return `<tr class="${i>=5?'group-ranking-extra stats-extra-row':''}">
                 <td style="color:#3d6a3d;font-family:'Bebas Neue',sans-serif;font-size:16px">#${i+1}</td>
                 <td class="film-title-cell">${escHtml(String(r.Title||""))}<br><span style="font-size:11px;color:#3d6a3d;font-weight:normal">${r.Year||""}</span></td>
                 <td class="tc" style="color:#ffffff;font-size:20px">${avg}</td>
@@ -2738,6 +2903,7 @@ function renderGroupStats(summary){
           </tbody>
         </table>
       </div>
+      ${sorted.length>5?'<button class="view-all-btn" data-label="View All '+sorted.length+' Films ↓" onclick="toggleStatsRows(\'group-ranking-extra\',this)">View All '+sorted.length+' Films ↓</button>':''}
     </div>
 
     <!-- Most Controversial -->
@@ -2882,33 +3048,35 @@ function updateH2H(){
     <div class="stats-section">
       <div class="stats-section-title">🔥 Biggest Disagreements</div>
       <div class="film-list">
-        ${byDiff.slice(0,8).map(r=>{
+        ${byDiff.map((r,i)=>{
           const sc1=parseFloat(r.userScores[u1]).toFixed(1);
           const sc2=parseFloat(r.userScores[u2]).toFixed(1);
           const diff=Math.abs(parseFloat(r.userScores[u1])-parseFloat(r.userScores[u2])).toFixed(1);
-          return `<div class="film-row">
+          return `<div class="film-row ${i>=5?'h2h-diff-extra':''}"${i>=5?' style="display:none"':''}>
             <div class="film-row-title">${escHtml(String(r.Title||""))}</div>
             <div class="film-row-year" style="color:#5a8a5a;font-size:12px">${escHtml(u1)}: ${sc1} · ${escHtml(u2)}: ${sc2}</div>
             <div class="film-row-score" style="color:#d08040;font-size:14px">Δ${diff}</div>
           </div>`;
         }).join("")}
       </div>
+      ${byDiff.length>5?'<button class="view-all-btn" data-label="View All '+byDiff.length+' Films ↓" onclick="toggleH2HList(\'h2h-diff-extra\',this)">View All '+byDiff.length+' Films ↓</button>':''}
     </div>
 
     <!-- Most agreement -->
     <div class="stats-section">
       <div class="stats-section-title">🤝 Most Agreement</div>
       <div class="film-list">
-        ${byAgreement.slice(0,8).map(r=>{
+        ${byAgreement.map((r,i)=>{
           const sc1=parseFloat(r.userScores[u1]).toFixed(1);
           const sc2=parseFloat(r.userScores[u2]).toFixed(1);
-          return `<div class="film-row">
+          return `<div class="film-row ${i>=5?'h2h-agreement-extra':''}"${i>=5?' style="display:none"':''}>
             <div class="film-row-title">${escHtml(String(r.Title||""))}</div>
             <div class="film-row-year" style="color:#5a8a5a;font-size:12px">${escHtml(u1)}: ${sc1} · ${escHtml(u2)}: ${sc2}</div>
             <div class="film-row-score" style="color:#4a9a4a;font-size:14px">${sc1}</div>
           </div>`;
         }).join("")}
       </div>
+      ${byAgreement.length>5?'<button class="view-all-btn" data-label="View All '+byAgreement.length+' Films ↓" onclick="toggleH2HList(\'h2h-agreement-extra\',this)">View All '+byAgreement.length+' Films ↓</button>':''}
     </div>
 
     <!-- Full comparison table -->
@@ -2929,12 +3097,12 @@ function updateH2H(){
               const aAvg=(parseFloat(a.userScores[u1])+parseFloat(a.userScores[u2]))/2;
               const bAvg=(parseFloat(b.userScores[u1])+parseFloat(b.userScores[u2]))/2;
               return bAvg-aAvg;
-            }).map(r=>{
+            }).map((r,i)=>{
               const sc1=parseFloat(r.userScores[u1]).toFixed(1);
               const sc2=parseFloat(r.userScores[u2]).toFixed(1);
               const diff=(parseFloat(r.userScores[u1])-parseFloat(r.userScores[u2])).toFixed(1);
               const diffColor=parseFloat(diff)>0?'#4a9a4a':parseFloat(diff)<0?'#d08040':'#3d6a3d';
-              return `<tr>
+              return `<tr class="${i>=5?'h2h-both-extra stats-extra-row':''}">
                 <td class="film-title-cell">${escHtml(String(r.Title||""))}</td>
                 <td class="tc">${sc1}</td>
                 <td class="tc">${sc2}</td>
@@ -2944,7 +3112,15 @@ function updateH2H(){
           </tbody>
         </table>
       </div>
+      ${both.length>5?'<button class="view-all-btn" data-label="View All '+both.length+' Films ↓" onclick="toggleStatsRows(\'h2h-both-extra\',this)">View All '+both.length+' Films ↓</button>':''}
     </div>`;
+}
+
+function toggleH2HList(className, btn){
+  const rows=document.querySelectorAll('.'+className);
+  const open=[...rows].some(row=>row.style.display!=='none');
+  rows.forEach(row=>row.style.display=open?'none':'flex');
+  btn.textContent=open ? btn.dataset.label : 'Show Less ↑';
 }
 
 // ── TOGGLE ALL RATINGS ───────────────────────────────────────────
@@ -2968,7 +3144,7 @@ async function saveAsImage(){
     const raw=quickMode && chosenScore10 != null
       ? chosenScore10 * 10
       : CATS.reduce((s,c)=>s+(scores[c.id]||0)*c.w,0);
-    const g=grade(raw);
+    const g=grade(chosenScore10);
     const CARD_W=720, SCALE=2, OUTER_PAD=80;
     const W=CARD_W+OUTER_PAD*2;
     const cw=W*SCALE;
@@ -3160,7 +3336,7 @@ async function saveAsImage(){
       ctx.textAlign="center";
       fs(11,"400","Arial"); fw(Math.round(c.w*100)+"%",col.wt+col.wtW/2,Y+rowH*0.6);
       fs(16,"900","Arial Black, Arial"); fw(s?String(s):"—",col.sc+col.scW/2,Y+rowH*0.65);
-      ctx.fillStyle="#ffffff"; fw(s?grade(s):"—",col.gr+col.grW/2,Y+rowH*0.65);
+      ctx.fillStyle="#ffffff"; fw(s?gradeFromRaw(s):"—",col.gr+col.grW/2,Y+rowH*0.65);
       ctx.fillStyle="#ffffff"; ctx.textAlign="left"; fs(10,"400","Arial");
       const n=notes[c.id]||"";
       if(n){ctx.font=`italic ${10*S}px Arial`;fw(n.slice(0,48)+(n.length>48?"…":""),col.note,Y+rowH*0.6,col.noteW);}
@@ -3453,7 +3629,7 @@ function lgLoadPlace(place){
       <td class="td-prompt" style="color:#6a3a3a">${c.prompt}</td>
       <td class="tc">
         <input class="lg-score-inp" id="lg-inp-${c.id}" type="number" min="0" max="100"
-          placeholder="—" oninput="lgUpdateTotal()"/>
+          step="0.1" placeholder="—" oninput="lgUpdateTotal()"/>
       </td>
       <td class="tc td-grade" id="lg-grade-${c.id}" style="color:#4a2a2a">—</td>
       <td><textarea class="lg-note-inp" id="lg-note-${c.id}" rows="2" placeholder="Optional..."></textarea></td>
@@ -3467,9 +3643,9 @@ function lgLoadPlace(place){
     document.getElementById('lg-quick-name').textContent = place.name;
     document.getElementById('lg-quick-sub').textContent =
       [place.address, place.cuisine, place.price].filter(Boolean).join(' · ');
-    document.getElementById('lg-quick-slider').value = 10;
+    document.getElementById('lg-quick-slider').value = 50;
     document.getElementById('lg-quick-note').value = '';
-    lgUpdateQuick(10);
+    lgUpdateQuick(50);
     showScreen('lg-quick');
   } else {
     showScreen('lg-score');
@@ -3481,12 +3657,12 @@ function lgUpdateTotal(){
     const v = document.getElementById('lg-inp-'+c.id)?.value;
     const el = document.getElementById('lg-grade-'+c.id);
     if(v!==''&&v!==null&&!isNaN(v)){
-      el.textContent=grade(v); el.classList.add('lg-grade-filled');
+      el.textContent=gradeFromRaw(v); el.classList.add('lg-grade-filled');
     } else { el.textContent='—'; el.classList.remove('lg-grade-filled'); }
   });
   const t = RESTAURANT_CATS.reduce((s,c)=>s+Number(document.getElementById('lg-inp-'+c.id)?.value||0)*c.w,0);
-  document.getElementById('lg-total-num').textContent = t.toFixed(2);
-  document.getElementById('lg-total-grade').textContent = grade(t);
+  document.getElementById('lg-total-num').textContent = t.toFixed(1);
+  document.getElementById('lg-total-grade').textContent = gradeFromRaw(t);
 }
 
 // ── LE GUIDE ROUNDING ─────────────────────────────────────────
@@ -3496,18 +3672,17 @@ function lgGoRound(){
     lgNotes[c.id]  = document.getElementById('lg-note-'+c.id)?.value||'';
   });
   const raw = RESTAURANT_CATS.reduce((s,c)=>s+(lgScores[c.id]||0)*c.w,0);
-  const g   = grade(raw);
-  lgChosenScore10 = null;
+  lgChosenScore10 = scoreToTenth(raw);
+  const g   = grade(lgChosenScore10);
   document.getElementById('lg-round-name').textContent = lgCurrentPlace.name.toUpperCase();
-  document.getElementById('lg-round-raw-num').textContent = raw.toFixed(2);
+  document.getElementById('lg-round-raw-num').textContent = raw.toFixed(1);
   document.getElementById('lg-round-raw-grade').textContent = g;
-  const opts = halfOptions(raw);
-  document.getElementById('lg-round-options').innerHTML = opts.map(o=>`
-    <div class="lg-round-opt" onclick="lgSelectRound(${o}, this)">
-      <div class="lg-round-num">${o.toFixed(1)}</div>
+  document.getElementById('lg-round-options').innerHTML = `
+    <div class="lg-round-opt selected">
+      <div class="lg-round-num">${lgChosenScore10.toFixed(1)}</div>
       <div class="lg-round-lbl">out of 10</div>
-    </div>`).join('');
-  document.getElementById('lg-round-confirm').disabled = true;
+    </div>`;
+  document.getElementById('lg-round-confirm').disabled = false;
   showScreen('lg-round');
 }
 
@@ -3526,16 +3701,16 @@ function lgConfirmRound(){
 
 // ── QUICK RATING ──────────────────────────────────────────────
 function lgUpdateQuick(val){
-  const score = (parseInt(val)/2).toFixed(1);
+  const score = (Number(val)/10).toFixed(1);
   document.getElementById('lg-quick-display').textContent = score;
   document.getElementById('lg-quick-grade').textContent = grade(parseFloat(score));
-  const pct = (val/20*100).toFixed(1);
+  const pct = Number(val).toFixed(1);
   document.getElementById('lg-quick-slider').style.setProperty('--pct', pct+'%');
 }
 
 function lgSubmitQuick(){
   const val = document.getElementById('lg-quick-slider').value;
-  lgChosenScore10 = parseFloat((parseInt(val)/2).toFixed(1));
+  lgChosenScore10 = Number((Number(val)/10).toFixed(1));
   lgScores = {}; lgNotes = {};
   lgRatingDate = new Date().toISOString().slice(0,10);
   document.getElementById('lg-overall-note').value = document.getElementById('lg-quick-note').value||'';
@@ -3552,7 +3727,7 @@ function lgGenerateCard(){
   const raw = lgQuickMode && lgChosenScore10 != null
     ? lgChosenScore10 * 10
     : RESTAURANT_CATS.reduce((s,c)=>s+(lgScores[c.id]||0)*c.w,0);
-  const g   = grade(raw);
+  const g   = grade(lgChosenScore10);
   const overallNote = document.getElementById('lg-overall-note')?.value||'';
   const today = new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
   const stars = lgChosenScore10 / 2;
@@ -3590,7 +3765,7 @@ function lgGenerateCard(){
         <td class="lg-ct-name">${c.label}</td>
         <td class="tc lg-ct-dim">${Math.round(c.w*100)}%</td>
         <td class="tc lg-ct-score">${lgScores[c.id]||'—'}</td>
-        <td class="tc lg-ct-grade">${lgScores[c.id]?grade(lgScores[c.id]):'—'}</td>
+        <td class="tc lg-ct-grade">${lgScores[c.id]?gradeFromRaw(lgScores[c.id]):'—'}</td>
         <td class="lg-ct-note">${escHtml(lgNotes[c.id]||'')}</td>
       </tr>`).join('');
   }
@@ -3607,7 +3782,7 @@ function lgGenerateCard(){
   document.getElementById('lg-sheet-msg').textContent = '';
 
   showScreen('lg-result');
-  lgPushToSheets(raw.toFixed(2), g, overallNote, today);
+  lgPushToSheets(raw.toFixed(1), g, overallNote, today);
   lgLoadRankReveal();
 }
 
@@ -3628,11 +3803,11 @@ async function lgPushToSheets(raw100, g, overallNote, today){
     score100: lgQuickMode ? (lgChosenScore10*10).toFixed(1) : raw100,
     grade:   g,
     stars:   (lgChosenScore10/2).toFixed(1),
-    food:          lgQuickMode?'':lgScores.food||'',        foodGrade:    lgQuickMode?'':grade(lgScores.food||0),
-    value:         lgQuickMode?'':lgScores.value||'',       valueGrade:   lgQuickMode?'':grade(lgScores.value||0),
-    service:       lgQuickMode?'':lgScores.service||'',     serviceGrade: lgQuickMode?'':grade(lgScores.service||0),
-    atmosphere:    lgQuickMode?'':lgScores.atmosphere||'',  atmosphereGrade: lgQuickMode?'':grade(lgScores.atmosphere||0),
-    craving:       lgQuickMode?'':lgScores.craving||'',     cravingGrade: lgQuickMode?'':grade(lgScores.craving||0),
+    food:          lgQuickMode?'':lgScores.food||'',        foodGrade:    lgQuickMode?'':gradeFromRaw(lgScores.food||0),
+    value:         lgQuickMode?'':lgScores.value||'',       valueGrade:   lgQuickMode?'':gradeFromRaw(lgScores.value||0),
+    service:       lgQuickMode?'':lgScores.service||'',     serviceGrade: lgQuickMode?'':gradeFromRaw(lgScores.service||0),
+    atmosphere:    lgQuickMode?'':lgScores.atmosphere||'',  atmosphereGrade: lgQuickMode?'':gradeFromRaw(lgScores.atmosphere||0),
+    craving:       lgQuickMode?'':lgScores.craving||'',     cravingGrade: lgQuickMode?'':gradeFromRaw(lgScores.craving||0),
     notes: overallNote,
     placeId: lgCurrentPlace.placeId||'',
   };
@@ -3655,8 +3830,8 @@ async function lgLoadRankReveal(){
     const myScore  = lgChosenScore10;
     const rank     = scores10.filter(s=>s>myScore).length+1;
     const total    = scores10.length;
-    const g        = grade(lgQuickMode && lgChosenScore10 != null ? lgChosenScore10 * 10 : RESTAURANT_CATS.reduce((s,c)=>s+(lgScores[c.id]||0)*c.w,0));
-    const gCount   = ratings.filter(r=>grade(parseFloat(r['Raw /100']||0))===g).length;
+    const g        = grade(lgChosenScore10);
+    const gCount   = ratings.filter(r=>grade(parseFloat(r['Score /10']||0))===g).length;
     stats.innerHTML=`
       <div class="rank-stat">
         <div class="rank-stat-num">#${rank}</div>
@@ -3761,7 +3936,7 @@ function lgRenderMyStats(){
 
   const GRADES=["S","A+","A","A-","B+","B","B-","C+","C","C-","D+","D","D-","F"];
   const gradeCounts={}; GRADES.forEach(g=>gradeCounts[g]=0);
-  ratings.forEach(r=>{ const raw=parseFloat(r['Raw /100']||0); if(raw>0) gradeCounts[grade(raw)]=(gradeCounts[grade(raw)]||0)+1; });
+  ratings.forEach(r=>{ const score10=parseFloat(r['Score /10']||0); if(score10>0) gradeCounts[grade(score10)]=(gradeCounts[grade(score10)]||0)+1; });
   const maxGrade=Math.max(...Object.values(gradeCounts),1);
 
   const catFields={'Food & Taste':'Food','Value':'Value','Service':'Service','Atmosphere':'Atmosphere','Craving Factor':'Craving'};
@@ -3887,7 +4062,7 @@ async function lgSaveImage(){
     const raw = lgQuickMode && lgChosenScore10 != null
       ? lgChosenScore10 * 10
       : RESTAURANT_CATS.reduce((s,c)=>s+(lgScores[c.id]||0)*c.w,0);
-    const g   = grade(raw);
+    const g   = grade(lgChosenScore10);
     const CARD_W=720, SCALE=2, OUTER_PAD=80;
     const W=CARD_W+OUTER_PAD*2, cw=W*SCALE;
     const cv=document.createElement('canvas');
@@ -4011,7 +4186,7 @@ async function lgSaveImage(){
         fw(Math.round(c.w*100)+'%',CIX+175+25,Y+rowH*0.6);
         ctx.fillStyle='#F5ECD7'; fs(14,'bold','Bebas Neue, Georgia, serif');
         fw(s?String(s):'—',CIX+230+25,Y+rowH*0.65);
-        fw(s?grade(s):'—',CIX+285+25,Y+rowH*0.65);
+        fw(s?gradeFromRaw(s):'—',CIX+285+25,Y+rowH*0.65);
         const n=lgNotes[c.id]||'';
         if(n){ctx.fillStyle='#F5ECD7';ctx.textAlign='left';fs(9,'400','Arial');ctx.font=`italic ${9*S}px Arial`;fw(n.slice(0,48),CIX+340,Y+rowH*0.6,CW-340);}
         Y+=rowH; hline(Y,CIX,CIX+CW,'rgba(200,164,90,0.2)',0.3); Y+=3;
