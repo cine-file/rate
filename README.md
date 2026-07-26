@@ -1,4 +1,4 @@
-# Cine-file Secure Film + Restaurant Version
+# Cine-file Secure Ratings Dashboard
 
 This folder merges the latest restaurant UI work with the secure GitHub Pages + Apps Script backend approach.
 
@@ -9,8 +9,8 @@ Cine-file is a small private ratings dashboard for a group of friends. GitHub Pa
 The app currently has three rating areas:
 
 - **Cine-file / Film** - movie search, full category rating, quick rating, generated rating card, already-rated detection, personal stats, group stats, and head-to-head stats.
-- **Cine-file / TV** - series search, season ratings, optional manual overall-series ratings, generated rating cards, separate season/overall stats, and a TV wishlist.
-- **Le Guide / Restaurant** - restaurant search, full category rating, quick rating, generated restaurant card, already-rated detection, personal restaurant stats, and group restaurant stats.
+- **Cine-file / TV** - series search, season ratings, optional manual overall-series ratings, quick and full category scoring, generated rating cards, separate season/overall stats, and a TV wishlist.
+- **Le Guide / Restaurant** - restaurant search, full category rating, quick rating, generated restaurant card, already-rated detection, personal, group, head-to-head, and individual stats.
 
 The dashboard is intentionally still a single-page app. Screens are shown/hidden with CSS classes rather than separate routes. The main user flow is:
 
@@ -78,7 +78,7 @@ The active website backend uses only these sheet tabs:
 - `Future-TV`
 - `Users`
 
-Paste and deploy `Code.gs`, then run `setupActiveSheetTabs` from the Apps Script editor. This formats the active tabs and rebuilds `Summary-Films` and `Summary-Restaurants` from the database tabs.
+Paste and deploy `Code.gs`, then run `setupActiveSheetTabs` from the Apps Script editor. This formats the active tabs and rebuilds the Film, Restaurant, and TV summary tabs from their database tabs.
 
 New film saves write to `Database-Films` and rebuild `Summary-Films`; new restaurant saves write to `Database-Restaurants` and rebuild `Summary-Restaurants`. The website still receives the same response shape it used before, so the UI and stats should behave the same.
 
@@ -104,7 +104,7 @@ TV uses **TV** as the category label. Search for a series, then choose either a 
 - Seasons are the normal rating unit. A show such as *Survivor* can have independent entries for each season.
 - Overall Series is optional and always stored separately from season ratings.
 - The overall choice shows the current user's average across their rated seasons as a placeholder when they have not supplied a manual overall score. That calculated value is not stored as an overall rating.
-- TV stats have separate **Seasons** and **Overall Shows** views. They never mix those two entry types in the same ranking or average.
+- TV stats have a **Seasons / Overall Shows** selector above the same **My Stats**, **Group**, **Head to Head**, and **Individual Ratings** views used by Film. They never mix the two entry types in a ranking or average.
 - Saving a season or overall TV rating removes that series from that user's `Future-TV` list.
 
 ## Scoring and Grades
@@ -138,6 +138,8 @@ Grade bands are:
 
 - **My Stats** has clickable rating rows and a search box for opening any of the current user's saved film ratings. Rating detail cards calculate the grade from the stored final `/10` score, so old incorrect grade text does not affect the display.
 - Rating detail cards show the user's score and grade, IMDb, RT Audience, and other users' scores when available.
+- Film, TV, and Restaurant stats include **Individual Ratings**: select a user, then search their ratings or browse their complete score-sorted list. This view is derived from the same summary data used by group comparisons.
+- Film, TV, and Restaurant **Head to Head** views compare two selected users, showing shared ratings, average scores, biggest disagreements, and strongest agreement.
 - **Group Stats** includes a film search that shows the current user's score when available, each group member's score, the group average, IMDb, and RT Audience.
 - **Group Rankings** and all three Head-to-Head lists initially show five rows with an option to expand the full list.
 - Film group data is returned by the authenticated `getSummary` action from `Database-Films`; the frontend does not read legacy sheet tabs.
