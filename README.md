@@ -8,14 +8,14 @@ Cine-file is a small private ratings dashboard for a group of friends. GitHub Pa
 
 The app currently has three rating areas:
 
-- **Cine-file / Film** - movie search, full category rating, quick rating, generated rating card, already-rated detection, personal stats, group stats, and head-to-head stats.
-- **Cine-file / TV** - series search, season ratings, optional manual overall-series ratings, quick and full category scoring, generated rating cards, separate season/overall stats, and a TV wishlist.
-- **Le Guide / Restaurant** - restaurant search, full category rating, quick rating, generated restaurant card, already-rated detection, personal, group, head-to-head, and individual stats.
+- **Cine-file / Film** - movie search, advanced title/year search, full category rating, quick rating, generated rating card, already-rated detection, full personal/group/head-to-head/individual stats, score distributions, and secure self-service rating deletion.
+- **Cine-file / TV** - series and advanced title/year search, season ratings, optional manual overall-series ratings, quick and full category scoring, generated rating cards, separate season/overall full stats, score distributions, secure deletion, and a TV wishlist.
+- **Le Guide / Restaurant** - restaurant search, full category rating, quick rating, generated restaurant card, already-rated detection, full personal/group/head-to-head/individual stats, score distributions, and secure deletion.
 
 The dashboard is intentionally still a single-page app. Screens are shown/hidden with CSS classes rather than separate routes. The main user flow is:
 
 1. User opens the GitHub Pages site.
-2. User chooses Film or Restaurant.
+2. User chooses Film, TV, or Restaurant.
 3. User logs in with name + PIN.
 4. Frontend receives a temporary session token from Apps Script.
 5. Search/rating/stats actions call Apps Script with that token.
@@ -144,6 +144,20 @@ Grade bands are:
 - **Group Rankings** and all three Head-to-Head lists initially show five rows with an option to expand the full list.
 - Film group data is returned by the authenticated `getSummary` action from `Database-Films`; the frontend does not read legacy sheet tabs.
 
+## Stats and Score Views
+
+Film, TV, and Restaurant stats use the same four views: **My Stats**, **Group**, **Head to Head**, and **Individual Ratings**. The `/10 Score` and `Raw /100` toggle is shared across all three categories and all comparison views. Group summary API responses include both final `/10` values and raw `/100` values so the toggle does not have to estimate raw scores.
+
+The old grade-count bars are replaced by a score distribution chart. It uses 5-point bins across a fixed 0-100 x-axis, counts ratings on the y-axis, draws a smoothed distribution curve over the bins, and marks the arithmetic average with a vertical line.
+
+## Advanced Film and TV Search
+
+Normal search remains fast and shows the first seven TMDB matches. The **Advanced Search** control can optionally narrow by release/first-air year and searches up to three result pages, returning up to 30 unique matches.
+
+## Secure Rating Deletion
+
+The bottom of each **My Stats** view contains **Delete a Rating**. Deletion requires the logged-in user to re-enter their PIN, choose a rating, and complete a separate final confirmation. The backend verifies the PIN again when processing the delete request, removes only that user's matching database row, and rebuilds the corresponding summary tab.
+
 ## Security Model
 
 The GitHub frontend is public, so it must not contain private values. These stay in Apps Script Script Properties:
@@ -179,4 +193,4 @@ Restaurant thumbnails are fetched server-side and returned as small data URLs so
 6. Deploy a new web app version.
 7. Confirm `CONFIG.GAS_URL` in `index.html` points to the deployed `/exec` URL.
 
-Run `setupActiveSheetTabs` when setting up the active tabs, after deploying a version that adds new tabs, rebuilding summary tabs, or repairing formatting. This TV version creates `Database-TV`, `Summary-TV`, and `Future-TV`. A normal frontend-only change does not require it. A `Code.gs` change does require a new Apps Script deployment for the live GitHub Pages site to use it.
+Run `setupActiveSheetTabs` when setting up the active tabs, after deploying a version that adds new tabs, rebuilding summary tabs, or repairing formatting. This TV version creates `Database-TV`, `Summary-TV`, and `Future-TV`. A normal frontend-only change does not require it. A `Code.gs` change does require a new Apps Script deployment for the live GitHub Pages site to use it. This update changes both `index.html` and `Code.gs`; deploy a new Apps Script version after pasting the backend. No new sheet tabs or setup run are required.
