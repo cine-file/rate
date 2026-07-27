@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 //  CINE-FILE — Google Apps Script
-//  Version: 2026.07.27-stats-search-delete.1
+//  Version: 2026.07.27-stats-genre-bars.2
 //  Runtime: GitHub Pages frontend + Apps Script JSON backend
 //
 //  Version notes:
@@ -12,11 +12,12 @@
 //    Future-Restaurants lists, removed automatically when their owner rates an item.
 //  - tv-season-ratings.1: adds TV season and optional overall-series ratings.
 //  - stats-search-delete.1: raw-score summaries, advanced search, secure rating deletion, and distribution-ready data.
+//  - stats-genre-bars.2: exposes film genres to the stats API for cross-user genre filtering.
 //
 //  Original by friend, restaurant functions added by Claude
 // ─────────────────────────────────────────────────────────────
 
-const BACKEND_VERSION = '2026.07.27-stats-search-delete.1';
+const BACKEND_VERSION = '2026.07.27-stats-genre-bars.2';
 const SESSION_TTL_SECONDS = 6 * 60 * 60;
 
 const FILMS_SHEET_NAME = 'Database-Films';
@@ -1012,6 +1013,7 @@ function doGetSummary_() {
       grouped[key] = {
         Title: r.title,
         Year: r.year,
+        Genre: r.genres || '',
         rt: r.rtAudience || '',
         imdb: r.imdb || '',
         scores: [],
@@ -1020,6 +1022,7 @@ function doGetSummary_() {
         userRawScores: {}
       };
     }
+    grouped[key].Genre = grouped[key].Genre || r.genres || '';
     grouped[key].rt = grouped[key].rt || r.rtAudience || '';
     grouped[key].imdb = grouped[key].imdb || r.imdb || '';
     var score = parseFloat(r.score10);
