@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 //  CINE-FILE — Google Apps Script
-//  Version: 2026.07.25-tv-season-ratings.2
+//  Version: 2026.07.27-stats-search-delete.1
 //  Runtime: GitHub Pages frontend + Apps Script JSON backend
 //
 //  Version notes:
@@ -11,11 +11,12 @@
 //  - wishlist-theme-details.1: adds authenticated personal Future-Films and
 //    Future-Restaurants lists, removed automatically when their owner rates an item.
 //  - tv-season-ratings.1: adds TV season and optional overall-series ratings.
+//  - stats-search-delete.1: raw-score summaries, advanced search, secure rating deletion, and distribution-ready data.
 //
 //  Original by friend, restaurant functions added by Claude
 // ─────────────────────────────────────────────────────────────
 
-const BACKEND_VERSION = '2026.07.25-tv-season-ratings.2';
+const BACKEND_VERSION = '2026.07.27-stats-search-delete.1';
 const SESSION_TTL_SECONDS = 6 * 60 * 60;
 
 const FILMS_SHEET_NAME = 'Database-Films';
@@ -244,6 +245,7 @@ function doPost(e) {
     if (action === 'getUsers')   return jsonOut_({ users: getUsersPublic_() });
     if (action === 'getDeploymentStatus') return doGetDeploymentStatus_(d);
     if (action === 'getSession') return doGetSession_(d);
+    if (action === 'verifyUserPin') return doVerifyUserPin_(d);
 
     // Admin actions
     if (action === 'saveUsers') {
@@ -287,6 +289,9 @@ function doPost(e) {
     if (action === 'getFutureRestaurants')   return doGetFutureRestaurants_(username);
     if (action === 'addFutureRestaurant')    return doAddFutureRestaurant_(d.payload || d, username);
     if (action === 'deleteFutureRestaurant') return doDeleteFutureRestaurant_(d.payload || d, username);
+    if (action === 'deleteRating')             return doDeleteRating_(d.payload || d, username);
+    if (action === 'deleteTvRating')           return doDeleteTvRating_(d.payload || d, username);
+    if (action === 'deleteRestaurantRating')   return doDeleteRestaurantRating_(d.payload || d, username);
 
     return jsonOut_({ error: 'Unknown action: ' + action });
   } catch(err) {
@@ -362,6 +367,24 @@ function doGetSession_(d) {
   return jsonOut_({ user: { name: sess.username } });
 }
 
+function verifyUserPinValue_(username, pin) {
+  var normalizedPin = String(pin || '').replace(/\D/g, '').padStart(4, '0').slice(-4);
+  var user = getUsers_().filter(function(u){
+    return String(u.name || '').trim().toLowerCase() === String(username || '').trim().toLowerCase();
+  })[0];
+  if (!user) return false;
+  return user.legacyPin
+    ? String(user.legacyPin).padStart(4, '0') === normalizedPin
+    : verifyPin_(normalizedPin, user.pinHash, user.pinSalt);
+}
+
+function doVerifyUserPin_(d) {
+  var sess = validateSession_(d.token || '');
+  if (!sess) return jsonOut_({ ok: false, error: 'Invalid or expired session. Please log in again.' });
+  if (!verifyUserPinValue_(sess.username, d.pin)) return jsonOut_({ ok: false, error: 'Incorrect PIN.' });
+  return jsonOut_({ ok: true });
+}
+
 function doGetDeploymentStatus_(d) {
   var props = getScriptProps().getProperties();
   return jsonOut_({
@@ -423,23 +446,38 @@ function doSaveUsers_(d) {
 function rebuildSummariesSafe_() {
   try { rebuildFilmSummary_(); } catch(e) {}
   try { rebuildRestaurantSummary_(); } catch(e) {}
+  try { rebuildTvSummary_(); } catch(e) {}
 }
 
 // ── SEARCH MOVIES ─────────────────────────────────────────────
 function doSearchMovies_(d) {
-  var url = 'https://api.themoviedb.org/3/search/movie?api_key=' + getTmdbKey() +
-            '&query=' + encodeURIComponent(d.query || '') + '&include_adult=false';
-  var data = fetchJson_(url);
-  var results = (data.results || []).slice(0, 7).map(function(r) {
-    return {
-      id:          r.id,
-      title:       r.title,
-      year:        (r.release_date || '').slice(0, 4),
-      poster_path: r.poster_path || '',
-      overview:    r.overview    || ''
-    };
-  });
-  return jsonOut_({ results: results });
+  var query = String(d.query || '').trim();
+  var advanced = !!d.advanced;
+  var year = String(d.year || '').replace(/\D/g, '').slice(0, 4);
+  var pageCount = advanced ? Math.max(1, Math.min(3, parseInt(d.pages, 10) || 3)) : 1;
+  var seen = {};
+  var merged = [];
+  for (var page = 1; page <= pageCount; page++) {
+    var url = 'https://api.themoviedb.org/3/search/movie?api_key=' + getTmdbKey() +
+      '&query=' + encodeURIComponent(query) + '&include_adult=false&page=' + page +
+      (year ? '&primary_release_year=' + encodeURIComponent(year) : '');
+    var data = fetchJson_(url);
+    (data.results || []).forEach(function(r) {
+      if (!r.id || seen[r.id]) return;
+      seen[r.id] = true;
+      merged.push({
+        id: r.id,
+        title: r.title,
+        original_title: r.original_title || '',
+        year: (r.release_date || '').slice(0, 4),
+        release_date: r.release_date || '',
+        poster_path: r.poster_path || '',
+        overview: r.overview || ''
+      });
+    });
+    if (!advanced || page >= Number(data.total_pages || 1)) break;
+  }
+  return jsonOut_({ results: merged.slice(0, advanced ? 30 : 7) });
 }
 
 // ── GET MOVIE DETAILS ─────────────────────────────────────────
@@ -977,7 +1015,9 @@ function doGetSummary_() {
         rt: r.rtAudience || '',
         imdb: r.imdb || '',
         scores: [],
-        userScores: {}
+        rawScores: [],
+        userScores: {},
+        userRawScores: {}
       };
     }
     grouped[key].rt = grouped[key].rt || r.rtAudience || '';
@@ -986,6 +1026,10 @@ function doGetSummary_() {
     if (!isNaN(score) && r.user) {
       grouped[key].scores.push(score);
       grouped[key].userScores[summaryDisplayName_(r.user)] = score;
+      var rawScore = parseFloat(r.raw100);
+      if (isNaN(rawScore)) rawScore = score * 10;
+      grouped[key].rawScores.push(rawScore);
+      grouped[key].userRawScores[summaryDisplayName_(r.user)] = rawScore;
     }
   });
   return jsonOut_({ rows: Object.keys(grouped).map(function(k){ return grouped[k]; }) });
@@ -1194,13 +1238,32 @@ function tvToApiRow_(r) {
 }
 
 function doSearchTv_(d) {
-  var url = 'https://api.themoviedb.org/3/search/tv?api_key=' + getTmdbKey() +
-    '&query=' + encodeURIComponent(d.query || '') + '&include_adult=false';
-  var data = fetchJson_(url);
-  var results = (data.results || []).slice(0, 7).map(function(r) {
-    return { id:r.id, name:r.name, year:(r.first_air_date || '').slice(0,4), poster_path:r.poster_path || '' };
-  });
-  return jsonOut_({ results: results });
+  var query = String(d.query || '').trim();
+  var advanced = !!d.advanced;
+  var year = String(d.year || '').replace(/\D/g, '').slice(0, 4);
+  var pageCount = advanced ? Math.max(1, Math.min(3, parseInt(d.pages, 10) || 3)) : 1;
+  var seen = {};
+  var merged = [];
+  for (var page = 1; page <= pageCount; page++) {
+    var url = 'https://api.themoviedb.org/3/search/tv?api_key=' + getTmdbKey() +
+      '&query=' + encodeURIComponent(query) + '&include_adult=false&page=' + page +
+      (year ? '&first_air_date_year=' + encodeURIComponent(year) : '');
+    var data = fetchJson_(url);
+    (data.results || []).forEach(function(r) {
+      if (!r.id || seen[r.id]) return;
+      seen[r.id] = true;
+      merged.push({
+        id: r.id,
+        name: r.name,
+        original_name: r.original_name || '',
+        year: (r.first_air_date || '').slice(0, 4),
+        poster_path: r.poster_path || '',
+        overview: r.overview || ''
+      });
+    });
+    if (!advanced || page >= Number(data.total_pages || 1)) break;
+  }
+  return jsonOut_({ results: merged.slice(0, advanced ? 30 : 7) });
 }
 
 function doGetTvDetails_(d) {
@@ -1267,12 +1330,16 @@ function doGetTvSummary_() {
       'Series':r.seriesTitle, 'Year':r.seriesYear, 'Type':r.entryType, 'Season':r.seasonNumber,
       'Season Name':r.seasonName, 'Episodes':r.episodeCount, 'Creator':r.creator,
       'Genre':r.genres, 'IMDb':r.imdb,
-      scores:[], userScores:{}
+      scores:[], rawScores:[], userScores:{}, userRawScores:{}
     };
     var score = parseFloat(r.score10);
     if (!isNaN(score) && r.user) {
       grouped[key].scores.push(score);
       grouped[key].userScores[summaryDisplayName_(r.user)] = score;
+      var rawScore = parseFloat(r.raw100);
+      if (isNaN(rawScore)) rawScore = score * 10;
+      grouped[key].rawScores.push(rawScore);
+      grouped[key].userRawScores[summaryDisplayName_(r.user)] = rawScore;
     }
   });
   return jsonOut_({ rows:Object.keys(grouped).map(function(key){ return grouped[key]; }) });
@@ -1540,12 +1607,16 @@ function doGetRestaurantSummary_() {
   data.forEach(function(r) {
     var key = restaurantGroupKey_(r);
     if (!grouped[key]) {
-      grouped[key] = { Name: r.name, Address: r.address, scores: [], userScores: {} };
+      grouped[key] = { Name: r.name, Address: r.address, scores: [], rawScores: [], userScores: {}, userRawScores: {} };
     }
     var score = parseFloat(r.score10);
     if (!isNaN(score) && r.user) {
       grouped[key].scores.push(score);
       grouped[key].userScores[summaryDisplayName_(r.user)] = score;
+      var rawScore = parseFloat(r.raw100);
+      if (isNaN(rawScore)) rawScore = score * 10;
+      grouped[key].rawScores.push(rawScore);
+      grouped[key].userRawScores[summaryDisplayName_(r.user)] = rawScore;
     }
   });
   return jsonOut_({ rows: Object.keys(grouped).map(function(k){ return grouped[k]; }) });
@@ -1594,6 +1665,64 @@ function rebuildRestaurantSummary_() {
 
   writeTable_(summaryTab, header, rows);
   return { sheet: RESTAURANTS_SUMMARY_SHEET_NAME, rows: rows.length, userColumns: userNames.map(summaryDisplayName_) };
+}
+
+
+// ── SECURE RATING DELETION ───────────────────────────────────
+function requireDeletePin_(d, username) {
+  var pin = String(d.pin || '').replace(/\D/g, '');
+  if (!/^\d{4}$/.test(pin) || !verifyUserPinValue_(username, pin)) throw new Error('Incorrect PIN.');
+}
+
+function deleteMatchingRows_(tab, header, matcher) {
+  if (!tab || tab.getLastRow() < 2) return 0;
+  var rows = sheetObjects_(tab, header);
+  var sheetRows = [];
+  rows.forEach(function(row, index) { if (matcher(row)) sheetRows.push(index + 2); });
+  sheetRows.sort(function(a, b){ return b - a; }).forEach(function(rowNumber){ tab.deleteRow(rowNumber); });
+  return sheetRows.length;
+}
+
+function doDeleteRating_(d, username) {
+  requireDeletePin_(d, username);
+  var target = { user: username, tmdbId: d.tmdbId, title: d.title, year: d.year };
+  var key = categoryKey_(target.user, target.tmdbId, target.title, target.year);
+  var fallback = categoryKey_(target.user, '', target.title, target.year);
+  var deleted = deleteMatchingRows_(getExistingSheet_(FILMS_SHEET_NAME), FILMS_HEADER, function(row) {
+    var rowKey = categoryKey_(row.user, row.tmdbId, row.title, row.year);
+    var rowFallback = categoryKey_(row.user, '', row.title, row.year);
+    return rowKey === key || rowFallback === fallback;
+  });
+  if (!deleted) return jsonOut_({ ok: false, error: 'Rating not found.' });
+  rebuildFilmSummary_();
+  return jsonOut_({ ok: true, deleted: deleted });
+}
+
+function doDeleteTvRating_(d, username) {
+  requireDeletePin_(d, username);
+  var target = tvPayloadToSheetRow_(d, username, {});
+  var targetKey = String(username || '').toLowerCase() + '|' + tvGroupKey_(target);
+  var deleted = deleteMatchingRows_(getExistingSheet_(TV_SHEET_NAME), TV_HEADER, function(row) {
+    return (String(row.user || '').toLowerCase() + '|' + tvGroupKey_(row)) === targetKey;
+  });
+  if (!deleted) return jsonOut_({ ok: false, error: 'Rating not found.' });
+  rebuildTvSummary_();
+  return jsonOut_({ ok: true, deleted: deleted });
+}
+
+function doDeleteRestaurantRating_(d, username) {
+  requireDeletePin_(d, username);
+  var target = { user: username, placeId: d.placeId, name: d.name, address: d.address };
+  var key = categoryKey_(target.user, target.placeId, target.name, target.address);
+  var fallback = categoryKey_(target.user, '', target.name, target.address);
+  var deleted = deleteMatchingRows_(getExistingSheet_(RESTAURANTS_SHEET_NAME), RESTAURANTS_HEADER, function(row) {
+    var rowKey = categoryKey_(row.user, row.placeId, row.name, row.address);
+    var rowFallback = categoryKey_(row.user, '', row.name, row.address);
+    return rowKey === key || rowFallback === fallback;
+  });
+  if (!deleted) return jsonOut_({ ok: false, error: 'Rating not found.' });
+  rebuildRestaurantSummary_();
+  return jsonOut_({ ok: true, deleted: deleted });
 }
 
 function setupActiveSheetTabs() {
