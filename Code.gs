@@ -29,6 +29,8 @@ const FUTURE_RESTAURANTS_SHEET_NAME = 'Future-Restaurants';
 const TV_SHEET_NAME = 'Database-TV';
 const TV_SUMMARY_SHEET_NAME = 'Summary-TV';
 const FUTURE_TV_SHEET_NAME = 'Future-TV';
+const FILM_RECOMMENDATIONS_SHEET_NAME = 'Recommendations-Films';
+const FILM_RECOMMENDATION_FEEDBACK_SHEET_NAME = 'Recommendation-Feedback';
 
 const FILM_SUMMARY_BASE_COLUMNS = ['Title','Year','Genre','Director','Movie length','RT Audience','IMDb'];
 const FILM_SUMMARY_AVERAGE_COLUMN = 'Average Rating';
@@ -83,6 +85,16 @@ const FUTURE_TV_HEADER = [
   'posterPath','createdAt','updatedAt'
 ];
 
+const FILM_RECOMMENDATIONS_HEADER = [
+  'recommendationId','user','sourceMode','sourceTmdbId','sourceTitle','pool','style',
+  'recommendedTmdbId','recommendedTitle','rank','role','explanation','score',
+  'posterPath','year','genres','runtimeMinutes','createdAt','status'
+];
+
+const FILM_RECOMMENDATION_FEEDBACK_HEADER = [
+  'recommendationId','user','recommendedTmdbId','action','createdAt'
+];
+
 function getScriptProps() {
   return PropertiesService.getScriptProperties();
 }
@@ -115,6 +127,10 @@ function getAdminPin() {
 
 function getPlacesKey() {
   return requireProp_('GOOGLE_PLACES_KEY');
+}
+
+function getGeminiKey_() {
+  return getProp_('GEMINI_API_KEY');
 }
 
 // ── SESSION ───────────────────────────────────────────────────
@@ -275,6 +291,10 @@ function doPost(e) {
     if (action === 'getFutureFilms')         return doGetFutureFilms_(username);
     if (action === 'addFutureFilm')          return doAddFutureFilm_(d.payload || d, username);
     if (action === 'deleteFutureFilm')       return doDeleteFutureFilm_(d.payload || d, username);
+    if (action === 'getRecommendationSources') return doGetRecommendationSources_(username);
+    if (action === 'generateFilmRecommendations') return doGenerateFilmRecommendations_(d.payload || d, username);
+    if (action === 'replaceFilmRecommendation') return doReplaceFilmRecommendation_(d.payload || d, username);
+    if (action === 'recordRecommendationFeedback') return doRecordRecommendationFeedback_(d.payload || d, username);
     if (action === 'searchTv')                return doSearchTv_(d);
     if (action === 'getTvDetails')            return doGetTvDetails_(d);
     if (action === 'saveTvRating')            return doSaveTvRating_(d.payload || d, username);
@@ -1735,12 +1755,16 @@ function setupActiveSheetTabs() {
   var futureRestaurants = getOrCreateSheet_(FUTURE_RESTAURANTS_SHEET_NAME, FUTURE_RESTAURANTS_HEADER);
   var tvDb = getOrCreateSheet_(TV_SHEET_NAME, TV_HEADER);
   var futureTv = getOrCreateSheet_(FUTURE_TV_SHEET_NAME, FUTURE_TV_HEADER);
+  var filmRecommendations = getOrCreateSheet_(FILM_RECOMMENDATIONS_SHEET_NAME, FILM_RECOMMENDATIONS_HEADER);
+  var recommendationFeedback = getOrCreateSheet_(FILM_RECOMMENDATION_FEEDBACK_SHEET_NAME, FILM_RECOMMENDATION_FEEDBACK_HEADER);
   formatSheetAsTable_(filmDb);
   formatSheetAsTable_(restaurantDb);
   formatSheetAsTable_(futureFilms);
   formatSheetAsTable_(futureRestaurants);
   formatSheetAsTable_(tvDb);
   formatSheetAsTable_(futureTv);
+  formatSheetAsTable_(filmRecommendations);
+  formatSheetAsTable_(recommendationFeedback);
   var filmSummary = rebuildFilmSummary_();
   var restaurantSummary = rebuildRestaurantSummary_();
   var tvSummary = rebuildTvSummary_();
@@ -1755,8 +1779,232 @@ function setupActiveSheetTabs() {
     databaseTv: TV_SHEET_NAME,
     summaryTv: tvSummary,
     futureTv: FUTURE_TV_SHEET_NAME,
+    filmRecommendations: FILM_RECOMMENDATIONS_SHEET_NAME,
+    recommendationFeedback: FILM_RECOMMENDATION_FEEDBACK_SHEET_NAME,
     usersTabKept: true
   };
   console.log(JSON.stringify(result, null, 2));
   return result;
+}
+
+// ══════════════════════════════════════════════════════════════
+//  FILM RECOMMENDATIONS — TMDB CANDIDATES + OPTIONAL AI JURY
+// ══════════════════════════════════════════════════════════════
+function doGetRecommendationSources_(username) {
+  var rows = sheetObjects_(getExistingSheet_(FILMS_SHEET_NAME), FILMS_HEADER)
+    .filter(function(r){ return String(r.user || '').toLowerCase() === String(username || '').toLowerCase(); })
+    .map(function(r){
+      return {
+        tmdbId: r.tmdbId || '', title: r.title || '', year: r.year || '', score10: Number(r.score10 || 0),
+        raw100: Number(r.raw100 || 0), grade: r.grade || '', genres: r.genres || '', posterPath: r.posterPath || '',
+        director: r.director || '', runtimeMinutes: r.runtimeMinutes || '', ratingType: filmRatingType_(r)
+      };
+    })
+    .sort(function(a,b){ return b.score10 - a.score10 || String(a.title).localeCompare(String(b.title)); });
+  return jsonOut_({ rows: rows });
+}
+
+function filmRatingType_(r) {
+  var categoryFields = ['plot','entertainment','acting','visuals','pacing','emotional'];
+  return categoryFields.some(function(k){ return r[k] !== '' && r[k] !== null && r[k] !== undefined; }) ? 'full' : 'quick';
+}
+
+function splitGenres_(value) {
+  if (Array.isArray(value)) return value.map(String).filter(Boolean);
+  return String(value || '').split(/\s*[·,|]\s*/).map(function(v){ return v.trim(); }).filter(Boolean);
+}
+
+function normalizedScore100_(r) {
+  var raw = parseFloat(r.raw100);
+  if (!isNaN(raw) && raw >= 0) return raw;
+  var ten = parseFloat(r.score10);
+  return isNaN(ten) ? 0 : ten * 10;
+}
+
+function buildFilmTasteProfile_(username) {
+  var rows = sheetObjects_(getExistingSheet_(FILMS_SHEET_NAME), FILMS_HEADER)
+    .filter(function(r){ return String(r.user || '').toLowerCase() === String(username || '').toLowerCase(); });
+  var genre = {}, director = {}, decade = {}, runtime = { short:[], medium:[], long:[] };
+  var fullCount = 0, quickCount = 0;
+  rows.forEach(function(r){
+    var score = Number(r.score10 || 0);
+    splitGenres_(r.genres).forEach(function(g){
+      var k = String(g).toLowerCase(); if (!genre[k]) genre[k] = { name:g, scores:[] }; genre[k].scores.push(score);
+    });
+    if (r.director) { var d=String(r.director).toLowerCase(); if(!director[d]) director[d]={name:r.director,scores:[]}; director[d].scores.push(score); }
+    var y=parseInt(r.year,10); if(y){ var dec=Math.floor(y/10)*10; if(!decade[dec]) decade[dec]=[]; decade[dec].push(score); }
+    var mins=parseInt(r.runtimeMinutes,10); if(mins){ runtime[mins<100?'short':(mins<=140?'medium':'long')].push(score); }
+    if (filmRatingType_(r)==='full') fullCount++; else quickCount++;
+  });
+  function summarize(map){ return Object.keys(map).map(function(k){ var x=map[k], arr=x.scores||x; return {name:x.name||k, count:arr.length, average:Number((arr.reduce(function(a,b){return a+b;},0)/arr.length).toFixed(2))}; }).sort(function(a,b){return b.average-a.average || b.count-a.count;}); }
+  return {
+    ratingCount: rows.length, fullCount: fullCount, quickCount: quickCount,
+    topGenres: summarize(genre).slice(0,8), lowGenres: summarize(genre).slice().sort(function(a,b){return a.average-b.average || b.count-a.count;}).slice(0,5),
+    topDirectors: summarize(director).filter(function(x){return x.count>=1;}).slice(0,6),
+    topDecades: summarize(decade).slice(0,5), runtimePreferences: summarize(runtime).filter(function(x){return x.count;})
+  };
+}
+
+function tmdbMovieDetailsForRecommendation_(id) {
+  var url = 'https://api.themoviedb.org/3/movie/' + encodeURIComponent(id) + '?api_key=' + getTmdbKey() + '&append_to_response=keywords,recommendations,similar,credits';
+  return fetchJson_(url);
+}
+
+function tmdbDiscover_(params, pages) {
+  var out = [], seen = {};
+  pages = pages || 2;
+  for (var page=1; page<=pages; page++) {
+    var pairs = Object.keys(params || {}).filter(function(k){return params[k] !== '' && params[k] !== null && params[k] !== undefined;})
+      .map(function(k){return encodeURIComponent(k)+'='+encodeURIComponent(params[k]);});
+    pairs.push('api_key='+encodeURIComponent(getTmdbKey())); pairs.push('page='+page); pairs.push('include_adult=false');
+    var data = fetchJson_('https://api.themoviedb.org/3/discover/movie?' + pairs.join('&'));
+    (data.results || []).forEach(function(r){ if(!seen[r.id]){ seen[r.id]=true; out.push(r); } });
+  }
+  return out;
+}
+
+function buildRecommendationCandidates_(payload, username) {
+  var mode = payload.sourceMode === 'taste' ? 'taste' : 'movie';
+  var source = null, candidates = [], seen = {};
+  function add(list, originWeight){ (list || []).forEach(function(r){ if(!r || !r.id || seen[r.id]) return; seen[r.id]=true; r._originWeight=originWeight||0; candidates.push(r); }); }
+  if (mode === 'movie') {
+    if (!payload.sourceTmdbId) throw new Error('Choose a source movie.');
+    source = tmdbMovieDetailsForRecommendation_(payload.sourceTmdbId);
+    add(source.recommendations && source.recommendations.results, 32);
+    add(source.similar && source.similar.results, 28);
+    var genreIds = (source.genres || []).map(function(g){return g.id;}).join(',');
+    if (genreIds) add(tmdbDiscover_({with_genres:genreIds, sort_by:'vote_average.desc', 'vote_count.gte':250}, 2), 18);
+    var director = (source.credits && source.credits.crew || []).filter(function(c){return c.job==='Director';})[0];
+    if (director) add(tmdbDiscover_({with_crew:director.id, sort_by:'popularity.desc'}, 1), 20);
+  } else {
+    var profile = buildFilmTasteProfile_(username);
+    var genreMap = tmdbGenreMap_();
+    var ids = profile.topGenres.slice(0,3).map(function(g){return genreMap[String(g.name).toLowerCase()] || '';}).filter(Boolean).join(',');
+    if (ids) add(tmdbDiscover_({with_genres:ids, sort_by:'vote_average.desc', 'vote_count.gte':300}, 3), 22);
+    add(tmdbDiscover_({sort_by:'vote_average.desc', 'vote_count.gte':1000}, 2), 8);
+  }
+  return { source: source, candidates: candidates.slice(0,90) };
+}
+
+function tmdbGenreMap_() {
+  var data = fetchJson_('https://api.themoviedb.org/3/genre/movie/list?api_key=' + getTmdbKey());
+  var out={}; (data.genres||[]).forEach(function(g){out[String(g.name).toLowerCase()]=g.id;}); return out;
+}
+
+function ratedAndWishlistIds_(username) {
+  var rated={}, wished={};
+  sheetObjects_(getExistingSheet_(FILMS_SHEET_NAME), FILMS_HEADER).forEach(function(r){ if(String(r.user||'').toLowerCase()===String(username).toLowerCase() && r.tmdbId) rated[String(r.tmdbId)]=r; });
+  sheetObjects_(getExistingSheet_(FUTURE_FILMS_SHEET_NAME), FUTURE_FILMS_HEADER).forEach(function(r){ if(String(r.user||'').toLowerCase()===String(username).toLowerCase() && r.tmdbId) wished[String(r.tmdbId)]=r; });
+  return {rated:rated,wished:wished};
+}
+
+function scoreRecommendationCandidates_(bundle, payload, username) {
+  var profile=buildFilmTasteProfile_(username), states=ratedAndWishlistIds_(username), genreMap={}, source=bundle.source;
+  profile.topGenres.forEach(function(g,i){ genreMap[String(g.name).toLowerCase()] = Math.max(0, (g.average-5.5)*7) + Math.max(0, 8-i); });
+  var sourceGenres=(source && source.genres || []).map(function(g){return g.id;});
+  var pool=payload.pool || 'new';
+  return bundle.candidates.filter(function(c){
+    if(source && String(c.id)===String(source.id)) return false;
+    if(pool==='new' && states.rated[String(c.id)]) return false;
+    if(pool==='notWishlist' && (states.rated[String(c.id)] || states.wished[String(c.id)])) return false;
+    return true;
+  }).map(function(c){
+    var score=Number(c._originWeight||0);
+    var cGenreIds=c.genre_ids||[];
+    score += cGenreIds.filter(function(id){return sourceGenres.indexOf(id)>-1;}).length*7;
+    var names=[]; Object.keys(genreMap).forEach(function(name){ var id=tmdbGenreMapCached_()[name]; if(cGenreIds.indexOf(id)>-1){score+=genreMap[name];names.push(name);} });
+    score += Math.min(12, Math.log(Math.max(1,Number(c.vote_count||0)))*1.5);
+    score += Math.max(0, (Number(c.vote_average||0)-6)*3);
+    if((payload.style||'balanced')==='hidden') score += Math.max(0, 10-Math.log(Math.max(1,Number(c.popularity||1))));
+    if((payload.style||'balanced')==='different') score -= cGenreIds.filter(function(id){return sourceGenres.indexOf(id)>-1;}).length*4;
+    c._score=Number(score.toFixed(2)); c._tasteGenres=names; c._rated=states.rated[String(c.id)]||null; c._wishlisted=!!states.wished[String(c.id)]; return c;
+  }).sort(function(a,b){return b._score-a._score;});
+}
+
+function tmdbGenreMapCached_() {
+  var cache=CacheService.getScriptCache(), key='tmdb_genre_map_v1', val=cache.get(key);
+  if(val) return JSON.parse(val); var map=tmdbGenreMap_(); cache.put(key,JSON.stringify(map),21600); return map;
+}
+
+function recommendationRole_(index, style) {
+  var normal=['Best Overall Match','Closest Match','Hidden Gem','Something Different','Wildcard'];
+  var hidden=['Hidden Gem','Underseen Match','Critic Pick','Deep Cut','Wildcard'];
+  var different=['Taste Expansion','Genre Stretch','Unexpected Match','Adjacent Pick','Wildcard'];
+  return ((style==='hidden'?hidden:(style==='different'?different:normal))[index] || 'Recommendation');
+}
+
+function buildRecommendationExplanation_(candidate, source, profile, index) {
+  var bits=[];
+  if(source) bits.push('It shares key DNA with ' + source.title + '.');
+  if(candidate._tasteGenres && candidate._tasteGenres.length) bits.push('It matches your strong ratings in ' + candidate._tasteGenres.slice(0,2).map(function(x){return x.replace(/\b\w/g,function(m){return m.toUpperCase();});}).join(' and ') + '.');
+  if(Number(candidate.vote_average)>=7.5) bits.push('Its audience score gives it a strong quality signal.');
+  if(!bits.length) bits.push('It fits the strongest patterns in your film history.');
+  return bits.join(' ');
+}
+
+function callGeminiRecommendationJury_(candidates, source, profile, payload) {
+  var key=getGeminiKey_(); if(!key) return null;
+  var compact=candidates.slice(0,18).map(function(c){return {id:c.id,title:c.title,year:String(c.release_date||'').slice(0,4),genres:c._tasteGenres,score:c._score,overview:String(c.overview||'').slice(0,260)};});
+  var prompt={
+    instruction:'Select exactly 5 movie IDs from candidates and rank 10 backup IDs. Never invent a title or ID. Favor diversity while respecting the requested style. Return strict JSON only.',
+    source:source?{id:source.id,title:source.title,genres:(source.genres||[]).map(function(g){return g.name;})}:null,
+    tasteProfile:profile, style:payload.style||'balanced', candidates:compact,
+    outputSchema:{selected:[{id:'number',role:'short label',explanation:'one or two sentences'}],backups:['number']}
+  };
+  try {
+    var url='https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key='+encodeURIComponent(key);
+    var res=UrlFetchApp.fetch(url,{method:'post',contentType:'application/json',muteHttpExceptions:true,payload:JSON.stringify({contents:[{parts:[{text:JSON.stringify(prompt)}]}],generationConfig:{responseMimeType:'application/json',temperature:0.35}})});
+    if(res.getResponseCode()<200||res.getResponseCode()>=300) return null;
+    var data=JSON.parse(res.getContentText()), text=data.candidates&&data.candidates[0]&&data.candidates[0].content&&data.candidates[0].content.parts&&data.candidates[0].content.parts[0].text;
+    return text?JSON.parse(text):null;
+  } catch(e) { return null; }
+}
+
+function hydrateRecommendationMovie_(c) {
+  var details={}; try{ details=fetchJson_('https://api.themoviedb.org/3/movie/'+encodeURIComponent(c.id)+'?api_key='+getTmdbKey()); }catch(e){}
+  return {
+    tmdbId:c.id,title:c.title||details.title||'',year:String(c.release_date||details.release_date||'').slice(0,4),
+    posterPath:c.poster_path||details.poster_path||'',genres:(details.genres||[]).map(function(g){return g.name;}),
+    runtimeMinutes:details.runtime||'',tmdbRating:Number(c.vote_average||details.vote_average||0).toFixed(1),
+    overview:c.overview||details.overview||'',score:c._score||0,ratedScore:c._rated?Number(c._rated.score10||0):'',wishlisted:!!c._wishlisted
+  };
+}
+
+function persistRecommendations_(username, payload, source, recommendations, backups, recommendationId) {
+  var tab=getOrCreateSheet_(FILM_RECOMMENDATIONS_SHEET_NAME,FILM_RECOMMENDATIONS_HEADER), now=new Date().toISOString();
+  recommendations.forEach(function(r,i){ tab.appendRow(rowForHeader_(FILM_RECOMMENDATIONS_HEADER,{
+    recommendationId:recommendationId,user:username,sourceMode:payload.sourceMode||'movie',sourceTmdbId:source?source.id:'',sourceTitle:source?source.title:'',pool:payload.pool||'new',style:payload.style||'balanced',
+    recommendedTmdbId:r.tmdbId,recommendedTitle:r.title,rank:i+1,role:r.role,explanation:r.explanation,score:r.score,posterPath:r.posterPath,year:r.year,genres:(r.genres||[]).join(' · '),runtimeMinutes:r.runtimeMinutes,createdAt:now,status:'shown'
+  })); });
+  CacheService.getScriptCache().put('rec_backups_'+recommendationId,JSON.stringify(backups),21600);
+}
+
+function doGenerateFilmRecommendations_(payload, username) {
+  payload=payload||{}; var bundle=buildRecommendationCandidates_(payload,username), ranked=scoreRecommendationCandidates_(bundle,payload,username);
+  if(ranked.length<5) throw new Error('Not enough eligible movies were found. Try a broader recommendation pool.');
+  var profile=buildFilmTasteProfile_(username), jury=callGeminiRecommendationJury_(ranked,bundle.source,profile,payload), byId={}; ranked.forEach(function(c){byId[String(c.id)]=c;});
+  var selected=[], backupCandidates=[];
+  if(jury && Array.isArray(jury.selected)) jury.selected.forEach(function(x){var c=byId[String(x.id)]; if(c&&!selected.some(function(y){return y.c.id===c.id;})) selected.push({c:c,role:x.role,explanation:x.explanation});});
+  ranked.forEach(function(c){if(selected.length<5&&!selected.some(function(y){return y.c.id===c.id;})) selected.push({c:c}); else if(!selected.some(function(y){return y.c.id===c.id;})) backupCandidates.push(c);});
+  var recs=selected.slice(0,5).map(function(x,i){var r=hydrateRecommendationMovie_(x.c); r.role=x.role||recommendationRole_(i,payload.style); r.explanation=x.explanation||buildRecommendationExplanation_(x.c,bundle.source,profile,i); return r;});
+  var backups=backupCandidates.slice(0,15).map(hydrateRecommendationMovie_);
+  var recommendationId=Utilities.getUuid(); persistRecommendations_(username,payload,bundle.source,recs,backups,recommendationId);
+  return jsonOut_({recommendationId:recommendationId,source:bundle.source?{tmdbId:bundle.source.id,title:bundle.source.title}:null,profileSummary:{ratingCount:profile.ratingCount,fullCount:profile.fullCount,quickCount:profile.quickCount},aiEnhanced:!!jury,recommendations:recs});
+}
+
+function doReplaceFilmRecommendation_(payload, username) {
+  var id=String(payload.recommendationId||''), currentId=String(payload.currentTmdbId||''); if(!id) throw new Error('Recommendation session is missing.');
+  var cache=CacheService.getScriptCache(), raw=cache.get('rec_backups_'+id), backups=raw?JSON.parse(raw):[];
+  if(!backups.length) throw new Error('No more backup recommendations are available. Generate a new set.');
+  var next=backups.shift(); cache.put('rec_backups_'+id,JSON.stringify(backups),21600);
+  doRecordRecommendationFeedback_({recommendationId:id,recommendedTmdbId:currentId,action:'replaced'},username);
+  next.role='Replacement Pick'; next.explanation='This was the next strongest eligible match from your recommendation pool.';
+  return jsonOut_({recommendation:next});
+}
+
+function doRecordRecommendationFeedback_(payload, username) {
+  var action=String(payload.action||'').trim(); if(!action) throw new Error('Feedback action is required.');
+  var tab=getOrCreateSheet_(FILM_RECOMMENDATION_FEEDBACK_SHEET_NAME,FILM_RECOMMENDATION_FEEDBACK_HEADER);
+  tab.appendRow(rowForHeader_(FILM_RECOMMENDATION_FEEDBACK_HEADER,{recommendationId:payload.recommendationId||'',user:username,recommendedTmdbId:payload.recommendedTmdbId||'',action:action,createdAt:new Date().toISOString()}));
+  return jsonOut_({ok:true});
 }
