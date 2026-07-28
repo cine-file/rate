@@ -1226,6 +1226,53 @@ body.theme-cream .wishlist-item-score span,body.theme-gold .wishlist-item-score 
 body.theme-cream .wishlist-item-score,body.theme-gold .wishlist-item-score{color:var(--theme-accent);}
 body.theme-cream .wishlist-remove,body.theme-gold .wishlist-remove{border-color:var(--theme-border);color:var(--theme-muted);}
 
+
+/* Film recommendations */
+.recommend-panel{display:none;margin:0 0 30px;padding:22px;background:#0b120b;border:1px solid #1a3a1a;border-radius:3px;}
+.recommend-panel.open{display:block;}
+.recommend-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px;}
+.recommend-title{font-family:'Bebas Neue',sans-serif;font-size:28px;color:#e8f8e8;letter-spacing:.04em;}
+.recommend-copy{font-size:12px;color:#4a7a4a;line-height:1.55;margin-top:3px;}
+.recommend-close{background:transparent;border:0;color:#4a7a4a;font-size:20px;cursor:pointer;}
+.recommend-mode-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;}
+.recommend-mode-btn{padding:8px 14px;background:transparent;border:1px solid #1e3a1e;color:#5a8a5a;border-radius:2px;font:12px 'Barlow Condensed',sans-serif;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;}
+.recommend-mode-btn.active{background:#142414;border-color:#3a7a3a;color:#90d090;}
+.recommend-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:16px;}
+.recommend-field label{display:block;margin-bottom:6px;font:10px 'Barlow Condensed',sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#3d6a3d;}
+.recommend-select{width:100%;padding:10px 11px;background:#090f09;border:1px solid #1e3a1e;border-radius:2px;color:#c0e0c0;font-family:'Barlow',sans-serif;outline:none;}
+.recommend-generate{width:100%;padding:12px;background:#142414;border:1px solid #2e6a2e;border-radius:2px;color:#a0e0a0;font:13px 'Barlow Condensed',sans-serif;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;}
+.recommend-generate:disabled{opacity:.5;cursor:default;}
+.recommend-results{display:flex;flex-direction:column;gap:12px;margin-top:22px;}
+.recommend-card{display:grid;grid-template-columns:70px 1fr auto;gap:14px;padding:14px;background:#090f09;border:1px solid #1a3a1a;border-radius:3px;align-items:start;}
+.recommend-poster{width:70px;height:105px;object-fit:cover;border-radius:2px;background:#111d11;}
+.recommend-role{font:10px 'Barlow Condensed',sans-serif;letter-spacing:.18em;text-transform:uppercase;color:#5aaa5a;margin-bottom:4px;}
+.recommend-movie{font-family:'Bebas Neue',sans-serif;font-size:23px;color:#e8f8e8;line-height:1;}
+.recommend-meta{font-size:11px;color:#4a7a4a;margin-top:5px;}
+.recommend-reason{font-size:12px;color:#7aa47a;line-height:1.55;margin-top:9px;}
+.recommend-actions{display:flex;flex-direction:column;gap:7px;min-width:106px;}
+.recommend-action{padding:7px 9px;background:transparent;border:1px solid #1e3a1e;border-radius:2px;color:#6a9a6a;font:10px 'Barlow Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;}
+.recommend-action.primary{background:#142414;border-color:#2e6a2e;color:#a0e0a0;}
+.recommend-status{margin-top:10px;min-height:18px;font-size:12px;color:#5a9a5a;}
+.recommend-launch{width:100%;margin:0 0 22px;padding:12px;background:#0b120b;border:1px solid #2a5a2a;border-radius:2px;color:#80d080;font:13px 'Barlow Condensed',sans-serif;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;}
+body.theme-cream .recommend-panel,body.theme-gold .recommend-panel,
+body.theme-cream .recommend-card,body.theme-gold .recommend-card{background:var(--theme-panel);border-color:var(--theme-border);}
+body.theme-cream .recommend-title,body.theme-gold .recommend-title,
+body.theme-cream .recommend-movie,body.theme-gold .recommend-movie{color:var(--theme-text);}
+body.theme-cream .recommend-copy,body.theme-gold .recommend-copy,
+body.theme-cream .recommend-meta,body.theme-gold .recommend-meta,
+body.theme-cream .recommend-reason,body.theme-gold .recommend-reason,
+body.theme-cream .recommend-field label,body.theme-gold .recommend-field label{color:var(--theme-muted);}
+body.theme-cream .recommend-role,body.theme-gold .recommend-role,
+body.theme-cream .recommend-status,body.theme-gold .recommend-status{color:var(--theme-accent);}
+body.theme-cream .recommend-select,body.theme-gold .recommend-select{background:var(--theme-bg-2);border-color:var(--theme-border);color:var(--theme-text);}
+body.theme-cream .recommend-mode-btn,body.theme-gold .recommend-mode-btn,
+body.theme-cream .recommend-action,body.theme-gold .recommend-action,
+body.theme-cream .recommend-launch,body.theme-gold .recommend-launch{border-color:var(--theme-border);color:var(--theme-muted);background:transparent;}
+body.theme-cream .recommend-mode-btn.active,body.theme-gold .recommend-mode-btn.active,
+body.theme-cream .recommend-action.primary,body.theme-gold .recommend-action.primary,
+body.theme-cream .recommend-generate,body.theme-gold .recommend-generate{background:var(--theme-panel-2);border-color:var(--theme-accent);color:var(--theme-accent);}
+@media(max-width:640px){.recommend-grid{grid-template-columns:1fr}.recommend-card{grid-template-columns:58px 1fr}.recommend-poster{width:58px;height:87px}.recommend-actions{grid-column:1/-1;flex-direction:row}.recommend-action{flex:1}}
+
 </style>
 </head>
 <body>
@@ -1884,6 +1931,29 @@ const SITE_NAME = "Cine-file";
     <div class="s-eyebrow">Saved for Later</div>
     <h1 class="s-title" id="wishlist-title">Film Wishlist</h1>
     <p class="s-sub" id="wishlist-sub">Search for films you want to watch.</p>
+
+    <button class="recommend-launch" id="recommend-launch" onclick="toggleRecommendationPanel()">Generate Film Recommendations</button>
+    <div class="recommend-panel" id="recommend-panel">
+      <div class="recommend-head">
+        <div><div class="recommend-title">Recommendation Room</div><div class="recommend-copy">Generate five validated movies from your ratings, with backups ready when you replace a pick.</div></div>
+        <button class="recommend-close" onclick="toggleRecommendationPanel(false)" aria-label="Close">×</button>
+      </div>
+      <div class="recommend-mode-row">
+        <button class="recommend-mode-btn active" id="rec-mode-movie" onclick="setRecommendationMode('movie')">Based on a Movie</button>
+        <button class="recommend-mode-btn" id="rec-mode-taste" onclick="setRecommendationMode('taste')">Based on My Taste</button>
+      </div>
+      <div class="recommend-field" id="rec-source-wrap" style="margin-bottom:12px">
+        <label>Source Movie</label>
+        <select class="recommend-select" id="rec-source"><option value="">Choose one of your rated movies...</option></select>
+      </div>
+      <div class="recommend-grid">
+        <div class="recommend-field"><label>Recommendation Pool</label><select class="recommend-select" id="rec-pool"><option value="new">New to Me</option><option value="notWishlist">Not Rated or Wishlisted</option><option value="all">Include Rated Movies</option></select></div>
+        <div class="recommend-field"><label>Style</label><select class="recommend-select" id="rec-style"><option value="balanced">Balanced</option><option value="hidden">Hidden Gems</option><option value="different">Something Different</option></select></div>
+      </div>
+      <button class="recommend-generate" id="rec-generate" onclick="generateFilmRecommendations()">Generate 5 Movies</button>
+      <div class="recommend-status" id="rec-status"></div>
+      <div class="recommend-results" id="rec-results"></div>
+    </div>
     <div class="wishlist-search-wrap">
       <div class="search-field">
         <span class="search-icon" id="wishlist-search-icon">🎬</span>
@@ -2561,6 +2631,8 @@ function renderWishlistMode(){
   document.getElementById('wishlist-search-input').value = '';
   document.getElementById('wishlist-dropdown').classList.remove('open');
   document.getElementById('wishlist-msg').textContent = '';
+  document.getElementById('recommend-launch').style.display = films ? 'block' : 'none';
+  if(!films) document.getElementById('recommend-panel').classList.remove('open');
 }
 
 async function loadWishlist(){
@@ -2683,6 +2755,91 @@ document.getElementById('wishlist-search-input').addEventListener('input', funct
 document.getElementById('wishlist-search-input').addEventListener('blur', function(){
   setTimeout(function(){ document.getElementById('wishlist-dropdown').classList.remove('open'); }, 160);
 });
+
+
+
+// ── FILM RECOMMENDATIONS ─────────────────────────────────────
+let recommendationMode='movie';
+let recommendationSources=[];
+let recommendationSessionId='';
+let recommendationResults=[];
+
+function toggleRecommendationPanel(force){
+  if(wishlistMode!=='film') return;
+  const panel=document.getElementById('recommend-panel');
+  const open=typeof force==='boolean'?force:!panel.classList.contains('open');
+  panel.classList.toggle('open',open);
+  if(open && !recommendationSources.length) loadRecommendationSources();
+}
+
+function setRecommendationMode(mode){
+  recommendationMode=mode==='taste'?'taste':'movie';
+  document.getElementById('rec-mode-movie').classList.toggle('active',recommendationMode==='movie');
+  document.getElementById('rec-mode-taste').classList.toggle('active',recommendationMode==='taste');
+  document.getElementById('rec-source-wrap').style.display=recommendationMode==='movie'?'block':'none';
+}
+
+async function loadRecommendationSources(){
+  const select=document.getElementById('rec-source');
+  try{
+    const data=await apiCall('getRecommendationSources',{token:getSessionToken()});
+    recommendationSources=data.rows||[];
+    select.innerHTML='<option value="">Choose one of your rated movies...</option>'+recommendationSources.map(function(r){
+      return '<option value="'+escHtml(String(r.tmdbId||''))+'">'+escHtml(r.title+' ('+r.year+') — '+Number(r.score10).toFixed(1)+'/10')+'</option>';
+    }).join('');
+  }catch(e){
+    document.getElementById('rec-status').textContent=e.message||'Could not load your rated movies.';
+  }
+}
+
+async function generateFilmRecommendations(){
+  const btn=document.getElementById('rec-generate'),status=document.getElementById('rec-status'),results=document.getElementById('rec-results');
+  const sourceTmdbId=document.getElementById('rec-source').value;
+  if(recommendationMode==='movie'&&!sourceTmdbId){status.textContent='Choose a source movie first.';return;}
+  btn.disabled=true;btn.textContent='Building Recommendations...';status.textContent='Reviewing your ratings and validating movie candidates...';results.innerHTML='';
+  try{
+    const data=await apiCall('generateFilmRecommendations',{token:getSessionToken(),payload:{sourceMode:recommendationMode,sourceTmdbId:sourceTmdbId,pool:document.getElementById('rec-pool').value,style:document.getElementById('rec-style').value}});
+    recommendationSessionId=data.recommendationId||'';recommendationResults=data.recommendations||[];
+    status.textContent=(data.aiEnhanced?'AI jury enhanced · ':'Taste engine · ')+(data.profileSummary?.ratingCount||0)+' ratings reviewed';
+    renderFilmRecommendations();
+  }catch(e){status.textContent=e.message||'Could not generate recommendations.';}
+  btn.disabled=false;btn.textContent='Generate 5 Movies';
+}
+
+function renderFilmRecommendations(){
+  const wrap=document.getElementById('rec-results');
+  wrap.innerHTML=recommendationResults.map(function(r,index){
+    const poster=r.posterPath?'<img class="recommend-poster" src="https://image.tmdb.org/t/p/w185'+escHtml(r.posterPath)+'" alt="">':'<div class="recommend-poster"></div>';
+    const meta=[r.year,(r.genres||[]).join(' · '),r.runtimeMinutes?(r.runtimeMinutes+' min'):'',r.tmdbRating?('TMDB '+r.tmdbRating):'',r.ratedScore!==''?('You rated '+Number(r.ratedScore).toFixed(1)):''].filter(Boolean).join(' · ');
+    return '<div class="recommend-card" id="rec-card-'+index+'">'+poster+'<div><div class="recommend-role">'+escHtml(r.role||'Recommendation')+'</div><div class="recommend-movie">'+escHtml(r.title||'')+'</div><div class="recommend-meta">'+escHtml(meta)+'</div><div class="recommend-reason">'+escHtml(r.explanation||'')+'</div></div><div class="recommend-actions"><button class="recommend-action primary" onclick="saveRecommendationToWishlist('+index+')">'+(r.wishlisted?'On Wishlist':'Add to Wishlist')+'</button><button class="recommend-action" onclick="replaceFilmRecommendation('+index+')">Replace</button><button class="recommend-action" onclick="dismissFilmRecommendation('+index+')">Not Interested</button></div></div>';
+  }).join('');
+}
+
+async function saveRecommendationToWishlist(index){
+  const r=recommendationResults[index];if(!r||r.wishlisted)return;
+  const status=document.getElementById('rec-status');
+  try{
+    const details=await apiCall('getMovieDetails',{token:getSessionToken(),id:r.tmdbId});
+    await apiCall('addFutureFilm',{token:getSessionToken(),payload:details});
+    await apiCall('recordRecommendationFeedback',{token:getSessionToken(),payload:{recommendationId:recommendationSessionId,recommendedTmdbId:r.tmdbId,action:'added_to_wishlist'}});
+    r.wishlisted=true;status.textContent=r.title+' was added to your wishlist.';renderFilmRecommendations();await loadWishlist();
+  }catch(e){status.textContent=e.message||'Could not add this movie.';}
+}
+
+async function replaceFilmRecommendation(index){
+  const current=recommendationResults[index];if(!current)return;
+  const status=document.getElementById('rec-status');status.textContent='Loading the next best backup...';
+  try{
+    const data=await apiCall('replaceFilmRecommendation',{token:getSessionToken(),payload:{recommendationId:recommendationSessionId,currentTmdbId:current.tmdbId}});
+    recommendationResults[index]=data.recommendation;status.textContent='Recommendation replaced.';renderFilmRecommendations();
+  }catch(e){status.textContent=e.message||'Could not replace this recommendation.';}
+}
+
+async function dismissFilmRecommendation(index){
+  const current=recommendationResults[index];if(!current)return;
+  try{await apiCall('recordRecommendationFeedback',{token:getSessionToken(),payload:{recommendationId:recommendationSessionId,recommendedTmdbId:current.tmdbId,action:'not_interested'}});}catch(e){}
+  replaceFilmRecommendation(index);
+}
 
 // ── SEARCH ───────────────────────────────────────────────────
 let searchTimer=null;
