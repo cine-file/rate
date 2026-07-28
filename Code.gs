@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 //  CINE-FILE — Google Apps Script
-//  Version: 2026.07.27-recommendation-diagnostics.4
+//  Version: 2026.07.27-gemini-3.6.5
 //  Runtime: GitHub Pages frontend + Apps Script JSON backend
 //
 //  Version notes:
@@ -14,11 +14,12 @@
 //  - stats-search-delete.1: raw-score summaries, advanced search, secure rating deletion, and distribution-ready data.
 //  - stats-genre-bars.2: exposes film genres to the stats API for cross-user genre filtering.
 //  - recommendation-diagnostics.4: strengthens recommendation candidates, uses source category scores/notes in Gemini, exposes safe AI diagnostics, and defers backup hydration for faster generation.
+//  - gemini-3.6.5: migrates the optional AI jury to Gemini 3.6 Flash and removes deprecated sampling parameters.
 //
 //  Original by friend, restaurant functions added by Claude
 // ─────────────────────────────────────────────────────────────
 
-const BACKEND_VERSION = '2026.07.27-recommendation-diagnostics.4';
+const BACKEND_VERSION = '2026.07.27-gemini-3.6.5';
 const SESSION_TTL_SECONDS = 6 * 60 * 60;
 
 const FILMS_SHEET_NAME = 'Database-Films';
@@ -1981,7 +1982,7 @@ function buildRecommendationExplanation_(candidate, source, profile, index) {
 
 function callGeminiRecommendationJury_(candidates, source, sourceRating, profile, payload) {
   var key=getGeminiKey_();
-  var diagnostic={attempted:false,success:false,error:key?'':'GEMINI_API_KEY is not configured.',httpStatus:'',model:'gemini-2.5-flash'};
+  var diagnostic={attempted:false,success:false,error:key?'':'GEMINI_API_KEY is not configured.',httpStatus:'',model:'gemini-3.6-flash'};
   if(!key) return {jury:null,diagnostic:diagnostic};
   diagnostic.attempted=true;
   var compact=candidates.slice(0,40).map(function(c){return {
@@ -1998,7 +1999,7 @@ function callGeminiRecommendationJury_(candidates, source, sourceRating, profile
   };
   try {
     var url='https://generativelanguage.googleapis.com/v1beta/models/'+diagnostic.model+':generateContent?key='+encodeURIComponent(key);
-    var res=UrlFetchApp.fetch(url,{method:'post',contentType:'application/json',muteHttpExceptions:true,payload:JSON.stringify({contents:[{parts:[{text:JSON.stringify(prompt)}]}],generationConfig:{responseMimeType:'application/json',temperature:0.45}})});
+    var res=UrlFetchApp.fetch(url,{method:'post',contentType:'application/json',muteHttpExceptions:true,payload:JSON.stringify({contents:[{parts:[{text:JSON.stringify(prompt)}]}],generationConfig:{responseMimeType:'application/json'}})});
     diagnostic.httpStatus=res.getResponseCode();
     if(res.getResponseCode()<200||res.getResponseCode()>=300){ diagnostic.error='Gemini returned HTTP '+res.getResponseCode()+': '+String(res.getContentText()||'').slice(0,180); return {jury:null,diagnostic:diagnostic}; }
     var data=JSON.parse(res.getContentText()), text=data.candidates&&data.candidates[0]&&data.candidates[0].content&&data.candidates[0].content.parts&&data.candidates[0].content.parts[0].text;
