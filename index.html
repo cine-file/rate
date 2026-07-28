@@ -1840,6 +1840,13 @@ const SITE_NAME = "Cine-file";
       <button class="score-mode-btn" data-mode="10" onclick="setScoreMode('10')">/10 Score</button>
       <button class="score-mode-btn" data-mode="raw" onclick="setScoreMode('raw')">Raw /100</button>
     </div>
+    <div class="stats-filter-row">
+      <div class="stats-filter-field">
+        <label class="stats-filter-label" for="restaurant-cuisine-filter">Food Type</label>
+        <select class="stats-genre-select" id="restaurant-cuisine-filter" onchange="setRestaurantCuisine(this.value)"><option value="">All Food Types</option></select>
+      </div>
+      <div class="stats-filter-summary" id="restaurant-cuisine-summary">Showing all food types</div>
+    </div>
     <div class="lg-stats-tabs">
       <button class="lg-stats-tab active" id="lg-tab-my" onclick="lgSwitchTab('my')">My Ratings</button>
       <button class="lg-stats-tab" id="lg-tab-group" onclick="lgSwitchTab('group')">Group</button>
@@ -1976,6 +1983,28 @@ const SITE_NAME = "Cine-file";
       <div class="recommend-diagnostics" id="rec-diagnostics" style="display:none"></div>
       <div class="recommend-results" id="rec-results"></div>
     </div>
+    </div>
+
+    <div id="tv-recommendation-section" style="margin-top:34px;display:none">
+      <button class="recommend-launch" onclick="toggleGenericRecommendationPanel('tv')">Generate TV Recommendations</button>
+      <div class="recommend-panel" id="tv-recommend-panel">
+        <div class="recommend-head"><div><div class="recommend-title">TV Recommendation Room</div><div class="recommend-copy">Generate five series from your own TV ratings, with five replacements ready.</div></div><button class="recommend-close" onclick="toggleGenericRecommendationPanel('tv',false)">×</button></div>
+        <div class="recommend-mode-row"><button class="recommend-mode-btn active" id="tv-rec-mode-source" onclick="setGenericRecommendationMode('tv','source')">Based on a Show</button><button class="recommend-mode-btn" id="tv-rec-mode-taste" onclick="setGenericRecommendationMode('tv','taste')">Based on My Taste</button></div>
+        <div class="recommend-field" id="tv-rec-source-wrap" style="margin-bottom:12px"><label>Source Show</label><select class="recommend-select" id="tv-rec-source"><option value="">Choose one of your rated shows...</option></select></div>
+        <div class="recommend-grid"><div class="recommend-field"><label>Recommendation Pool</label><select class="recommend-select" id="tv-rec-pool"><option value="new">New to Me</option><option value="notWishlist">Not Rated or Wishlisted</option><option value="all">Include Rated Shows</option></select></div><div class="recommend-field"><label>Style</label><select class="recommend-select" id="tv-rec-style"><option value="balanced">Balanced</option><option value="hidden">Hidden Gems</option><option value="different">Something Different</option></select></div></div>
+        <button class="recommend-generate" id="tv-rec-generate" onclick="generateGenericRecommendations('tv')">Generate 5 Shows</button><div class="recommend-status" id="tv-rec-status"></div><div class="recommend-diagnostics" id="tv-rec-diagnostics" style="display:none"></div><div class="recommend-results" id="tv-rec-results"></div>
+      </div>
+    </div>
+
+    <div id="restaurant-recommendation-section" style="margin-top:34px;display:none">
+      <button class="recommend-launch" onclick="toggleGenericRecommendationPanel('restaurant')">Generate Restaurant Recommendations</button>
+      <div class="recommend-panel" id="restaurant-recommend-panel">
+        <div class="recommend-head"><div><div class="recommend-title">Restaurant Recommendation Room</div><div class="recommend-copy">Generate five real restaurants based on your Le Guide ratings, with five replacements ready.</div></div><button class="recommend-close" onclick="toggleGenericRecommendationPanel('restaurant',false)">×</button></div>
+        <div class="recommend-mode-row"><button class="recommend-mode-btn active" id="restaurant-rec-mode-source" onclick="setGenericRecommendationMode('restaurant','source')">Based on a Restaurant</button><button class="recommend-mode-btn" id="restaurant-rec-mode-taste" onclick="setGenericRecommendationMode('restaurant','taste')">Based on My Taste</button></div>
+        <div class="recommend-field" id="restaurant-rec-source-wrap" style="margin-bottom:12px"><label>Source Restaurant</label><select class="recommend-select" id="restaurant-rec-source"><option value="">Choose one of your rated restaurants...</option></select></div>
+        <div class="recommend-grid"><div class="recommend-field"><label>Recommendation Pool</label><select class="recommend-select" id="restaurant-rec-pool"><option value="new">New to Me</option><option value="notWishlist">Not Rated or Wishlisted</option><option value="all">Include Rated Restaurants</option></select></div><div class="recommend-field"><label>Style</label><select class="recommend-select" id="restaurant-rec-style"><option value="balanced">Balanced</option><option value="hidden">Hidden Gems</option><option value="different">Something Different</option></select></div></div>
+        <button class="recommend-generate" id="restaurant-rec-generate" onclick="generateGenericRecommendations('restaurant')">Generate 5 Restaurants</button><div class="recommend-status" id="restaurant-rec-status"></div><div class="recommend-diagnostics" id="restaurant-rec-diagnostics" style="display:none"></div><div class="recommend-results" id="restaurant-rec-results"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -2245,22 +2274,35 @@ function renderDistributionChart(values,{restaurant=false}={}){
   const useRaw=_scoreMode==='raw';
   const maxScore=useRaw ? 100 : 10;
   const binSize=useRaw ? 5 : 0.5;
+  const minSpan=useRaw ? 20 : 2;
   const scores=rawScores.map(function(value){ return useRaw ? value : value/10; });
-  const binCount=20;
+  const lowest=Math.min.apply(null,scores);
+  let axisMin=Math.floor(lowest/(useRaw?10:1))*(useRaw?10:1)-binSize;
+  axisMin=Math.max(0,axisMin);
+  axisMin=Math.min(axisMin,maxScore-minSpan);
+  axisMin=Math.floor(axisMin/binSize)*binSize;
+  const binCount=Math.max(1,Math.round((maxScore-axisMin)/binSize));
   const counts=Array.from({length:binCount},function(){ return 0; });
-  scores.forEach(function(value){ counts[Math.min(binCount-1,Math.floor(value/binSize))]++; });
+  scores.forEach(function(value){
+    const index=Math.min(binCount-1,Math.max(0,Math.floor((value-axisMin)/binSize)));
+    counts[index]++;
+  });
   const average=scores.reduce(function(sum,value){ return sum+value; },0)/scores.length;
   const width=760,height=290,left=48,right=18,top=24,bottom=48;
   const chartWidth=width-left-right, chartHeight=height-top-bottom;
   const maxCount=Math.max.apply(null,counts.concat([1]));
-  const x=function(value){ return left+(value/maxScore)*chartWidth; };
+  const x=function(value){ return left+((value-axisMin)/(maxScore-axisMin))*chartWidth; };
   const y=function(count){ return top+chartHeight-(count/maxCount)*chartHeight; };
   const barWidth=chartWidth/binCount;
   const yTicks=[...new Set([0,Math.ceil(maxCount/3),Math.ceil(maxCount*2/3),maxCount])].sort(function(a,b){ return a-b; });
-  const xTicks=Array.from({length:11},function(_,index){ return useRaw ? index*10 : index; });
+  const majorStep=useRaw ? 10 : 1;
+  const xTicks=[];
+  for(let value=Math.ceil(axisMin/majorStep)*majorStep; value<=maxScore+0.0001; value+=majorStep) xTicks.push(Number(value.toFixed(1)));
+  if(!xTicks.length || xTicks[0]!==axisMin) xTicks.unshift(Number(axisMin.toFixed(1)));
   const axisTitle=useRaw ? 'Score /100 · 5-point bins' : 'Score /10 · 0.5-point bins';
+  const rangeText=`Distribution shown from ${axisMin.toFixed(useRaw?0:1)}–${maxScore.toFixed(useRaw?0:1)}`;
   return `<div class="distribution-chart-wrap${restaurant?' restaurant':''}">
-    <svg class="distribution-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="Score distribution from zero to ${maxScore} with an average of ${average.toFixed(1)}">
+    <svg class="distribution-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="Score distribution from ${axisMin} to ${maxScore} with an average of ${average.toFixed(1)}">
       ${yTicks.map(function(tick){ return `<line class="distribution-grid" x1="${left}" y1="${y(tick)}" x2="${width-right}" y2="${y(tick)}"></line><text class="distribution-label" x="${left-9}" y="${y(tick)+4}" text-anchor="end">${tick}</text>`; }).join('')}
       ${xTicks.map(function(value){ return `<text class="distribution-label" x="${x(value)}" y="${height-22}" text-anchor="middle">${value}</text>`; }).join('')}
       <line class="distribution-axis" x1="${left}" y1="${top+chartHeight}" x2="${width-right}" y2="${top+chartHeight}"></line>
@@ -2268,7 +2310,9 @@ function renderDistributionChart(values,{restaurant=false}={}){
       ${counts.map(function(count,index){
         const barHeight=count ? Math.max(2,top+chartHeight-y(count)) : 0;
         const barY=top+chartHeight-barHeight;
-        const interaction=count ? `tabindex="0" role="button" aria-label="${count} ratings" onclick="showDistributionCount(event,${count})" onkeydown="distributionBarKeydown(event,${count})"` : 'aria-hidden="true"';
+        const low=axisMin+index*binSize;
+        const high=Math.min(maxScore,low+binSize);
+        const interaction=count ? `tabindex="0" role="button" aria-label="${count} ratings from ${low.toFixed(useRaw?0:1)} to ${high.toFixed(useRaw?0:1)}" onclick="showDistributionCount(event,${count})" onkeydown="distributionBarKeydown(event,${count})"` : 'aria-hidden="true"';
         return `<rect class="distribution-bar" ${interaction} data-count="${count}" x="${left+index*barWidth+2}" y="${barY}" width="${Math.max(1,barWidth-4)}" height="${barHeight}" rx="2"></rect>`;
       }).join('')}
       <line class="distribution-average" x1="${x(average)}" y1="${top-4}" x2="${x(average)}" y2="${top+chartHeight}"></line>
@@ -2277,7 +2321,7 @@ function renderDistributionChart(values,{restaurant=false}={}){
       <text class="distribution-axis-title" transform="translate(12 ${top+chartHeight/2}) rotate(-90)" text-anchor="middle">Number of ratings</text>
     </svg>
     <div class="distribution-popup" aria-live="polite"></div>
-    <div class="distribution-note">Click a bar to see how many ratings are in that range. The dashed line marks the average.</div>
+    <div class="distribution-note">${rangeText}. Click a bar to see its count. The dashed line marks the average.</div>
   </div>`;
 }
 
@@ -2641,8 +2685,12 @@ function renderWishlistMode(){
   document.getElementById('wishlist-search-input').value = '';
   document.getElementById('wishlist-dropdown').classList.remove('open');
   document.getElementById('wishlist-msg').textContent = '';
-  document.getElementById('recommend-launch').style.display = films ? 'block' : 'none';
+  document.getElementById('film-recommendation-section').style.display = films ? 'block' : 'none';
+  document.getElementById('tv-recommendation-section').style.display = tv ? 'block' : 'none';
+  document.getElementById('restaurant-recommendation-section').style.display = (!films && !tv) ? 'block' : 'none';
   if(!films) document.getElementById('recommend-panel').classList.remove('open');
+  if(!tv) document.getElementById('tv-recommend-panel').classList.remove('open');
+  if(films||tv) document.getElementById('restaurant-recommend-panel').classList.remove('open');
 }
 
 async function loadWishlist(){
@@ -2865,6 +2913,24 @@ async function dismissFilmRecommendation(index){
   try{await apiCall('recordRecommendationFeedback',{token:getSessionToken(),payload:{recommendationId:recommendationSessionId,recommendedTmdbId:current.tmdbId,action:'not_interested'}});}catch(e){}
   replaceFilmRecommendation(index);
 }
+
+
+// ── TV + RESTAURANT RECOMMENDATIONS ──────────────────────────
+const genericRecommendationState={
+  tv:{mode:'source',sources:[],sessionId:'',results:[],seen:[]},
+  restaurant:{mode:'source',sources:[],sessionId:'',results:[],seen:[]}
+};
+function toggleGenericRecommendationPanel(kind,force){
+  const panel=document.getElementById(kind+'-recommend-panel');
+  const open=typeof force==='boolean'?force:!panel.classList.contains('open');panel.classList.toggle('open',open);
+  if(open&&!genericRecommendationState[kind].sources.length)loadGenericRecommendationSources(kind);
+}
+function setGenericRecommendationMode(kind,mode){const st=genericRecommendationState[kind];st.mode=mode==='taste'?'taste':'source';document.getElementById(kind+'-rec-mode-source').classList.toggle('active',st.mode==='source');document.getElementById(kind+'-rec-mode-taste').classList.toggle('active',st.mode==='taste');document.getElementById(kind+'-rec-source-wrap').style.display=st.mode==='source'?'block':'none';}
+async function loadGenericRecommendationSources(kind){const st=genericRecommendationState[kind],select=document.getElementById(kind+'-rec-source'),status=document.getElementById(kind+'-rec-status');try{const action=kind==='tv'?'getTvRecommendationSources':'getRestaurantRecommendationSources',data=await apiCall(action,{token:getSessionToken()});st.sources=data.rows||[];select.innerHTML='<option value="">Choose one of your rated '+(kind==='tv'?'shows':'restaurants')+'...</option>'+st.sources.map(function(r){const id=kind==='tv'?r.tmdbTvId:r.placeId,title=kind==='tv'?r.title:r.name,detail=kind==='tv'?r.year:r.city;return '<option value="'+escHtml(String(id||''))+'">'+escHtml(title+(detail?' ('+detail+')':'')+' — '+Number(r.score10||0).toFixed(1)+'/10')+'</option>';}).join('');}catch(e){status.textContent=e.message||'Could not load recommendation sources.';}}
+async function generateGenericRecommendations(kind,options){options=options||{};const st=genericRecommendationState[kind],btn=document.getElementById(kind+'-rec-generate'),status=document.getElementById(kind+'-rec-status'),results=document.getElementById(kind+'-rec-results'),source=document.getElementById(kind+'-rec-source').value;if(st.mode==='source'&&!source){status.textContent='Choose a source '+(kind==='tv'?'show':'restaurant')+' first.';return;}btn.disabled=true;status.textContent='Building recommendations...';results.innerHTML='';document.getElementById(kind+'-rec-diagnostics').style.display='none';try{const action=kind==='tv'?'generateTvRecommendations':'generateRestaurantRecommendations',payload={sourceMode:st.mode==='taste'?'taste':'source',pool:document.getElementById(kind+'-rec-pool').value,style:document.getElementById(kind+'-rec-style').value,excludeIds:options.continueBatch?st.seen:[]};if(kind==='tv')payload.sourceTmdbId=source;else payload.sourcePlaceId=source;const data=await apiCall(action,{token:getSessionToken(),payload});st.sessionId=data.recommendationId||'';st.results=data.recommendations||[];if(!options.continueBatch)st.seen=[];st.results.forEach(function(r){const id=kind==='tv'?r.tmdbTvId:r.placeId;if(id&&!st.seen.includes(String(id)))st.seen.push(String(id));});status.textContent='AI recommendations · '+(data.profileSummary?.ratingCount||0)+' ratings reviewed';const d=data.diagnostics||{},diag=document.getElementById(kind+'-rec-diagnostics');diag.style.display='block';diag.innerHTML='<strong>Recommendation engine:</strong> '+escHtml(d.engine||'Gemini')+'<br><strong>Recommendation batch:</strong> '+escHtml(String(d.validatedCount||0))+' validated · 5 shown · '+escHtml(String(d.backupCount||0))+' backups'+(d.city?'<br><strong>Location:</strong> '+escHtml(d.city):'')+(d.model?'<br><strong>AI model:</strong> '+escHtml(d.model):'');renderGenericRecommendations(kind);}catch(e){status.textContent=e.message||'Could not generate recommendations.';}btn.disabled=false;}
+function renderGenericRecommendations(kind){const st=genericRecommendationState[kind],wrap=document.getElementById(kind+'-rec-results');wrap.innerHTML=st.results.map(function(r,index){let media='';if(kind==='tv')media=r.posterPath?'<img class="recommend-poster" src="https://image.tmdb.org/t/p/w185'+escHtml(r.posterPath)+'" alt="">':'<div class="recommend-poster"></div>';else media='<div class="recommend-poster" style="display:flex;align-items:center;justify-content:center;font-size:30px">🍽️</div>';const title=kind==='tv'?r.title:r.name,meta=kind==='tv'?[r.year,(r.genres||[]).join(' · '),r.tmdbRating?'TMDB '+r.tmdbRating:'',r.ratedScore!==''?'You rated '+Number(r.ratedScore).toFixed(1):'']:[r.city,r.address,r.price,r.googleRating?'Google '+r.googleRating:'',r.ratedScore!==''?'You rated '+Number(r.ratedScore).toFixed(1):''];return '<div class="recommend-card">'+media+'<div><div class="recommend-role">'+escHtml(r.role||'Recommendation')+'</div><div class="recommend-movie">'+escHtml(title||'')+'</div><div class="recommend-meta">'+escHtml(meta.filter(Boolean).join(' · '))+'</div><div class="recommend-reason">'+escHtml(r.explanation||'')+'</div></div><div class="recommend-actions"><button class="recommend-action primary" onclick="saveGenericRecommendation('+JSON.stringify(kind)+','+index+')">'+(r.wishlisted?'On Wishlist':'Add to Wishlist')+'</button><button class="recommend-action" onclick="replaceGenericRecommendation('+JSON.stringify(kind)+','+index+')">Replace</button><button class="recommend-action" onclick="replaceGenericRecommendation('+JSON.stringify(kind)+','+index+')">Not Interested</button></div></div>';}).join('');}
+async function saveGenericRecommendation(kind,index){const st=genericRecommendationState[kind],r=st.results[index],status=document.getElementById(kind+'-rec-status');if(!r||r.wishlisted)return;try{if(kind==='tv'){await apiCall('addFutureTv',{token:getSessionToken(),payload:{tmdbTvId:r.tmdbTvId,seriesTitle:r.title,seriesYear:r.year,posterPath:r.posterPath,genres:r.genres||[]}});}else{await apiCall('addFutureRestaurant',{token:getSessionToken(),payload:{placeId:r.placeId,name:r.name,address:r.address,city:r.city,cuisine:r.cuisine||'',price:r.price||'',googleRating:r.googleRating||''}});}r.wishlisted=true;status.textContent=(kind==='tv'?r.title:r.name)+' was added to your wishlist.';renderGenericRecommendations(kind);await loadWishlist();}catch(e){status.textContent=e.message||'Could not add this recommendation.';}}
+async function replaceGenericRecommendation(kind,index){const st=genericRecommendationState[kind],r=st.results[index],status=document.getElementById(kind+'-rec-status');if(!r)return;try{const action=kind==='tv'?'replaceTvRecommendation':'replaceRestaurantRecommendation',id=kind==='tv'?r.tmdbTvId:r.placeId,data=await apiCall(action,{token:getSessionToken(),payload:{recommendationId:st.sessionId,currentId:id}});if(data.exhausted){status.textContent='You reviewed all 10. Generating a fresh batch...';await generateGenericRecommendations(kind,{continueBatch:true});return;}st.results[index]=data.recommendation;const nextId=kind==='tv'?data.recommendation.tmdbTvId:data.recommendation.placeId;if(nextId&&!st.seen.includes(String(nextId)))st.seen.push(String(nextId));status.textContent='Recommendation replaced · '+data.remainingBackups+' backups remaining.';renderGenericRecommendations(kind);}catch(e){status.textContent=e.message||'Could not replace this recommendation.';}}
 
 // ── SEARCH ───────────────────────────────────────────────────
 let searchTimer=null;
@@ -3333,6 +3399,33 @@ const _statsGenres = {
   film: localStorage.getItem('cf_film_genre') || '',
   tv: localStorage.getItem('cf_tv_genre') || ''
 };
+let _restaurantCuisine=localStorage.getItem('cf_restaurant_cuisine') || '';
+function normalizeCuisine(value){ return String(value||'').trim(); }
+function rowCuisine(row){ return normalizeCuisine(row?.Cuisine ?? row?.cuisine ?? ''); }
+function rowMatchesCuisine(row,cuisine){ return !cuisine || rowCuisine(row).toLowerCase()===String(cuisine).toLowerCase(); }
+function collectCuisines(rows){
+  const names=new Map();
+  (rows||[]).forEach(function(row){ const name=rowCuisine(row); if(name && !names.has(name.toLowerCase())) names.set(name.toLowerCase(),name); });
+  return [...names.values()].sort(function(a,b){ return a.localeCompare(b); });
+}
+function filteredRestaurantSummary(summary){ return {rows:(summary?.rows||[]).filter(function(row){ return rowMatchesCuisine(row,_restaurantCuisine); })}; }
+function populateRestaurantCuisineFilter(ratings,summaryRows){
+  const select=document.getElementById('restaurant-cuisine-filter');
+  const summary=document.getElementById('restaurant-cuisine-summary');
+  if(!select) return;
+  const cuisines=collectCuisines([...(ratings||[]),...(summaryRows||[])]);
+  const canonical=cuisines.find(function(name){ return name.toLowerCase()===String(_restaurantCuisine).toLowerCase(); });
+  if(_restaurantCuisine && !canonical){ _restaurantCuisine=''; localStorage.removeItem('cf_restaurant_cuisine'); }
+  else if(canonical) _restaurantCuisine=canonical;
+  select.innerHTML='<option value="">All Food Types</option>'+cuisines.map(function(name){ return '<option value="'+escHtml(name)+'">'+escHtml(name)+'</option>'; }).join('');
+  select.value=_restaurantCuisine;
+  if(summary) summary.textContent=_restaurantCuisine ? 'Showing '+_restaurantCuisine : 'Showing all food types';
+}
+function setRestaurantCuisine(value){
+  _restaurantCuisine=String(value||'');
+  if(_restaurantCuisine) localStorage.setItem('cf_restaurant_cuisine',_restaurantCuisine); else localStorage.removeItem('cf_restaurant_cuisine');
+  lgRenderCurrentTab();
+}
 
 function splitGenres(value){
   if(Array.isArray(value)) return value.map(function(item){ return String(item||'').trim(); }).filter(Boolean);
@@ -4745,6 +4838,7 @@ async function lgGoStats(){
       lgCall({action:'getRestaurantSummary'})
     ]);
     _lgStatsData = {ratings: ratingsData||[], summary: summaryData||null};
+    populateRestaurantCuisineFilter(_lgStatsData.ratings,_lgStatsData.summary?.rows||[]);
     lgRenderCurrentTab();
   }catch(e){
     content.innerHTML=`<div class="stats-empty" style="color:#6a3a3a">Could not load data.</div>`;
@@ -4760,19 +4854,21 @@ function lgSwitchTab(tab){
 }
 
 function lgRenderCurrentTab(){
+  populateRestaurantCuisineFilter(_lgStatsData.ratings||[],_lgStatsData.summary?.rows||[]);
+  const filteredSummary=filteredRestaurantSummary(_lgStatsData.summary);
   if(_lgStatsTab==='my')    lgRenderMyStats();
   if(_lgStatsTab==='group') renderSummaryGroupStats({
-    id:'restaurant', containerId:'lg-stats-content', summary:_lgStatsData.summary, itemLabel:'Restaurants',
+    id:'restaurant', containerId:'lg-stats-content', summary:filteredSummary, itemLabel:'Restaurants',
     title:function(row){ return String(row.Name || ''); },
     meta:function(row){ return String(row.Address || ''); }
   });
   if(_lgStatsTab==='h2h')   renderSummaryH2H({
-    id:'restaurant', containerId:'lg-stats-content', summary:_lgStatsData.summary, itemLabel:'Restaurants',
+    id:'restaurant', containerId:'lg-stats-content', summary:filteredSummary, itemLabel:'Restaurants',
     title:function(row){ return String(row.Name || ''); },
     meta:function(row){ return String(row.Address || ''); }
   });
   if(_lgStatsTab==='individual') renderIndividualRatings({
-    id:'restaurant', containerId:'lg-stats-content', summary:_lgStatsData.summary, itemLabel:'Restaurants',
+    id:'restaurant', containerId:'lg-stats-content', summary:filteredSummary, itemLabel:'Restaurants',
     title:function(row){ return String(row.Name || ''); },
     meta:function(row){ return String(row.Address || ''); }
   });
@@ -4780,7 +4876,7 @@ function lgRenderCurrentTab(){
 
 function lgRenderMyStats(){
   const container = document.getElementById('lg-stats-content');
-  const ratings   = _lgStatsData.ratings||[];
+  const ratings   = (_lgStatsData.ratings||[]).filter(function(row){ return rowMatchesCuisine(row,_restaurantCuisine); });
   if(!ratings.length){
     container.innerHTML=`<div class="stats-empty" style="color:#6a3a3a">No restaurant ratings yet.</div><div class="stats-danger-zone"><button class="delete-rating-btn" onclick="openDeleteRating('restaurant')">Delete a Rating</button></div>`;
     return;
@@ -4795,6 +4891,17 @@ function lgRenderMyStats(){
     const vals=ratings.map(r=>parseFloat(r[col]||0)).filter(v=>v>0);
     catAvgs[label]=vals.length?(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1):'—';
   });
+  const cuisineGroups={};
+  (_lgStatsData.ratings||[]).forEach(function(r){
+    const cuisine=rowCuisine(r)||'Uncategorized';
+    if(!cuisineGroups[cuisine]) cuisineGroups[cuisine]=[];
+    const score=ratingDisplayScore(r);
+    if(Number.isFinite(score)) cuisineGroups[cuisine].push(score);
+  });
+  const cuisineRankings=Object.keys(cuisineGroups).map(function(cuisine){
+    const values=cuisineGroups[cuisine];
+    return {cuisine:cuisine,count:values.length,average:averageScores(values)};
+  }).sort(function(a,b){ return b.average-a.average || b.count-a.count || a.cuisine.localeCompare(b.cuisine); });
   const restaurantRow=(r,index,ranked=true)=>`<div class="lg-film-row"><div class="lg-film-row-rank">${ranked?'#'+(index+1):''}</div><div style="flex:1"><div class="lg-film-row-title">${escHtml(String(r['Name']||''))}</div><div class="lg-film-row-sub">${escHtml(String(r['Cuisine']||''))}${r['Address']?' · '+escHtml(String(r['Address']||'').split(',')[0]):''}</div></div><div class="lg-film-row-score">${ratingDisplayScore(r).toFixed(1)}</div></div>`;
   container.innerHTML=`
     <div class="stats-section"><div class="stats-section-title" style="border-color:#3a1a1a;color:#8a4a4a">Overview — ${escHtml(currentUser.name)}</div><div class="stats-grid">
@@ -4808,6 +4915,9 @@ function lgRenderMyStats(){
       <button class="view-all-btn" style="border-color:#3a1a1a;color:#8a4a4a" onclick="lgToggleAll(this)">View All ${ratings.length} Ratings ↓</button><div class="all-ratings-wrap" id="lg-all-wrap">${sorted.map((r,i)=>restaurantRow(r,i)).join('')}</div>
     </div>
     <div class="stats-section"><div class="stats-section-title" style="border-color:#3a1a1a;color:#8a4a4a">Recently Visited</div>${recent5.map((r,i)=>restaurantRow(r,i,false)).join('')}</div>
+    <div class="stats-section"><div class="stats-section-title" style="border-color:#3a1a1a;color:#8a4a4a">Food Type Averages</div>
+      ${cuisineRankings.length?cuisineRankings.map(function(item,index){ return `<div class="lg-film-row"><div class="lg-film-row-rank">#${index+1}</div><div style="flex:1"><div class="lg-film-row-title">${escHtml(item.cuisine)}</div><div class="lg-film-row-sub">${item.count} ${item.count===1?'rating':'ratings'}</div></div><div class="lg-film-row-score">${item.average.toFixed(1)}</div></div>`; }).join(''):'<div class="stats-empty">No food-type data yet.</div>'}
+    </div>
     <div class="stats-section"><div class="stats-section-title" style="border-color:#3a1a1a;color:#8a4a4a">Category Averages</div><div class="cat-bars">${Object.entries(catAvgs).map(([label,val])=>`<div class="cat-bar-row"><div class="cat-bar-label" style="color:#8a6a6a">${label}</div><div class="grade-bar-track" style="background:#1a0608"><div class="lg-grade-bar-fill" style="width:${val==='—'?0:val}%"></div></div><div class="cat-bar-val" style="color:#C41E3A">${val}</div></div>`).join('')}</div></div>
     <div class="stats-danger-zone"><button class="delete-rating-btn" onclick="openDeleteRating('restaurant')">Delete a Rating</button></div>`;
 }
