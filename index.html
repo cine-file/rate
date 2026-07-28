@@ -1271,6 +1271,12 @@ body.theme-cream .recommend-launch,body.theme-gold .recommend-launch{border-colo
 body.theme-cream .recommend-mode-btn.active,body.theme-gold .recommend-mode-btn.active,
 body.theme-cream .recommend-action.primary,body.theme-gold .recommend-action.primary,
 body.theme-cream .recommend-generate,body.theme-gold .recommend-generate{background:var(--theme-panel-2);border-color:var(--theme-accent);color:var(--theme-accent);}
+
+.recommend-diagnostics{margin-top:10px;padding:10px 12px;background:#090f09;border:1px solid #1a3a1a;border-radius:2px;font-size:11px;line-height:1.55;color:#5a8a5a;}
+.recommend-diagnostics strong{color:#80d080;font-weight:600;}
+body.theme-cream .recommend-diagnostics,body.theme-gold .recommend-diagnostics{background:var(--theme-bg-2);border-color:var(--theme-border);color:var(--theme-muted);}
+body.theme-cream .recommend-diagnostics strong,body.theme-gold .recommend-diagnostics strong{color:var(--theme-accent);}
+#film-recommendation-section .recommend-launch{margin-top:0;}
 @media(max-width:640px){.recommend-grid{grid-template-columns:1fr}.recommend-card{grid-template-columns:58px 1fr}.recommend-poster{width:58px;height:87px}.recommend-actions{grid-column:1/-1;flex-direction:row}.recommend-action{flex:1}}
 
 </style>
@@ -1932,6 +1938,21 @@ const SITE_NAME = "Cine-file";
     <h1 class="s-title" id="wishlist-title">Film Wishlist</h1>
     <p class="s-sub" id="wishlist-sub">Search for films you want to watch.</p>
 
+    <div class="wishlist-search-wrap">
+      <div class="search-field">
+        <span class="search-icon" id="wishlist-search-icon">🎬</span>
+        <input id="wishlist-search-input" type="search" placeholder="Search for a film to save..." autocomplete="off"/>
+        <span class="search-spinner" id="wishlist-spinner">⟳</span>
+      </div>
+      <div class="wishlist-dropdown" id="wishlist-dropdown"></div>
+    </div>
+    <div class="settings-msg" id="wishlist-msg"></div>
+    <div class="stats-section" style="margin-top:28px">
+      <div class="stats-section-title" id="wishlist-list-title">Your Saved Films</div>
+      <div class="wishlist-items" id="wishlist-items"></div>
+    </div>
+
+    <div id="film-recommendation-section" style="margin-top:34px">
     <button class="recommend-launch" id="recommend-launch" onclick="toggleRecommendationPanel()">Generate Film Recommendations</button>
     <div class="recommend-panel" id="recommend-panel">
       <div class="recommend-head">
@@ -1952,20 +1973,9 @@ const SITE_NAME = "Cine-file";
       </div>
       <button class="recommend-generate" id="rec-generate" onclick="generateFilmRecommendations()">Generate 5 Movies</button>
       <div class="recommend-status" id="rec-status"></div>
+      <div class="recommend-diagnostics" id="rec-diagnostics" style="display:none"></div>
       <div class="recommend-results" id="rec-results"></div>
     </div>
-    <div class="wishlist-search-wrap">
-      <div class="search-field">
-        <span class="search-icon" id="wishlist-search-icon">🎬</span>
-        <input id="wishlist-search-input" type="search" placeholder="Search for a film to save..." autocomplete="off"/>
-        <span class="search-spinner" id="wishlist-spinner">⟳</span>
-      </div>
-      <div class="wishlist-dropdown" id="wishlist-dropdown"></div>
-    </div>
-    <div class="settings-msg" id="wishlist-msg"></div>
-    <div class="stats-section" style="margin-top:28px">
-      <div class="stats-section-title" id="wishlist-list-title">Your Saved Films</div>
-      <div class="wishlist-items" id="wishlist-items"></div>
     </div>
   </div>
 </div>
@@ -2796,11 +2806,15 @@ async function generateFilmRecommendations(){
   const btn=document.getElementById('rec-generate'),status=document.getElementById('rec-status'),results=document.getElementById('rec-results');
   const sourceTmdbId=document.getElementById('rec-source').value;
   if(recommendationMode==='movie'&&!sourceTmdbId){status.textContent='Choose a source movie first.';return;}
-  btn.disabled=true;btn.textContent='Building Recommendations...';status.textContent='Reviewing your ratings and validating movie candidates...';results.innerHTML='';
+  btn.disabled=true;btn.textContent='Building Recommendations...';status.textContent='Reviewing your ratings and validating movie candidates...';results.innerHTML='';document.getElementById('rec-diagnostics').style.display='none';
   try{
     const data=await apiCall('generateFilmRecommendations',{token:getSessionToken(),payload:{sourceMode:recommendationMode,sourceTmdbId:sourceTmdbId,pool:document.getElementById('rec-pool').value,style:document.getElementById('rec-style').value}});
     recommendationSessionId=data.recommendationId||'';recommendationResults=data.recommendations||[];
     status.textContent=(data.aiEnhanced?'AI jury enhanced · ':'Taste engine · ')+(data.profileSummary?.ratingCount||0)+' ratings reviewed';
+    const diagnostics=document.getElementById('rec-diagnostics');
+    const d=data.diagnostics||{};
+    diagnostics.style.display='block';
+    diagnostics.innerHTML='<strong>Recommendation engine:</strong> '+escHtml(d.engine|| (data.aiEnhanced?'Gemini AI jury':'Deterministic fallback'))+'<br><strong>Candidate pool:</strong> '+escHtml(String(d.candidateCount||0))+' eligible movies'+(d.aiCandidateCount?(' · '+escHtml(String(d.aiCandidateCount))+' reviewed by AI'):'')+(d.aiError?('<br><strong>AI status:</strong> '+escHtml(d.aiError)):'');
     renderFilmRecommendations();
   }catch(e){status.textContent=e.message||'Could not generate recommendations.';}
   btn.disabled=false;btn.textContent='Generate 5 Movies';
