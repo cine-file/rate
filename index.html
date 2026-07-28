@@ -2773,6 +2773,7 @@ let recommendationMode='movie';
 let recommendationSources=[];
 let recommendationSessionId='';
 let recommendationResults=[];
+let recommendationSeenIds=[];
 
 function toggleRecommendationPanel(force){
   if(wishlistMode!=='film') return;
@@ -2802,19 +2803,22 @@ async function loadRecommendationSources(){
   }
 }
 
-async function generateFilmRecommendations(){
+async function generateFilmRecommendations(options){
+  options=options||{};
   const btn=document.getElementById('rec-generate'),status=document.getElementById('rec-status'),results=document.getElementById('rec-results');
   const sourceTmdbId=document.getElementById('rec-source').value;
   if(recommendationMode==='movie'&&!sourceTmdbId){status.textContent='Choose a source movie first.';return;}
   btn.disabled=true;btn.textContent='Building Recommendations...';status.textContent='Reviewing your ratings and validating movie candidates...';results.innerHTML='';document.getElementById('rec-diagnostics').style.display='none';
   try{
-    const data=await apiCall('generateFilmRecommendations',{token:getSessionToken(),payload:{sourceMode:recommendationMode,sourceTmdbId:sourceTmdbId,pool:document.getElementById('rec-pool').value,style:document.getElementById('rec-style').value}});
+    const data=await apiCall('generateFilmRecommendations',{token:getSessionToken(),payload:{sourceMode:recommendationMode,sourceTmdbId:sourceTmdbId,pool:document.getElementById('rec-pool').value,style:document.getElementById('rec-style').value,excludeTmdbIds:options.continueBatch?recommendationSeenIds:[]}});
     recommendationSessionId=data.recommendationId||'';recommendationResults=data.recommendations||[];
+    if(!options.continueBatch) recommendationSeenIds=[];
+    recommendationResults.forEach(function(r){if(r&&r.tmdbId&&!recommendationSeenIds.includes(String(r.tmdbId)))recommendationSeenIds.push(String(r.tmdbId));});
     status.textContent=(data.aiEnhanced?'AI jury enhanced · ':'Taste engine · ')+(data.profileSummary?.ratingCount||0)+' ratings reviewed';
     const diagnostics=document.getElementById('rec-diagnostics');
     const d=data.diagnostics||{};
     diagnostics.style.display='block';
-    diagnostics.innerHTML='<strong>Recommendation engine:</strong> '+escHtml(d.engine|| (data.aiEnhanced?'Gemini AI jury':'Deterministic fallback'))+'<br><strong>Candidate pool:</strong> '+escHtml(String(d.candidateCount||0))+' eligible movies'+(d.aiCandidateCount?(' · '+escHtml(String(d.aiCandidateCount))+' reviewed by AI'):'')+(d.aiError?('<br><strong>AI status:</strong> '+escHtml(d.aiError)):'');
+    diagnostics.innerHTML='<strong>Recommendation engine:</strong> '+escHtml(d.engine|| (data.aiEnhanced?'Gemini-generated recommendations':'Deterministic fallback'))+'<br><strong>Recommendation batch:</strong> '+escHtml(String(d.validatedCount||d.candidateCount||0))+' validated movies · 5 shown · '+escHtml(String(d.backupCount||0))+' backups'+(d.aiCandidateCount?('<br><strong>AI proposals:</strong> '+escHtml(String(d.aiCandidateCount))+' movies generated for TMDB validation'):'')+(d.model?('<br><strong>AI model:</strong> '+escHtml(d.model)):'')+(d.aiError?('<br><strong>AI status:</strong> '+escHtml(d.aiError)):'');
     renderFilmRecommendations();
   }catch(e){status.textContent=e.message||'Could not generate recommendations.';}
   btn.disabled=false;btn.textContent='Generate 5 Movies';
@@ -2845,7 +2849,14 @@ async function replaceFilmRecommendation(index){
   const status=document.getElementById('rec-status');status.textContent='Loading the next best backup...';
   try{
     const data=await apiCall('replaceFilmRecommendation',{token:getSessionToken(),payload:{recommendationId:recommendationSessionId,currentTmdbId:current.tmdbId}});
-    recommendationResults[index]=data.recommendation;status.textContent='Recommendation replaced.';renderFilmRecommendations();
+    if(data.exhausted){
+      status.textContent='You reviewed all 10 movies. Generating a fresh batch...';
+      await generateFilmRecommendations({continueBatch:true});
+      return;
+    }
+    recommendationResults[index]=data.recommendation;
+    if(data.recommendation&&data.recommendation.tmdbId&&!recommendationSeenIds.includes(String(data.recommendation.tmdbId)))recommendationSeenIds.push(String(data.recommendation.tmdbId));
+    status.textContent='Recommendation replaced'+(data.remainingBackups!==undefined?' · '+data.remainingBackups+' backups remaining':'')+'.';renderFilmRecommendations();
   }catch(e){status.textContent=e.message||'Could not replace this recommendation.';}
 }
 
