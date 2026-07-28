@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 //  CINE-FILE — Google Apps Script
-//  Version: 2026.07.27-gemini-3.6.5
+//  Version: 2026.07.27-cross-category-recommendations.8
 //  Runtime: GitHub Pages frontend + Apps Script JSON backend
 //
 //  Version notes:
@@ -15,11 +15,13 @@
 //  - stats-genre-bars.2: exposes film genres to the stats API for cross-user genre filtering.
 //  - recommendation-diagnostics.4: strengthens recommendation candidates, uses source category scores/notes in Gemini, exposes safe AI diagnostics, and defers backup hydration for faster generation.
 //  - gemini-3.6.5: migrates the optional AI jury to Gemini 3.6 Flash and removes deprecated sampling parameters.
+//  - ai-first-recommendations.6: Gemini proposes titles first; TMDB only validates and enriches 10 eligible movies per batch, with 5 visible and 5 backups.
+//  - cross-category-recommendations.8: adds matching Gemini-first recommendation rooms for TV and restaurants, validated by TMDB and Google Places.
 //
 //  Original by friend, restaurant functions added by Claude
 // ─────────────────────────────────────────────────────────────
 
-const BACKEND_VERSION = '2026.07.27-gemini-3.6.5';
+const BACKEND_VERSION = '2026.07.27-cross-category-recommendations.8';
 const SESSION_TTL_SECONDS = 6 * 60 * 60;
 
 const FILMS_SHEET_NAME = 'Database-Films';
@@ -297,6 +299,12 @@ function doPost(e) {
     if (action === 'generateFilmRecommendations') return doGenerateFilmRecommendations_(d.payload || d, username);
     if (action === 'replaceFilmRecommendation') return doReplaceFilmRecommendation_(d.payload || d, username);
     if (action === 'recordRecommendationFeedback') return doRecordRecommendationFeedback_(d.payload || d, username);
+    if (action === 'getTvRecommendationSources') return doGetTvRecommendationSources_(username);
+    if (action === 'generateTvRecommendations') return doGenerateTvRecommendations_(d.payload || d, username);
+    if (action === 'replaceTvRecommendation') return doReplaceGenericRecommendation_(d.payload || d, username, 'tv');
+    if (action === 'getRestaurantRecommendationSources') return doGetRestaurantRecommendationSources_(username);
+    if (action === 'generateRestaurantRecommendations') return doGenerateRestaurantRecommendations_(d.payload || d, username);
+    if (action === 'replaceRestaurantRecommendation') return doReplaceGenericRecommendation_(d.payload || d, username, 'restaurant');
     if (action === 'searchTv')                return doSearchTv_(d);
     if (action === 'getTvDetails')            return doGetTvDetails_(d);
     if (action === 'saveTvRating')            return doSaveTvRating_(d.payload || d, username);
@@ -1632,7 +1640,7 @@ function doGetRestaurantSummary_() {
   data.forEach(function(r) {
     var key = restaurantGroupKey_(r);
     if (!grouped[key]) {
-      grouped[key] = { Name: r.name, Address: r.address, scores: [], rawScores: [], userScores: {}, userRawScores: {} };
+      grouped[key] = { Name: r.name, Address: r.address, Cuisine: r.cuisine || '', Price: r.price || '', GoogleRating: r.googleRating || '', scores: [], rawScores: [], userScores: {}, userRawScores: {} };
     }
     var score = parseFloat(r.score10);
     if (!isNaN(score) && r.user) {
@@ -1865,103 +1873,19 @@ function sourceFilmRatingContext_(username, tmdbId) {
 }
 
 function tmdbMovieDetailsForRecommendation_(id) {
-  var url = 'https://api.themoviedb.org/3/movie/' + encodeURIComponent(id) + '?api_key=' + getTmdbKey() + '&append_to_response=keywords,recommendations,similar,credits';
+  var url = 'https://api.themoviedb.org/3/movie/' + encodeURIComponent(id) + '?api_key=' + getTmdbKey() + '&append_to_response=keywords,credits';
   return fetchJson_(url);
-}
-
-function tmdbDiscover_(params, pages) {
-  var out = [], seen = {};
-  pages = pages || 2;
-  for (var page=1; page<=pages; page++) {
-    var pairs = Object.keys(params || {}).filter(function(k){return params[k] !== '' && params[k] !== null && params[k] !== undefined;})
-      .map(function(k){return encodeURIComponent(k)+'='+encodeURIComponent(params[k]);});
-    pairs.push('api_key='+encodeURIComponent(getTmdbKey())); pairs.push('page='+page); pairs.push('include_adult=false');
-    var data = fetchJson_('https://api.themoviedb.org/3/discover/movie?' + pairs.join('&'));
-    (data.results || []).forEach(function(r){ if(!seen[r.id]){ seen[r.id]=true; out.push(r); } });
-  }
-  return out;
-}
-
-function buildRecommendationCandidates_(payload, username) {
-  var mode = payload.sourceMode === 'taste' ? 'taste' : 'movie';
-  var source = null, sourceRating = null, candidates = [], seen = {};
-  function add(list, originWeight, origin){ (list || []).forEach(function(r){
-    if(!r || !r.id) return;
-    if(seen[r.id]) { seen[r.id]._originWeight=Math.max(seen[r.id]._originWeight||0,originWeight||0); if(origin) seen[r.id]._origins.push(origin); return; }
-    r._originWeight=originWeight||0; r._origins=origin?[origin]:[]; seen[r.id]=r; candidates.push(r);
-  }); }
-  if (mode === 'movie') {
-    if (!payload.sourceTmdbId) throw new Error('Choose a source movie.');
-    source = tmdbMovieDetailsForRecommendation_(payload.sourceTmdbId);
-    sourceRating = sourceFilmRatingContext_(username, payload.sourceTmdbId);
-    add(source.recommendations && source.recommendations.results, 34, 'TMDB recommendations');
-    add(source.similar && source.similar.results, 30, 'TMDB similar');
-    var genreIds = (source.genres || []).map(function(g){return g.id;});
-    if (genreIds.length) {
-      add(tmdbDiscover_({with_genres:genreIds.join('|'), sort_by:'vote_average.desc', 'vote_count.gte':350}, 2), 17, 'shared genre');
-      genreIds.forEach(function(id){ add(tmdbDiscover_({with_genres:id, sort_by:'vote_average.desc', 'vote_count.gte':500}, 1), 12, 'genre branch'); });
-    }
-    var keywordIds=(source.keywords && (source.keywords.keywords || source.keywords.results) || []).slice(0,8).map(function(k){return k.id;});
-    keywordIds.slice(0,5).forEach(function(id){ add(tmdbDiscover_({with_keywords:id, sort_by:'vote_average.desc', 'vote_count.gte':150}, 1), 24, 'shared keyword'); });
-    if(keywordIds.length>1) add(tmdbDiscover_({with_keywords:keywordIds.slice(0,4).join('|'),sort_by:'popularity.desc','vote_count.gte':100},2),20,'keyword blend');
-    var director = (source.credits && source.credits.crew || []).filter(function(c){return c.job==='Director';})[0];
-    if (director) add(tmdbDiscover_({with_crew:director.id, sort_by:'vote_average.desc','vote_count.gte':100}, 1), 25, 'same director');
-    (source.credits && source.credits.cast || []).slice(0,3).forEach(function(person){
-      add(tmdbDiscover_({with_cast:person.id, sort_by:'vote_average.desc','vote_count.gte':250},1),10,'lead cast');
-    });
-  } else {
-    var profile = buildFilmTasteProfile_(username);
-    var genreMap = tmdbGenreMap_();
-    var ids = profile.topGenres.slice(0,4).map(function(g){return genreMap[String(g.name).toLowerCase()] || '';}).filter(Boolean);
-    if (ids.length) add(tmdbDiscover_({with_genres:ids.join('|'), sort_by:'vote_average.desc', 'vote_count.gte':400}, 3), 22, 'taste genres');
-    ids.forEach(function(id){add(tmdbDiscover_({with_genres:id,sort_by:'vote_average.desc','vote_count.gte':700},1),15,'genre favorite');});
-    profile.topDirectors.slice(0,4).forEach(function(d){
-      try { var search=fetchJson_('https://api.themoviedb.org/3/search/person?api_key='+getTmdbKey()+'&query='+encodeURIComponent(d.name)); var person=(search.results||[])[0]; if(person) add(tmdbDiscover_({with_crew:person.id,sort_by:'vote_average.desc','vote_count.gte':100},1),18,'favorite director'); } catch(e) {}
-    });
-    add(tmdbDiscover_({sort_by:'vote_average.desc', 'vote_count.gte':1500}, 2), 8, 'quality baseline');
-  }
-  return { source: source, sourceRating:sourceRating, candidates: candidates.slice(0,140) };
-}
-
-function tmdbGenreMap_() {
-  var data = fetchJson_('https://api.themoviedb.org/3/genre/movie/list?api_key=' + getTmdbKey());
-  var out={}; (data.genres||[]).forEach(function(g){out[String(g.name).toLowerCase()]=g.id;}); return out;
 }
 
 function ratedAndWishlistIds_(username) {
   var rated={}, wished={};
-  sheetObjects_(getExistingSheet_(FILMS_SHEET_NAME), FILMS_HEADER).forEach(function(r){ if(String(r.user||'').toLowerCase()===String(username).toLowerCase() && r.tmdbId) rated[String(r.tmdbId)]=r; });
-  sheetObjects_(getExistingSheet_(FUTURE_FILMS_SHEET_NAME), FUTURE_FILMS_HEADER).forEach(function(r){ if(String(r.user||'').toLowerCase()===String(username).toLowerCase() && r.tmdbId) wished[String(r.tmdbId)]=r; });
+  sheetObjects_(getExistingSheet_(FILMS_SHEET_NAME), FILMS_HEADER).forEach(function(r){
+    if(String(r.user||'').toLowerCase()===String(username).toLowerCase() && r.tmdbId) rated[String(r.tmdbId)]=r;
+  });
+  sheetObjects_(getExistingSheet_(FUTURE_FILMS_SHEET_NAME), FUTURE_FILMS_HEADER).forEach(function(r){
+    if(String(r.user||'').toLowerCase()===String(username).toLowerCase() && r.tmdbId) wished[String(r.tmdbId)]=r;
+  });
   return {rated:rated,wished:wished};
-}
-
-function scoreRecommendationCandidates_(bundle, payload, username) {
-  var profile=buildFilmTasteProfile_(username), states=ratedAndWishlistIds_(username), genreMap={}, source=bundle.source;
-  profile.topGenres.forEach(function(g,i){ genreMap[String(g.name).toLowerCase()] = Math.max(0, (g.average-5.5)*7) + Math.max(0, 8-i); });
-  var sourceGenres=(source && source.genres || []).map(function(g){return g.id;});
-  var pool=payload.pool || 'new';
-  return bundle.candidates.filter(function(c){
-    if(source && String(c.id)===String(source.id)) return false;
-    if(pool==='new' && states.rated[String(c.id)]) return false;
-    if(pool==='notWishlist' && (states.rated[String(c.id)] || states.wished[String(c.id)])) return false;
-    return true;
-  }).map(function(c){
-    var score=Number(c._originWeight||0);
-    score += Math.min(10, ((c._origins||[]).length-1)*2.5);
-    var cGenreIds=c.genre_ids||[];
-    score += cGenreIds.filter(function(id){return sourceGenres.indexOf(id)>-1;}).length*7;
-    var names=[]; Object.keys(genreMap).forEach(function(name){ var id=tmdbGenreMapCached_()[name]; if(cGenreIds.indexOf(id)>-1){score+=genreMap[name];names.push(name);} });
-    score += Math.min(12, Math.log(Math.max(1,Number(c.vote_count||0)))*1.5);
-    score += Math.max(0, (Number(c.vote_average||0)-6)*3);
-    if((payload.style||'balanced')==='hidden') score += Math.max(0, 10-Math.log(Math.max(1,Number(c.popularity||1))));
-    if((payload.style||'balanced')==='different') score -= cGenreIds.filter(function(id){return sourceGenres.indexOf(id)>-1;}).length*4;
-    c._score=Number(score.toFixed(2)); c._tasteGenres=names; c._rated=states.rated[String(c.id)]||null; c._wishlisted=!!states.wished[String(c.id)]; return c;
-  }).sort(function(a,b){return b._score-a._score;});
-}
-
-function tmdbGenreMapCached_() {
-  var cache=CacheService.getScriptCache(), key='tmdb_genre_map_v1', val=cache.get(key);
-  if(val) return JSON.parse(val); var map=tmdbGenreMap_(); cache.put(key,JSON.stringify(map),21600); return map;
 }
 
 function recommendationRole_(index, style) {
@@ -1971,54 +1895,127 @@ function recommendationRole_(index, style) {
   return ((style==='hidden'?hidden:(style==='different'?different:normal))[index] || 'Recommendation');
 }
 
-function buildRecommendationExplanation_(candidate, source, profile, index) {
-  var bits=[];
-  if(source) bits.push('It shares key DNA with ' + source.title + '.');
-  if(candidate._tasteGenres && candidate._tasteGenres.length) bits.push('It matches your strong ratings in ' + candidate._tasteGenres.slice(0,2).map(function(x){return x.replace(/\b\w/g,function(m){return m.toUpperCase();});}).join(' and ') + '.');
-  if(Number(candidate.vote_average)>=7.5) bits.push('Its audience score gives it a strong quality signal.');
-  if(!bits.length) bits.push('It fits the strongest patterns in your film history.');
-  return bits.join(' ');
+function compactFilmHistoryForAi_(username) {
+  return sheetObjects_(getExistingSheet_(FILMS_SHEET_NAME), FILMS_HEADER)
+    .filter(function(r){return String(r.user||'').toLowerCase()===String(username||'').toLowerCase();})
+    .sort(function(a,b){return Number(b.score10||0)-Number(a.score10||0);})
+    .slice(0,80)
+    .map(function(r){return {
+      title:r.title||'', year:r.year||'', score10:Number(r.score10||0), ratingType:filmRatingType_(r),
+      genres:splitGenres_(r.genres), director:r.director||'', runtimeMinutes:r.runtimeMinutes||'',
+      categories:filmRatingType_(r)==='full'?{
+        plot:r.plot, entertainment:r.entertainment, acting:r.acting, visuals:r.visuals, pacing:r.pacing, emotional:r.emotional
+      }:null,
+      notes:[r.plotNotes,r.entNotes,r.actingNotes,r.visualsNotes,r.pacingNotes,r.emotionalNotes,r.overallNotes].filter(Boolean).join(' | ').slice(0,700)
+    };});
 }
 
-function callGeminiRecommendationJury_(candidates, source, sourceRating, profile, payload) {
+function callGeminiMovieGenerator_(source, sourceRating, profile, payload, username, states) {
   var key=getGeminiKey_();
   var diagnostic={attempted:false,success:false,error:key?'':'GEMINI_API_KEY is not configured.',httpStatus:'',model:'gemini-3.6-flash'};
-  if(!key) return {jury:null,diagnostic:diagnostic};
+  if(!key) return {suggestions:null,diagnostic:diagnostic};
   diagnostic.attempted=true;
-  var compact=candidates.slice(0,40).map(function(c){return {
-    id:c.id,title:c.title,year:String(c.release_date||'').slice(0,4),tmdbGenres:c.genre_ids||[],tasteGenres:c._tasteGenres,
-    deterministicScore:c._score,origins:c._origins||[],voteAverage:c.vote_average,voteCount:c.vote_count,
-    popularity:c.popularity,overview:String(c.overview||'').slice(0,420)
-  };});
+  var pool=payload.pool||'new';
+  var excludedIds={};
+  (payload.excludeTmdbIds||[]).forEach(function(id){excludedIds[String(id)]=true;});
+  var excluded=[];
+  Object.keys(states.rated).forEach(function(id){
+    if(pool==='new'||pool==='notWishlist') excluded.push({tmdbId:id,title:states.rated[id].title||'',year:states.rated[id].year||'',reason:'already rated'});
+  });
+  if(pool==='notWishlist') Object.keys(states.wished).forEach(function(id){excluded.push({tmdbId:id,title:states.wished[id].title||'',year:states.wished[id].year||'',reason:'already wishlisted'});});
+  Object.keys(excludedIds).forEach(function(id){excluded.push({tmdbId:id,reason:'already shown in this session'});});
   var prompt={
-    instruction:'Act as a rigorous movie recommendation jury. Select exactly 5 movie IDs only from candidates and rank 10 backup IDs. Do not preserve the deterministic order unless justified. Reject superficial genre-only matches. Prioritize the viewing experience, themes, tone, structure, atmosphere, pacing, emotional payoff, scale, and the user’s actual category scores and notes. Favor five meaningfully distinct but defensible recommendations. Never invent a title or ID. Return strict JSON only.',
-    source:source?{id:source.id,title:source.title,overview:source.overview||'',genres:(source.genres||[]).map(function(g){return g.name;}),keywords:(source.keywords&&(source.keywords.keywords||source.keywords.results)||[]).slice(0,12).map(function(k){return k.name;}),director:((source.credits&&source.credits.crew||[]).filter(function(c){return c.job==='Director';})[0]||{}).name||'',runtime:source.runtime||''}:null,
+    instruction:'You are the primary movie recommendation engine. Generate exactly 15 real feature films. Do not merely list broad genre matches. Recommend based on viewing experience, themes, tone, structure, atmosphere, pacing, emotional payoff, scale, and the user\'s actual rating behavior. Respect every exclusion. Provide title and release year accurately enough for TMDB validation. Return strict JSON only. Do not include television series, shorts, documentaries unless clearly appropriate, unreleased rumors, or invented films.',
+    mode:payload.sourceMode==='taste'?'Based on the user\'s overall taste':'Based on a source movie plus the user\'s taste',
+    style:payload.style||'balanced', pool:pool,
+    source:source?{title:source.title,year:String(source.release_date||'').slice(0,4),overview:source.overview||'',genres:(source.genres||[]).map(function(g){return g.name;}),keywords:(source.keywords&&(source.keywords.keywords||source.keywords.results)||[]).slice(0,15).map(function(k){return k.name;}),director:((source.credits&&source.credits.crew||[]).filter(function(c){return c.job==='Director';})[0]||{}).name||'',runtime:source.runtime||''}:null,
     sourceUserRating:sourceRating,
-    tasteProfile:profile, style:payload.style||'balanced', pool:payload.pool||'new', candidates:compact,
-    outputSchema:{selected:[{id:'number',role:'short label',explanation:'one or two specific sentences tied to the source rating and taste profile'}],backups:['number']}
+    tasteProfile:profile,
+    representativeRatingHistory:compactFilmHistoryForAi_(username),
+    exclusions:excluded.slice(0,180),
+    outputSchema:{recommendations:[{title:'exact movie title',year:'four-digit release year',role:'short recommendation label',explanation:'one or two specific sentences tied to the source rating or taste profile'}]}
   };
-  try {
+  try{
     var url='https://generativelanguage.googleapis.com/v1beta/models/'+diagnostic.model+':generateContent?key='+encodeURIComponent(key);
     var res=UrlFetchApp.fetch(url,{method:'post',contentType:'application/json',muteHttpExceptions:true,payload:JSON.stringify({contents:[{parts:[{text:JSON.stringify(prompt)}]}],generationConfig:{responseMimeType:'application/json'}})});
     diagnostic.httpStatus=res.getResponseCode();
-    if(res.getResponseCode()<200||res.getResponseCode()>=300){ diagnostic.error='Gemini returned HTTP '+res.getResponseCode()+': '+String(res.getContentText()||'').slice(0,180); return {jury:null,diagnostic:diagnostic}; }
-    var data=JSON.parse(res.getContentText()), text=data.candidates&&data.candidates[0]&&data.candidates[0].content&&data.candidates[0].content.parts&&data.candidates[0].content.parts[0].text;
-    if(!text){diagnostic.error='Gemini returned no recommendation JSON.';return {jury:null,diagnostic:diagnostic};}
-    var jury=JSON.parse(text);
-    if(!jury||!Array.isArray(jury.selected)){diagnostic.error='Gemini response did not match the required schema.';return {jury:null,diagnostic:diagnostic};}
-    diagnostic.success=true; diagnostic.error='';
-    return {jury:jury,diagnostic:diagnostic};
-  } catch(e) { diagnostic.error='Gemini request failed: '+e.message; return {jury:null,diagnostic:diagnostic}; }
+    if(res.getResponseCode()<200||res.getResponseCode()>=300){diagnostic.error='Gemini returned HTTP '+res.getResponseCode()+': '+String(res.getContentText()||'').slice(0,220);return {suggestions:null,diagnostic:diagnostic};}
+    var data=JSON.parse(res.getContentText());
+    var text=data.candidates&&data.candidates[0]&&data.candidates[0].content&&data.candidates[0].content.parts&&data.candidates[0].content.parts[0].text;
+    if(!text){diagnostic.error='Gemini returned no recommendation JSON.';return {suggestions:null,diagnostic:diagnostic};}
+    var parsed=JSON.parse(text), suggestions=parsed&&parsed.recommendations;
+    if(!Array.isArray(suggestions)){diagnostic.error='Gemini response did not match the required schema.';return {suggestions:null,diagnostic:diagnostic};}
+    suggestions=suggestions.filter(function(x){return x&&x.title;}).slice(0,15);
+    if(!suggestions.length){diagnostic.error='Gemini returned no usable movie titles.';return {suggestions:null,diagnostic:diagnostic};}
+    diagnostic.success=true;diagnostic.error='';
+    return {suggestions:suggestions,diagnostic:diagnostic};
+  }catch(e){diagnostic.error='Gemini request failed: '+e.message;return {suggestions:null,diagnostic:diagnostic};}
+}
+
+function normalizeMovieTitle_(value) {
+  return String(value||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+}
+
+function chooseTmdbSearchMatch_(suggestion, results) {
+  var wanted=normalizeMovieTitle_(suggestion.title), wantedYear=parseInt(suggestion.year,10)||0;
+  var ranked=(results||[]).map(function(r){
+    var title=normalizeMovieTitle_(r.title||r.original_title), year=parseInt(String(r.release_date||'').slice(0,4),10)||0, score=0;
+    if(title===wanted) score+=100;
+    else if(title.indexOf(wanted)>-1||wanted.indexOf(title)>-1) score+=55;
+    if(wantedYear&&year===wantedYear) score+=35;
+    else if(wantedYear&&year&&Math.abs(year-wantedYear)<=1) score+=15;
+    score+=Math.min(12,Math.log(Math.max(1,Number(r.vote_count||0))));
+    return {movie:r,score:score};
+  }).sort(function(a,b){return b.score-a.score;});
+  return ranked.length&&ranked[0].score>=55?ranked[0].movie:null;
+}
+
+function validateGeminiSuggestionsWithTmdb_(suggestions, payload, username, states) {
+  var requests=suggestions.map(function(s){
+    return {url:'https://api.themoviedb.org/3/search/movie?api_key='+encodeURIComponent(getTmdbKey())+'&query='+encodeURIComponent(s.title)+(s.year?'&year='+encodeURIComponent(s.year):'')+'&include_adult=false',muteHttpExceptions:true};
+  });
+  var responses=UrlFetchApp.fetchAll(requests), pool=payload.pool||'new', excluded={};
+  (payload.excludeTmdbIds||[]).forEach(function(id){excluded[String(id)]=true;});
+  var valid=[], seen={};
+  responses.forEach(function(res,i){
+    if(res.getResponseCode()<200||res.getResponseCode()>=300)return;
+    var data;try{data=JSON.parse(res.getContentText());}catch(e){return;}
+    var match=chooseTmdbSearchMatch_(suggestions[i],data.results||[]);if(!match)return;
+    var id=String(match.id);if(seen[id]||excluded[id])return;
+    if(pool==='new'&&states.rated[id])return;
+    if(pool==='notWishlist'&&(states.rated[id]||states.wished[id]))return;
+    seen[id]=true;
+    match._aiRole=suggestions[i].role||'';match._aiExplanation=suggestions[i].explanation||'';
+    match._rated=states.rated[id]||null;match._wishlisted=!!states.wished[id];
+    valid.push(match);
+  });
+  return valid.slice(0,10);
+}
+
+function hydrateRecommendationMovies_(candidates) {
+  var requests=candidates.map(function(c){return {url:'https://api.themoviedb.org/3/movie/'+encodeURIComponent(c.id)+'?api_key='+encodeURIComponent(getTmdbKey()),muteHttpExceptions:true};});
+  var responses=UrlFetchApp.fetchAll(requests);
+  return candidates.map(function(c,i){
+    var details={};try{if(responses[i].getResponseCode()>=200&&responses[i].getResponseCode()<300)details=JSON.parse(responses[i].getContentText());}catch(e){}
+    return {tmdbId:c.id,title:c.title||details.title||'',year:String(c.release_date||details.release_date||'').slice(0,4),posterPath:c.poster_path||details.poster_path||'',genres:(details.genres||[]).map(function(g){return g.name;}),runtimeMinutes:details.runtime||'',tmdbRating:Number(c.vote_average||details.vote_average||0).toFixed(1),overview:c.overview||details.overview||'',score:0,ratedScore:c._rated?Number(c._rated.score10||0):'',wishlisted:!!c._wishlisted,role:c._aiRole||'',explanation:c._aiExplanation||''};
+  });
+}
+
+function deterministicFallbackCandidates_(source, payload, username, states) {
+  var list=[];
+  if(source){
+    var data=fetchJson_('https://api.themoviedb.org/3/movie/'+encodeURIComponent(source.id)+'/recommendations?api_key='+encodeURIComponent(getTmdbKey()));
+    list=(data.results||[]);
+  }else{
+    var data2=fetchJson_('https://api.themoviedb.org/3/discover/movie?api_key='+encodeURIComponent(getTmdbKey())+'&sort_by=vote_average.desc&vote_count.gte=1200&include_adult=false');
+    list=(data2.results||[]);
+  }
+  var pool=payload.pool||'new', excluded={};(payload.excludeTmdbIds||[]).forEach(function(id){excluded[String(id)]=true;});
+  return list.filter(function(c){var id=String(c.id);if(excluded[id])return false;if(pool==='new'&&states.rated[id])return false;if(pool==='notWishlist'&&(states.rated[id]||states.wished[id]))return false;c._rated=states.rated[id]||null;c._wishlisted=!!states.wished[id];return true;}).slice(0,10);
 }
 
 function hydrateRecommendationMovie_(c) {
-  var details={}; try{ details=fetchJson_('https://api.themoviedb.org/3/movie/'+encodeURIComponent(c.id)+'?api_key='+getTmdbKey()); }catch(e){}
-  return {
-    tmdbId:c.id,title:c.title||details.title||'',year:String(c.release_date||details.release_date||'').slice(0,4),
-    posterPath:c.poster_path||details.poster_path||'',genres:(details.genres||[]).map(function(g){return g.name;}),
-    runtimeMinutes:details.runtime||'',tmdbRating:Number(c.vote_average||details.vote_average||0).toFixed(1),
-    overview:c.overview||details.overview||'',score:c._score||0,ratedScore:c._rated?Number(c._rated.score10||0):'',wishlisted:!!c._wishlisted
-  };
+  return hydrateRecommendationMovies_([c])[0];
 }
 
 function persistRecommendations_(username, payload, source, recommendations, backups, recommendationId) {
@@ -2032,29 +2029,37 @@ function persistRecommendations_(username, payload, source, recommendations, bac
 
 function doGenerateFilmRecommendations_(payload, username) {
   payload=payload||{};
-  var started=Date.now(), bundle=buildRecommendationCandidates_(payload,username), ranked=scoreRecommendationCandidates_(bundle,payload,username);
-  if(ranked.length<5) throw new Error('Not enough eligible movies were found. Try a broader recommendation pool.');
-  var profile=buildFilmTasteProfile_(username), ai=callGeminiRecommendationJury_(ranked,bundle.source,bundle.sourceRating,profile,payload), jury=ai.jury, byId={};
-  ranked.forEach(function(c){byId[String(c.id)]=c;});
-  var selected=[], backupCandidates=[];
-  if(jury && Array.isArray(jury.selected)) jury.selected.forEach(function(x){var c=byId[String(x.id)]; if(c&&!selected.some(function(y){return y.c.id===c.id;})) selected.push({c:c,role:x.role,explanation:x.explanation});});
-  ranked.forEach(function(c){if(selected.length<5&&!selected.some(function(y){return y.c.id===c.id;})) selected.push({c:c}); else if(!selected.some(function(y){return y.c.id===c.id;})) backupCandidates.push(c);});
-  var recs=selected.slice(0,5).map(function(x,i){var r=hydrateRecommendationMovie_(x.c); r.role=x.role||recommendationRole_(i,payload.style); r.explanation=x.explanation||buildRecommendationExplanation_(x.c,bundle.source,profile,i); return r;});
-  // Backups remain lightweight until replacement, reducing generation time.
-  var backups=backupCandidates.slice(0,15).map(function(c){return {tmdbId:c.id,title:c.title,year:String(c.release_date||'').slice(0,4),posterPath:c.poster_path||'',genres:[],runtimeMinutes:'',tmdbRating:Number(c.vote_average||0).toFixed(1),overview:c.overview||'',score:c._score||0,ratedScore:c._rated?Number(c._rated.score10||0):'',wishlisted:!!c._wishlisted};});
-  var recommendationId=Utilities.getUuid(); persistRecommendations_(username,payload,bundle.source,recs,backups,recommendationId);
-  return jsonOut_({recommendationId:recommendationId,source:bundle.source?{tmdbId:bundle.source.id,title:bundle.source.title}:null,profileSummary:{ratingCount:profile.ratingCount,fullCount:profile.fullCount,quickCount:profile.quickCount},aiEnhanced:!!jury,recommendations:recs,diagnostics:{engine:jury?'Gemini AI jury':'Deterministic fallback',candidateCount:ranked.length,aiCandidateCount:Math.min(40,ranked.length),aiAttempted:ai.diagnostic.attempted,aiHttpStatus:ai.diagnostic.httpStatus,aiError:ai.diagnostic.error||'',elapsedMs:Date.now()-started}});
+  var started=Date.now(), mode=payload.sourceMode==='taste'?'taste':'movie', source=null, sourceRating=null;
+  if(mode==='movie'){
+    if(!payload.sourceTmdbId)throw new Error('Choose a source movie.');
+    source=tmdbMovieDetailsForRecommendation_(payload.sourceTmdbId);
+    sourceRating=sourceFilmRatingContext_(username,payload.sourceTmdbId);
+  }
+  var profile=buildFilmTasteProfile_(username), states=ratedAndWishlistIds_(username);
+  var ai=callGeminiMovieGenerator_(source,sourceRating,profile,payload,username,states);
+  var candidates=ai.suggestions?validateGeminiSuggestionsWithTmdb_(ai.suggestions,payload,username,states):[];
+  if(candidates.length<5){
+    var fallback=deterministicFallbackCandidates_(source,payload,username,states), seen={};
+    candidates.forEach(function(c){seen[String(c.id)]=true;});
+    fallback.forEach(function(c){if(candidates.length<10&&!seen[String(c.id)]){seen[String(c.id)]=true;candidates.push(c);}});
+  }
+  if(candidates.length<5)throw new Error('Not enough eligible movies were found. Try a broader recommendation pool.');
+  candidates=candidates.slice(0,10);
+  var hydrated=hydrateRecommendationMovies_(candidates);
+  hydrated.forEach(function(r,i){r.role=r.role||recommendationRole_(i,payload.style);r.explanation=r.explanation||'This is one of the strongest validated matches for your selected recommendation mode.';});
+  var recs=hydrated.slice(0,5), backups=hydrated.slice(5,10);
+  var recommendationId=Utilities.getUuid();persistRecommendations_(username,payload,source,recs,backups,recommendationId);
+  return jsonOut_({recommendationId:recommendationId,source:source?{tmdbId:source.id,title:source.title}:null,profileSummary:{ratingCount:profile.ratingCount,fullCount:profile.fullCount,quickCount:profile.quickCount},aiEnhanced:!!ai.diagnostic.success,recommendations:recs,diagnostics:{engine:ai.diagnostic.success?'Gemini-generated recommendations':'Deterministic fallback',candidateCount:candidates.length,aiCandidateCount:ai.suggestions?ai.suggestions.length:0,validatedCount:candidates.length,backupCount:backups.length,aiAttempted:ai.diagnostic.attempted,aiHttpStatus:ai.diagnostic.httpStatus,aiError:ai.diagnostic.error||'',model:ai.diagnostic.model,elapsedMs:Date.now()-started}});
 }
 
 function doReplaceFilmRecommendation_(payload, username) {
-  var id=String(payload.recommendationId||''), currentId=String(payload.currentTmdbId||''); if(!id) throw new Error('Recommendation session is missing.');
-  var cache=CacheService.getScriptCache(), raw=cache.get('rec_backups_'+id), backups=raw?JSON.parse(raw):[];
-  if(!backups.length) throw new Error('No more backup recommendations are available. Generate a new set.');
-  var next=backups.shift(); cache.put('rec_backups_'+id,JSON.stringify(backups),21600);
-  if(!next.runtimeMinutes || !(next.genres||[]).length){ var c={id:next.tmdbId,title:next.title,release_date:next.year?next.year+'-01-01':'',poster_path:next.posterPath,overview:next.overview,vote_average:next.tmdbRating,_score:next.score,_rated:next.ratedScore!==''?{score10:next.ratedScore}:null,_wishlisted:next.wishlisted}; next=hydrateRecommendationMovie_(c); }
+  var id=String(payload.recommendationId||''),currentId=String(payload.currentTmdbId||'');if(!id)throw new Error('Recommendation session is missing.');
+  var cache=CacheService.getScriptCache(),raw=cache.get('rec_backups_'+id),backups=raw?JSON.parse(raw):[];
+  if(!backups.length)return jsonOut_({exhausted:true});
+  var next=backups.shift();cache.put('rec_backups_'+id,JSON.stringify(backups),21600);
   doRecordRecommendationFeedback_({recommendationId:id,recommendedTmdbId:currentId,action:'replaced'},username);
-  next.role='Replacement Pick'; next.explanation='This was the next strongest eligible match from your recommendation pool.';
-  return jsonOut_({recommendation:next});
+  next.role=next.role||'Replacement Pick';
+  return jsonOut_({recommendation:next,remainingBackups:backups.length,exhausted:false});
 }
 
 function doRecordRecommendationFeedback_(payload, username) {
@@ -2063,3 +2068,32 @@ function doRecordRecommendationFeedback_(payload, username) {
   tab.appendRow(rowForHeader_(FILM_RECOMMENDATION_FEEDBACK_HEADER,{recommendationId:payload.recommendationId||'',user:username,recommendedTmdbId:payload.recommendedTmdbId||'',action:action,createdAt:new Date().toISOString()}));
   return jsonOut_({ok:true});
 }
+
+
+// ══════════════════════════════════════════════════════════════
+//  TV + RESTAURANT RECOMMENDATIONS — GEMINI FIRST, API VALIDATED
+// ══════════════════════════════════════════════════════════════
+function doGetTvRecommendationSources_(username) {
+  var rows=sheetObjects_(getExistingSheet_(TV_SHEET_NAME),TV_HEADER)
+    .filter(function(r){return String(r.user||'').toLowerCase()===String(username||'').toLowerCase();})
+    .map(function(r){return {tmdbTvId:r.tmdbTvId||'',title:r.seriesTitle||'',year:r.seriesYear||'',score10:Number(r.score10||0),type:r.entryType||'season',season:r.seasonNumber||'',genres:r.genres||''};})
+    .sort(function(a,b){return b.score10-a.score10||String(a.title).localeCompare(String(b.title));});
+  var seen={};rows=rows.filter(function(r){var k=String(r.tmdbTvId||r.title).toLowerCase();if(seen[k])return false;seen[k]=true;return true;});
+  return jsonOut_({rows:rows});
+}
+function tvTasteContext_(username){
+  return sheetObjects_(getExistingSheet_(TV_SHEET_NAME),TV_HEADER).filter(function(r){return String(r.user||'').toLowerCase()===String(username||'').toLowerCase();}).sort(function(a,b){return Number(b.score10||0)-Number(a.score10||0);}).slice(0,70).map(function(r){return {title:r.seriesTitle,year:r.seriesYear,type:r.entryType,season:r.seasonNumber,score10:Number(r.score10||0),genres:splitGenres_(r.genres),categories:{plot:r.plot,entertainment:r.entertainment,acting:r.acting,visuals:r.visuals,pacing:r.pacing,emotional:r.emotional},notes:r.overallNotes||''};});
+}
+function tvStates_(username){var rated={},wished={};sheetObjects_(getExistingSheet_(TV_SHEET_NAME),TV_HEADER).forEach(function(r){if(String(r.user||'').toLowerCase()===String(username).toLowerCase()&&r.tmdbTvId)rated[String(r.tmdbTvId)]=r;});sheetObjects_(getExistingSheet_(FUTURE_TV_SHEET_NAME),FUTURE_TV_HEADER).forEach(function(r){if(String(r.user||'').toLowerCase()===String(username).toLowerCase()&&r.tmdbTvId)wished[String(r.tmdbTvId)]=r;});return {rated:rated,wished:wished};}
+function callGeminiGeneric_(kind,prompt){var key=getGeminiKey_(),model='gemini-3.6-flash',diag={attempted:false,success:false,error:key?'':'GEMINI_API_KEY is not configured.',model:model,httpStatus:''};if(!key)return {items:null,diagnostic:diag};diag.attempted=true;try{var res=UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent?key='+encodeURIComponent(key),{method:'post',contentType:'application/json',muteHttpExceptions:true,payload:JSON.stringify({contents:[{parts:[{text:JSON.stringify(prompt)}]}],generationConfig:{responseMimeType:'application/json'}})});diag.httpStatus=res.getResponseCode();if(res.getResponseCode()<200||res.getResponseCode()>=300){diag.error='Gemini returned HTTP '+res.getResponseCode()+': '+String(res.getContentText()||'').slice(0,220);return {items:null,diagnostic:diag};}var data=JSON.parse(res.getContentText()),text=data.candidates&&data.candidates[0]&&data.candidates[0].content&&data.candidates[0].content.parts&&data.candidates[0].content.parts[0].text,parsed=JSON.parse(text||'{}'),items=parsed.recommendations;if(!Array.isArray(items)||!items.length){diag.error='Gemini returned no usable '+kind+' recommendations.';return {items:null,diagnostic:diag};}diag.success=true;diag.error='';return {items:items.slice(0,15),diagnostic:diag};}catch(e){diag.error='Gemini request failed: '+e.message;return {items:null,diagnostic:diag};}}
+function doGenerateTvRecommendations_(payload,username){payload=payload||{};var states=tvStates_(username),source=null;if(payload.sourceMode!=='taste'){if(!payload.sourceTmdbId)throw new Error('Choose a source TV show.');source=fetchJson_('https://api.themoviedb.org/3/tv/'+encodeURIComponent(payload.sourceTmdbId)+'?api_key='+encodeURIComponent(getTmdbKey()));}
+  var exclusions=[];Object.keys(states.rated).forEach(function(id){if(payload.pool!=='all')exclusions.push({id:id,title:states.rated[id].seriesTitle,reason:'rated'});});if(payload.pool==='notWishlist')Object.keys(states.wished).forEach(function(id){exclusions.push({id:id,title:states.wished[id].seriesTitle,reason:'wishlisted'});});(payload.excludeIds||[]).forEach(function(id){exclusions.push({id:id,reason:'already shown'});});
+  var ai=callGeminiGeneric_('TV',{instruction:'Generate exactly 15 real television series recommendations. Use the user\'s actual ratings, category scores, notes, tone, pacing, themes, and viewing experience. Respect exclusions. Return strict JSON only.',mode:payload.sourceMode==='taste'?'overall taste':'source show plus taste',style:payload.style||'balanced',source:source?{title:source.name,year:String(source.first_air_date||'').slice(0,4),overview:source.overview,genres:(source.genres||[]).map(function(g){return g.name;})}:null,history:tvTasteContext_(username),exclusions:exclusions,outputSchema:{recommendations:[{title:'exact series title',year:'first air year',role:'short label',explanation:'specific reason'}]}});
+  if(!ai.items)throw new Error(ai.diagnostic.error||'TV recommendations could not be generated.');var req=ai.items.map(function(x){return {url:'https://api.themoviedb.org/3/search/tv?api_key='+encodeURIComponent(getTmdbKey())+'&query='+encodeURIComponent(x.title)+(x.year?'&first_air_date_year='+encodeURIComponent(x.year):''),muteHttpExceptions:true};}),resp=UrlFetchApp.fetchAll(req),seen={},valid=[];resp.forEach(function(r,i){if(r.getResponseCode()<200||r.getResponseCode()>=300)return;var d=JSON.parse(r.getContentText()),m=(d.results||[])[0];if(!m)return;var id=String(m.id);if(seen[id]||(payload.excludeIds||[]).map(String).indexOf(id)>-1)return;if(payload.pool!=='all'&&states.rated[id])return;if(payload.pool==='notWishlist'&&states.wished[id])return;seen[id]=true;valid.push({tmdbTvId:m.id,title:m.name,year:String(m.first_air_date||'').slice(0,4),posterPath:m.poster_path||'',genres:[],tmdbRating:Number(m.vote_average||0).toFixed(1),role:ai.items[i].role||recommendationRole_(valid.length,payload.style),explanation:ai.items[i].explanation||'',ratedScore:states.rated[id]?Number(states.rated[id].score10||0):'',wishlisted:!!states.wished[id]});});if(valid.length<5)throw new Error('Fewer than five eligible TV recommendations validated. Try a broader pool.');valid=valid.slice(0,10);var id=Utilities.getUuid();CacheService.getScriptCache().put('generic_rec_tv_'+id,JSON.stringify(valid.slice(5)),21600);return jsonOut_({recommendationId:id,recommendations:valid.slice(0,5),profileSummary:{ratingCount:tvTasteContext_(username).length},aiEnhanced:true,diagnostics:{engine:'Gemini-generated TV recommendations',validatedCount:valid.length,backupCount:Math.max(0,valid.length-5),aiCandidateCount:ai.items.length,model:ai.diagnostic.model,aiError:''}});}
+function doGetRestaurantRecommendationSources_(username){var rows=sheetObjects_(getExistingSheet_(RESTAURANTS_SHEET_NAME),RESTAURANTS_HEADER).filter(function(r){return String(r.user||'').toLowerCase()===String(username||'').toLowerCase();}).map(function(r){return {placeId:r.placeId||'',name:r.name||'',city:r.city||'',cuisine:r.cuisine||'',score10:Number(r.score10||0),address:r.address||''};}).sort(function(a,b){return b.score10-a.score10||String(a.name).localeCompare(String(b.name));});return jsonOut_({rows:rows});}
+function restaurantTasteContext_(username){return sheetObjects_(getExistingSheet_(RESTAURANTS_SHEET_NAME),RESTAURANTS_HEADER).filter(function(r){return String(r.user||'').toLowerCase()===String(username||'').toLowerCase();}).sort(function(a,b){return Number(b.score10||0)-Number(a.score10||0);}).slice(0,70).map(function(r){return {name:r.name,city:r.city,cuisine:r.cuisine,price:r.price,score10:Number(r.score10||0),categories:{food:r.food,value:r.value,service:r.service,atmosphere:r.atmosphere,craving:r.craving},notes:r.overallNotes||''};});}
+function restaurantStates_(username){var rated={},wished={};sheetObjects_(getExistingSheet_(RESTAURANTS_SHEET_NAME),RESTAURANTS_HEADER).forEach(function(r){if(String(r.user||'').toLowerCase()===String(username).toLowerCase()&&r.placeId)rated[String(r.placeId)]=r;});sheetObjects_(getExistingSheet_(FUTURE_RESTAURANTS_SHEET_NAME),FUTURE_RESTAURANTS_HEADER).forEach(function(r){if(String(r.user||'').toLowerCase()===String(username).toLowerCase()&&r.placeId)wished[String(r.placeId)]=r;});return {rated:rated,wished:wished};}
+function doGenerateRestaurantRecommendations_(payload,username){payload=payload||{};var history=restaurantTasteContext_(username),states=restaurantStates_(username),source=null;if(payload.sourceMode!=='taste'){source=doGetRestaurantRecommendationSourcesData_(username,payload.sourcePlaceId);if(!source)throw new Error('Choose a source restaurant.');}var defaultCity=payload.city||(source&&source.city)||mostCommonCity_(history);if(!defaultCity)throw new Error('Choose or rate a restaurant with a city before generating restaurant recommendations.');var exclusions=[];Object.keys(states.rated).forEach(function(id){if(payload.pool!=='all')exclusions.push({name:states.rated[id].name,city:states.rated[id].city,reason:'rated'});});if(payload.pool==='notWishlist')Object.keys(states.wished).forEach(function(id){exclusions.push({name:states.wished[id].name,city:states.wished[id].city,reason:'wishlisted'});});var ai=callGeminiGeneric_('restaurant',{instruction:'Generate exactly 15 real operating restaurant recommendations in the requested city or metro. Use cuisine, food quality, value, service, atmosphere, craving, price, notes, and the user\'s actual history. Respect exclusions. Return strict JSON only.',mode:payload.sourceMode==='taste'?'overall restaurant taste':'source restaurant plus taste',style:payload.style||'balanced',city:defaultCity,source:source,history:history,exclusions:exclusions,outputSchema:{recommendations:[{name:'exact restaurant name',city:'city',role:'short label',explanation:'specific reason'}]}});if(!ai.items)throw new Error(ai.diagnostic.error||'Restaurant recommendations could not be generated.');var key=getPlacesKey(),req=ai.items.map(function(x){return {url:'https://maps.googleapis.com/maps/api/place/textsearch/json?query='+encodeURIComponent(x.name+' restaurant '+(x.city||defaultCity))+'&type=restaurant&key='+encodeURIComponent(key),muteHttpExceptions:true};}),resp=UrlFetchApp.fetchAll(req),seen={},valid=[];resp.forEach(function(r,i){if(r.getResponseCode()<200||r.getResponseCode()>=300)return;var d=JSON.parse(r.getContentText()),m=(d.results||[])[0];if(!m)return;var id=String(m.place_id);if(seen[id])return;if(payload.pool!=='all'&&states.rated[id])return;if(payload.pool==='notWishlist'&&states.wished[id])return;seen[id]=true;var parts=String(m.formatted_address||'').split(',');valid.push({placeId:id,name:m.name,address:m.formatted_address||'',city:parts.length>1?parts[parts.length-2].trim():defaultCity,cuisine:'',price:m.price_level===undefined?'':['','$','$$','$$$','$$$$'][m.price_level],googleRating:m.rating||'',photo:'',role:ai.items[i].role||recommendationRole_(valid.length,payload.style),explanation:ai.items[i].explanation||'',ratedScore:states.rated[id]?Number(states.rated[id].score10||0):'',wishlisted:!!states.wished[id]});});if(valid.length<5)throw new Error('Fewer than five eligible restaurant recommendations validated. Try a broader pool or another city.');valid=valid.slice(0,10);var id=Utilities.getUuid();CacheService.getScriptCache().put('generic_rec_restaurant_'+id,JSON.stringify(valid.slice(5)),21600);return jsonOut_({recommendationId:id,recommendations:valid.slice(0,5),profileSummary:{ratingCount:history.length},aiEnhanced:true,diagnostics:{engine:'Gemini-generated restaurant recommendations',validatedCount:valid.length,backupCount:Math.max(0,valid.length-5),aiCandidateCount:ai.items.length,model:ai.diagnostic.model,aiError:'',city:defaultCity}});}
+function doGetRestaurantRecommendationSourcesData_(username,placeId){return sheetObjects_(getExistingSheet_(RESTAURANTS_SHEET_NAME),RESTAURANTS_HEADER).filter(function(r){return String(r.user||'').toLowerCase()===String(username||'').toLowerCase()&&String(r.placeId||'')===String(placeId||'');})[0]||null;}
+function mostCommonCity_(history){var c={};(history||[]).forEach(function(r){if(r.city)c[r.city]=(c[r.city]||0)+1;});return Object.keys(c).sort(function(a,b){return c[b]-c[a];})[0]||'';}
+function doReplaceGenericRecommendation_(payload,username,kind){var id=String(payload.recommendationId||'');if(!id)throw new Error('Recommendation session is missing.');var cache=CacheService.getScriptCache(),key='generic_rec_'+kind+'_'+id,raw=cache.get(key),arr=raw?JSON.parse(raw):[];if(!arr.length)return jsonOut_({exhausted:true});var next=arr.shift();cache.put(key,JSON.stringify(arr),21600);return jsonOut_({recommendation:next,remainingBackups:arr.length,exhausted:false});}
