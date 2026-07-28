@@ -327,4 +327,30 @@ All recommendation controls reuse the existing recommendation CSS and theme vari
 
 ### Deployment for v8
 
-Replace both `index.html` and `Code.gs`, save the Apps Script project, and deploy a new web-app version. No additional spreadsheet tabs or columns are required for the TV and restaurant recommendation rooms, so `setupActiveSheetTabs` does not need to be rerun when upgrading from v7.
+Replace both `index.html` and `Code.gs`, save the Apps Script project, and deploy a new web-app version. In v8, TV and restaurant recommendations did not yet use persistent recommendation tabs. The v9 learning update below supersedes that behavior and requires one `setupActiveSheetTabs` run.
+
+
+## Persistent TV and Restaurant Recommendation Learning — v9
+
+TV and Le Guide recommendations now mirror the persistent Film recommendation pattern.
+
+New tabs created by `setupActiveSheetTabs`:
+
+- `Recommendations-TV`
+- `Recommendation-Feedback-TV`
+- `Recommendations-Restaurants`
+- `Recommendation-Feedback-Restaurants`
+
+Each generated batch stores all validated recommendations, including the five initially shown and the backup recommendations. User actions are stored permanently:
+
+- Added to Wishlist
+- Replaced
+- Not Interested
+
+Future Gemini prompts include the logged-in user's recent recommendation feedback so later TV and restaurant suggestions can avoid repeatedly rejected titles and learn from accepted recommendations. Recommendation history remains user-specific.
+
+Run `setupActiveSheetTabs` once after deploying v9 to create and format the four new tabs.
+
+### Theme Search Cleanup
+
+Gold and Light/Cream themes no longer inherit Classic green or Le Guide red glow effects behind search controls. The search fields retain the active theme's surface and border styling without colored halos.
