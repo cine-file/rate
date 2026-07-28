@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 //  CINE-FILE — Google Apps Script
-//  Version: 2026.07.27-stats-genre-bars.2
+//  Version: 2026.07.27-recommendation-diagnostics.4
 //  Runtime: GitHub Pages frontend + Apps Script JSON backend
 //
 //  Version notes:
@@ -13,11 +13,12 @@
 //  - tv-season-ratings.1: adds TV season and optional overall-series ratings.
 //  - stats-search-delete.1: raw-score summaries, advanced search, secure rating deletion, and distribution-ready data.
 //  - stats-genre-bars.2: exposes film genres to the stats API for cross-user genre filtering.
+//  - recommendation-diagnostics.4: strengthens recommendation candidates, uses source category scores/notes in Gemini, exposes safe AI diagnostics, and defers backup hydration for faster generation.
 //
 //  Original by friend, restaurant functions added by Claude
 // ─────────────────────────────────────────────────────────────
 
-const BACKEND_VERSION = '2026.07.27-stats-genre-bars.2';
+const BACKEND_VERSION = '2026.07.27-recommendation-diagnostics.4';
 const SESSION_TTL_SECONDS = 6 * 60 * 60;
 
 const FILMS_SHEET_NAME = 'Database-Films';
@@ -1845,6 +1846,23 @@ function buildFilmTasteProfile_(username) {
   };
 }
 
+function sourceFilmRatingContext_(username, tmdbId) {
+  var rows = sheetObjects_(getExistingSheet_(FILMS_SHEET_NAME), FILMS_HEADER);
+  var userKey = String(username || '').toLowerCase();
+  var row = rows.filter(function(r){
+    return String(r.user || '').toLowerCase() === userKey && String(r.tmdbId || '') === String(tmdbId || '');
+  })[0];
+  if (!row) return null;
+  return {
+    score10:Number(row.score10 || 0), raw100:normalizedScore100_(row), ratingType:filmRatingType_(row),
+    plot:row.plot, entertainment:row.entertainment, acting:row.acting, visuals:row.visuals,
+    pacing:row.pacing, emotional:row.emotional,
+    plotNotes:row.plotNotes || '', entNotes:row.entNotes || '', actingNotes:row.actingNotes || '',
+    visualsNotes:row.visualsNotes || '', pacingNotes:row.pacingNotes || '', emotionalNotes:row.emotionalNotes || '',
+    overallNotes:row.overallNotes || '', director:row.director || '', genres:splitGenres_(row.genres), runtimeMinutes:row.runtimeMinutes || ''
+  };
+}
+
 function tmdbMovieDetailsForRecommendation_(id) {
   var url = 'https://api.themoviedb.org/3/movie/' + encodeURIComponent(id) + '?api_key=' + getTmdbKey() + '&append_to_response=keywords,recommendations,similar,credits';
   return fetchJson_(url);
@@ -1865,25 +1883,43 @@ function tmdbDiscover_(params, pages) {
 
 function buildRecommendationCandidates_(payload, username) {
   var mode = payload.sourceMode === 'taste' ? 'taste' : 'movie';
-  var source = null, candidates = [], seen = {};
-  function add(list, originWeight){ (list || []).forEach(function(r){ if(!r || !r.id || seen[r.id]) return; seen[r.id]=true; r._originWeight=originWeight||0; candidates.push(r); }); }
+  var source = null, sourceRating = null, candidates = [], seen = {};
+  function add(list, originWeight, origin){ (list || []).forEach(function(r){
+    if(!r || !r.id) return;
+    if(seen[r.id]) { seen[r.id]._originWeight=Math.max(seen[r.id]._originWeight||0,originWeight||0); if(origin) seen[r.id]._origins.push(origin); return; }
+    r._originWeight=originWeight||0; r._origins=origin?[origin]:[]; seen[r.id]=r; candidates.push(r);
+  }); }
   if (mode === 'movie') {
     if (!payload.sourceTmdbId) throw new Error('Choose a source movie.');
     source = tmdbMovieDetailsForRecommendation_(payload.sourceTmdbId);
-    add(source.recommendations && source.recommendations.results, 32);
-    add(source.similar && source.similar.results, 28);
-    var genreIds = (source.genres || []).map(function(g){return g.id;}).join(',');
-    if (genreIds) add(tmdbDiscover_({with_genres:genreIds, sort_by:'vote_average.desc', 'vote_count.gte':250}, 2), 18);
+    sourceRating = sourceFilmRatingContext_(username, payload.sourceTmdbId);
+    add(source.recommendations && source.recommendations.results, 34, 'TMDB recommendations');
+    add(source.similar && source.similar.results, 30, 'TMDB similar');
+    var genreIds = (source.genres || []).map(function(g){return g.id;});
+    if (genreIds.length) {
+      add(tmdbDiscover_({with_genres:genreIds.join('|'), sort_by:'vote_average.desc', 'vote_count.gte':350}, 2), 17, 'shared genre');
+      genreIds.forEach(function(id){ add(tmdbDiscover_({with_genres:id, sort_by:'vote_average.desc', 'vote_count.gte':500}, 1), 12, 'genre branch'); });
+    }
+    var keywordIds=(source.keywords && (source.keywords.keywords || source.keywords.results) || []).slice(0,8).map(function(k){return k.id;});
+    keywordIds.slice(0,5).forEach(function(id){ add(tmdbDiscover_({with_keywords:id, sort_by:'vote_average.desc', 'vote_count.gte':150}, 1), 24, 'shared keyword'); });
+    if(keywordIds.length>1) add(tmdbDiscover_({with_keywords:keywordIds.slice(0,4).join('|'),sort_by:'popularity.desc','vote_count.gte':100},2),20,'keyword blend');
     var director = (source.credits && source.credits.crew || []).filter(function(c){return c.job==='Director';})[0];
-    if (director) add(tmdbDiscover_({with_crew:director.id, sort_by:'popularity.desc'}, 1), 20);
+    if (director) add(tmdbDiscover_({with_crew:director.id, sort_by:'vote_average.desc','vote_count.gte':100}, 1), 25, 'same director');
+    (source.credits && source.credits.cast || []).slice(0,3).forEach(function(person){
+      add(tmdbDiscover_({with_cast:person.id, sort_by:'vote_average.desc','vote_count.gte':250},1),10,'lead cast');
+    });
   } else {
     var profile = buildFilmTasteProfile_(username);
     var genreMap = tmdbGenreMap_();
-    var ids = profile.topGenres.slice(0,3).map(function(g){return genreMap[String(g.name).toLowerCase()] || '';}).filter(Boolean).join(',');
-    if (ids) add(tmdbDiscover_({with_genres:ids, sort_by:'vote_average.desc', 'vote_count.gte':300}, 3), 22);
-    add(tmdbDiscover_({sort_by:'vote_average.desc', 'vote_count.gte':1000}, 2), 8);
+    var ids = profile.topGenres.slice(0,4).map(function(g){return genreMap[String(g.name).toLowerCase()] || '';}).filter(Boolean);
+    if (ids.length) add(tmdbDiscover_({with_genres:ids.join('|'), sort_by:'vote_average.desc', 'vote_count.gte':400}, 3), 22, 'taste genres');
+    ids.forEach(function(id){add(tmdbDiscover_({with_genres:id,sort_by:'vote_average.desc','vote_count.gte':700},1),15,'genre favorite');});
+    profile.topDirectors.slice(0,4).forEach(function(d){
+      try { var search=fetchJson_('https://api.themoviedb.org/3/search/person?api_key='+getTmdbKey()+'&query='+encodeURIComponent(d.name)); var person=(search.results||[])[0]; if(person) add(tmdbDiscover_({with_crew:person.id,sort_by:'vote_average.desc','vote_count.gte':100},1),18,'favorite director'); } catch(e) {}
+    });
+    add(tmdbDiscover_({sort_by:'vote_average.desc', 'vote_count.gte':1500}, 2), 8, 'quality baseline');
   }
-  return { source: source, candidates: candidates.slice(0,90) };
+  return { source: source, sourceRating:sourceRating, candidates: candidates.slice(0,140) };
 }
 
 function tmdbGenreMap_() {
@@ -1910,6 +1946,7 @@ function scoreRecommendationCandidates_(bundle, payload, username) {
     return true;
   }).map(function(c){
     var score=Number(c._originWeight||0);
+    score += Math.min(10, ((c._origins||[]).length-1)*2.5);
     var cGenreIds=c.genre_ids||[];
     score += cGenreIds.filter(function(id){return sourceGenres.indexOf(id)>-1;}).length*7;
     var names=[]; Object.keys(genreMap).forEach(function(name){ var id=tmdbGenreMapCached_()[name]; if(cGenreIds.indexOf(id)>-1){score+=genreMap[name];names.push(name);} });
@@ -1942,22 +1979,35 @@ function buildRecommendationExplanation_(candidate, source, profile, index) {
   return bits.join(' ');
 }
 
-function callGeminiRecommendationJury_(candidates, source, profile, payload) {
-  var key=getGeminiKey_(); if(!key) return null;
-  var compact=candidates.slice(0,18).map(function(c){return {id:c.id,title:c.title,year:String(c.release_date||'').slice(0,4),genres:c._tasteGenres,score:c._score,overview:String(c.overview||'').slice(0,260)};});
+function callGeminiRecommendationJury_(candidates, source, sourceRating, profile, payload) {
+  var key=getGeminiKey_();
+  var diagnostic={attempted:false,success:false,error:key?'':'GEMINI_API_KEY is not configured.',httpStatus:'',model:'gemini-2.5-flash'};
+  if(!key) return {jury:null,diagnostic:diagnostic};
+  diagnostic.attempted=true;
+  var compact=candidates.slice(0,40).map(function(c){return {
+    id:c.id,title:c.title,year:String(c.release_date||'').slice(0,4),tmdbGenres:c.genre_ids||[],tasteGenres:c._tasteGenres,
+    deterministicScore:c._score,origins:c._origins||[],voteAverage:c.vote_average,voteCount:c.vote_count,
+    popularity:c.popularity,overview:String(c.overview||'').slice(0,420)
+  };});
   var prompt={
-    instruction:'Select exactly 5 movie IDs from candidates and rank 10 backup IDs. Never invent a title or ID. Favor diversity while respecting the requested style. Return strict JSON only.',
-    source:source?{id:source.id,title:source.title,genres:(source.genres||[]).map(function(g){return g.name;})}:null,
-    tasteProfile:profile, style:payload.style||'balanced', candidates:compact,
-    outputSchema:{selected:[{id:'number',role:'short label',explanation:'one or two sentences'}],backups:['number']}
+    instruction:'Act as a rigorous movie recommendation jury. Select exactly 5 movie IDs only from candidates and rank 10 backup IDs. Do not preserve the deterministic order unless justified. Reject superficial genre-only matches. Prioritize the viewing experience, themes, tone, structure, atmosphere, pacing, emotional payoff, scale, and the user’s actual category scores and notes. Favor five meaningfully distinct but defensible recommendations. Never invent a title or ID. Return strict JSON only.',
+    source:source?{id:source.id,title:source.title,overview:source.overview||'',genres:(source.genres||[]).map(function(g){return g.name;}),keywords:(source.keywords&&(source.keywords.keywords||source.keywords.results)||[]).slice(0,12).map(function(k){return k.name;}),director:((source.credits&&source.credits.crew||[]).filter(function(c){return c.job==='Director';})[0]||{}).name||'',runtime:source.runtime||''}:null,
+    sourceUserRating:sourceRating,
+    tasteProfile:profile, style:payload.style||'balanced', pool:payload.pool||'new', candidates:compact,
+    outputSchema:{selected:[{id:'number',role:'short label',explanation:'one or two specific sentences tied to the source rating and taste profile'}],backups:['number']}
   };
   try {
-    var url='https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key='+encodeURIComponent(key);
-    var res=UrlFetchApp.fetch(url,{method:'post',contentType:'application/json',muteHttpExceptions:true,payload:JSON.stringify({contents:[{parts:[{text:JSON.stringify(prompt)}]}],generationConfig:{responseMimeType:'application/json',temperature:0.35}})});
-    if(res.getResponseCode()<200||res.getResponseCode()>=300) return null;
+    var url='https://generativelanguage.googleapis.com/v1beta/models/'+diagnostic.model+':generateContent?key='+encodeURIComponent(key);
+    var res=UrlFetchApp.fetch(url,{method:'post',contentType:'application/json',muteHttpExceptions:true,payload:JSON.stringify({contents:[{parts:[{text:JSON.stringify(prompt)}]}],generationConfig:{responseMimeType:'application/json',temperature:0.45}})});
+    diagnostic.httpStatus=res.getResponseCode();
+    if(res.getResponseCode()<200||res.getResponseCode()>=300){ diagnostic.error='Gemini returned HTTP '+res.getResponseCode()+': '+String(res.getContentText()||'').slice(0,180); return {jury:null,diagnostic:diagnostic}; }
     var data=JSON.parse(res.getContentText()), text=data.candidates&&data.candidates[0]&&data.candidates[0].content&&data.candidates[0].content.parts&&data.candidates[0].content.parts[0].text;
-    return text?JSON.parse(text):null;
-  } catch(e) { return null; }
+    if(!text){diagnostic.error='Gemini returned no recommendation JSON.';return {jury:null,diagnostic:diagnostic};}
+    var jury=JSON.parse(text);
+    if(!jury||!Array.isArray(jury.selected)){diagnostic.error='Gemini response did not match the required schema.';return {jury:null,diagnostic:diagnostic};}
+    diagnostic.success=true; diagnostic.error='';
+    return {jury:jury,diagnostic:diagnostic};
+  } catch(e) { diagnostic.error='Gemini request failed: '+e.message; return {jury:null,diagnostic:diagnostic}; }
 }
 
 function hydrateRecommendationMovie_(c) {
@@ -1980,16 +2030,19 @@ function persistRecommendations_(username, payload, source, recommendations, bac
 }
 
 function doGenerateFilmRecommendations_(payload, username) {
-  payload=payload||{}; var bundle=buildRecommendationCandidates_(payload,username), ranked=scoreRecommendationCandidates_(bundle,payload,username);
+  payload=payload||{};
+  var started=Date.now(), bundle=buildRecommendationCandidates_(payload,username), ranked=scoreRecommendationCandidates_(bundle,payload,username);
   if(ranked.length<5) throw new Error('Not enough eligible movies were found. Try a broader recommendation pool.');
-  var profile=buildFilmTasteProfile_(username), jury=callGeminiRecommendationJury_(ranked,bundle.source,profile,payload), byId={}; ranked.forEach(function(c){byId[String(c.id)]=c;});
+  var profile=buildFilmTasteProfile_(username), ai=callGeminiRecommendationJury_(ranked,bundle.source,bundle.sourceRating,profile,payload), jury=ai.jury, byId={};
+  ranked.forEach(function(c){byId[String(c.id)]=c;});
   var selected=[], backupCandidates=[];
   if(jury && Array.isArray(jury.selected)) jury.selected.forEach(function(x){var c=byId[String(x.id)]; if(c&&!selected.some(function(y){return y.c.id===c.id;})) selected.push({c:c,role:x.role,explanation:x.explanation});});
   ranked.forEach(function(c){if(selected.length<5&&!selected.some(function(y){return y.c.id===c.id;})) selected.push({c:c}); else if(!selected.some(function(y){return y.c.id===c.id;})) backupCandidates.push(c);});
   var recs=selected.slice(0,5).map(function(x,i){var r=hydrateRecommendationMovie_(x.c); r.role=x.role||recommendationRole_(i,payload.style); r.explanation=x.explanation||buildRecommendationExplanation_(x.c,bundle.source,profile,i); return r;});
-  var backups=backupCandidates.slice(0,15).map(hydrateRecommendationMovie_);
+  // Backups remain lightweight until replacement, reducing generation time.
+  var backups=backupCandidates.slice(0,15).map(function(c){return {tmdbId:c.id,title:c.title,year:String(c.release_date||'').slice(0,4),posterPath:c.poster_path||'',genres:[],runtimeMinutes:'',tmdbRating:Number(c.vote_average||0).toFixed(1),overview:c.overview||'',score:c._score||0,ratedScore:c._rated?Number(c._rated.score10||0):'',wishlisted:!!c._wishlisted};});
   var recommendationId=Utilities.getUuid(); persistRecommendations_(username,payload,bundle.source,recs,backups,recommendationId);
-  return jsonOut_({recommendationId:recommendationId,source:bundle.source?{tmdbId:bundle.source.id,title:bundle.source.title}:null,profileSummary:{ratingCount:profile.ratingCount,fullCount:profile.fullCount,quickCount:profile.quickCount},aiEnhanced:!!jury,recommendations:recs});
+  return jsonOut_({recommendationId:recommendationId,source:bundle.source?{tmdbId:bundle.source.id,title:bundle.source.title}:null,profileSummary:{ratingCount:profile.ratingCount,fullCount:profile.fullCount,quickCount:profile.quickCount},aiEnhanced:!!jury,recommendations:recs,diagnostics:{engine:jury?'Gemini AI jury':'Deterministic fallback',candidateCount:ranked.length,aiCandidateCount:Math.min(40,ranked.length),aiAttempted:ai.diagnostic.attempted,aiHttpStatus:ai.diagnostic.httpStatus,aiError:ai.diagnostic.error||'',elapsedMs:Date.now()-started}});
 }
 
 function doReplaceFilmRecommendation_(payload, username) {
@@ -1997,6 +2050,7 @@ function doReplaceFilmRecommendation_(payload, username) {
   var cache=CacheService.getScriptCache(), raw=cache.get('rec_backups_'+id), backups=raw?JSON.parse(raw):[];
   if(!backups.length) throw new Error('No more backup recommendations are available. Generate a new set.');
   var next=backups.shift(); cache.put('rec_backups_'+id,JSON.stringify(backups),21600);
+  if(!next.runtimeMinutes || !(next.genres||[]).length){ var c={id:next.tmdbId,title:next.title,release_date:next.year?next.year+'-01-01':'',poster_path:next.posterPath,overview:next.overview,vote_average:next.tmdbRating,_score:next.score,_rated:next.ratedScore!==''?{score10:next.ratedScore}:null,_wishlisted:next.wishlisted}; next=hydrateRecommendationMovie_(c); }
   doRecordRecommendationFeedback_({recommendationId:id,recommendedTmdbId:currentId,action:'replaced'},username);
   next.role='Replacement Pick'; next.explanation='This was the next strongest eligible match from your recommendation pool.';
   return jsonOut_({recommendation:next});
