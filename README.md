@@ -197,7 +197,7 @@ Restaurant thumbnails are fetched server-side and returned as small data URLs so
 Run `setupActiveSheetTabs` when setting up the active tabs, after deploying a version that adds new tabs, rebuilding summary tabs, or repairing formatting. This TV version creates `Database-TV`, `Summary-TV`, and `Future-TV`. A normal frontend-only change does not require it. This version changes `Code.gs` so Film group summaries include genre data; deploy a new Apps Script web-app version for genre filtering to work across group and head-to-head Film stats. This update changes both `index.html` and `Code.gs`; deploy a new Apps Script version after pasting the backend. No new sheet tabs or setup run are required.
 ## Film Recommendations
 
-Film Wishlist now includes an additive recommendation room. Existing Film, TV, Restaurant, Wishlist, Stats, theme, rating, advanced-search, and deletion behavior remains in place.
+Film Wishlist now includes an additive recommendation room below the Saved Films to Watch list. Existing Film, TV, Restaurant, Wishlist, Stats, theme, rating, advanced-search, and deletion behavior remains in place.
 
 Recommendation modes:
 
@@ -216,7 +216,7 @@ Recommendation styles:
 - Hidden Gems
 - Something Different
 
-The backend builds a validated candidate pool from TMDB, scores candidates using the user's genres, directors, decades, runtimes, rating strength, and source-film similarity, and returns five films plus stored backups. Replace uses a backup without regenerating the whole set. Add to Wishlist uses the existing `Future-Films` flow.
+The backend builds a validated candidate pool from TMDB recommendations, similar films, separate genre branches, source keywords, director work, lead-cast work, and taste-profile discovery. It scores candidates using the user's genres, directors, decades, runtimes, rating strength, and source-film similarity, then returns five films plus stored backups. Replace uses a backup without regenerating the whole set. Backup metadata is hydrated only when used, reducing initial generation time. Add to Wishlist uses the existing `Future-Films` flow.
 
 New sheet tabs:
 
@@ -227,7 +227,7 @@ Run `setupActiveSheetTabs` once after deploying this version to create and forma
 
 ### Optional AI Jury
 
-Set the optional Apps Script property `GEMINI_API_KEY` to enable the Gemini ranking jury. The AI may select and explain recommendations only from the TMDB-validated candidate list. If this property is absent or the AI call fails, the deterministic taste-ranking engine still returns recommendations.
+Set the optional Apps Script property `GEMINI_API_KEY` to enable the Gemini ranking jury. The AI may select and explain recommendations only from the TMDB-validated candidate list. For source-movie recommendations, the jury receives the user's actual overall score, category scores, category notes, overall notes, source keywords, director, genres, and runtime. The website displays whether Gemini ran, whether deterministic fallback was used, the eligible candidate count, and a safe AI error when applicable. If this property is absent or the AI call fails, the deterministic taste-ranking engine still returns recommendations.
 
 ### Deployment for This Version
 
@@ -237,3 +237,12 @@ Set the optional Apps Script property `GEMINI_API_KEY` to enable the Gemini rank
 4. Optionally add `GEMINI_API_KEY` in Apps Script Project Settings.
 5. Save and deploy a new web-app version.
 6. Run `setupActiveSheetTabs` once.
+
+
+### Recommendation Diagnostics Update
+
+- The Generate Film Recommendations control appears below the saved-film list.
+- All diagnostic and recommendation elements use the existing theme variables and follow Gold, Light, and Classic schemes.
+- Results identify `Gemini AI jury` or `Deterministic fallback`.
+- Safe diagnostics show candidate counts and Gemini failure details without exposing the API key.
+- This update changes both `index.html` and `Code.gs`; deploy a new Apps Script web-app version. Existing recommendation sheet tabs do not need to be recreated if they already exist.
