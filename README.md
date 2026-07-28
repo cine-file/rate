@@ -195,3 +195,45 @@ Restaurant thumbnails are fetched server-side and returned as small data URLs so
 7. Confirm `CONFIG.GAS_URL` in `index.html` points to the deployed `/exec` URL.
 
 Run `setupActiveSheetTabs` when setting up the active tabs, after deploying a version that adds new tabs, rebuilding summary tabs, or repairing formatting. This TV version creates `Database-TV`, `Summary-TV`, and `Future-TV`. A normal frontend-only change does not require it. This version changes `Code.gs` so Film group summaries include genre data; deploy a new Apps Script web-app version for genre filtering to work across group and head-to-head Film stats. This update changes both `index.html` and `Code.gs`; deploy a new Apps Script version after pasting the backend. No new sheet tabs or setup run are required.
+## Film Recommendations
+
+Film Wishlist now includes an additive recommendation room. Existing Film, TV, Restaurant, Wishlist, Stats, theme, rating, advanced-search, and deletion behavior remains in place.
+
+Recommendation modes:
+
+- **Based on a Movie** uses one of the current user's rated films as the source.
+- **Based on My Taste** uses the user's complete film-rating history without requiring a source movie.
+
+Recommendation pools:
+
+- **New to Me** excludes films the user has already rated.
+- **Not Rated or Wishlisted** excludes both rated films and existing wishlist films.
+- **Include Rated Movies** permits previously rated films and labels the user's score.
+
+Recommendation styles:
+
+- Balanced
+- Hidden Gems
+- Something Different
+
+The backend builds a validated candidate pool from TMDB, scores candidates using the user's genres, directors, decades, runtimes, rating strength, and source-film similarity, and returns five films plus stored backups. Replace uses a backup without regenerating the whole set. Add to Wishlist uses the existing `Future-Films` flow.
+
+New sheet tabs:
+
+- `Recommendations-Films` records displayed recommendation sets and explanations.
+- `Recommendation-Feedback` records actions such as add to wishlist, replace, and not interested.
+
+Run `setupActiveSheetTabs` once after deploying this version to create and format the two new tabs.
+
+### Optional AI Jury
+
+Set the optional Apps Script property `GEMINI_API_KEY` to enable the Gemini ranking jury. The AI may select and explain recommendations only from the TMDB-validated candidate list. If this property is absent or the AI call fails, the deterministic taste-ranking engine still returns recommendations.
+
+### Deployment for This Version
+
+1. Replace GitHub `index.html`.
+2. Replace the version-control copy of `Code.gs`.
+3. Paste `Code.gs` into the Apps Script project.
+4. Optionally add `GEMINI_API_KEY` in Apps Script Project Settings.
+5. Save and deploy a new web-app version.
+6. Run `setupActiveSheetTabs` once.
