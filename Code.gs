@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 //  CINE-FILE — Google Apps Script
-//  Version: 2026.07.27-cross-category-recommendations.8
+//  Version: 2026.07.28-cross-category-learning.9
 //  Runtime: GitHub Pages frontend + Apps Script JSON backend
 //
 //  Version notes:
@@ -17,11 +17,12 @@
 //  - gemini-3.6.5: migrates the optional AI jury to Gemini 3.6 Flash and removes deprecated sampling parameters.
 //  - ai-first-recommendations.6: Gemini proposes titles first; TMDB only validates and enriches 10 eligible movies per batch, with 5 visible and 5 backups.
 //  - cross-category-recommendations.8: adds matching Gemini-first recommendation rooms for TV and restaurants, validated by TMDB and Google Places.
+//  - cross-category-learning.9: persists TV and restaurant recommendation sessions and feedback, feeds prior actions back into future Gemini prompts, and removes off-theme search glows.
 //
 //  Original by friend, restaurant functions added by Claude
 // ─────────────────────────────────────────────────────────────
 
-const BACKEND_VERSION = '2026.07.27-cross-category-recommendations.8';
+const BACKEND_VERSION = '2026.07.28-cross-category-learning.9';
 const SESSION_TTL_SECONDS = 6 * 60 * 60;
 
 const FILMS_SHEET_NAME = 'Database-Films';
@@ -35,6 +36,10 @@ const TV_SUMMARY_SHEET_NAME = 'Summary-TV';
 const FUTURE_TV_SHEET_NAME = 'Future-TV';
 const FILM_RECOMMENDATIONS_SHEET_NAME = 'Recommendations-Films';
 const FILM_RECOMMENDATION_FEEDBACK_SHEET_NAME = 'Recommendation-Feedback';
+const TV_RECOMMENDATIONS_SHEET_NAME = 'Recommendations-TV';
+const TV_RECOMMENDATION_FEEDBACK_SHEET_NAME = 'Recommendation-Feedback-TV';
+const RESTAURANT_RECOMMENDATIONS_SHEET_NAME = 'Recommendations-Restaurants';
+const RESTAURANT_RECOMMENDATION_FEEDBACK_SHEET_NAME = 'Recommendation-Feedback-Restaurants';
 
 const FILM_SUMMARY_BASE_COLUMNS = ['Title','Year','Genre','Director','Movie length','RT Audience','IMDb'];
 const FILM_SUMMARY_AVERAGE_COLUMN = 'Average Rating';
@@ -98,6 +103,16 @@ const FILM_RECOMMENDATIONS_HEADER = [
 const FILM_RECOMMENDATION_FEEDBACK_HEADER = [
   'recommendationId','user','recommendedTmdbId','action','createdAt'
 ];
+
+const GENERIC_RECOMMENDATIONS_HEADER = [
+  'recommendationId','user','sourceMode','sourceId','sourceTitle','pool','style','category',
+  'recommendedId','recommendedTitle','rank','role','explanation','yearOrCity','metadata','createdAt','status'
+];
+
+const GENERIC_RECOMMENDATION_FEEDBACK_HEADER = [
+  'recommendationId','user','category','recommendedId','action','createdAt'
+];
+
 
 function getScriptProps() {
   return PropertiesService.getScriptProperties();
@@ -305,6 +320,8 @@ function doPost(e) {
     if (action === 'getRestaurantRecommendationSources') return doGetRestaurantRecommendationSources_(username);
     if (action === 'generateRestaurantRecommendations') return doGenerateRestaurantRecommendations_(d.payload || d, username);
     if (action === 'replaceRestaurantRecommendation') return doReplaceGenericRecommendation_(d.payload || d, username, 'restaurant');
+    if (action === 'recordTvRecommendationFeedback') return doRecordGenericRecommendationFeedback_(d.payload || d, username, 'tv');
+    if (action === 'recordRestaurantRecommendationFeedback') return doRecordGenericRecommendationFeedback_(d.payload || d, username, 'restaurant');
     if (action === 'searchTv')                return doSearchTv_(d);
     if (action === 'getTvDetails')            return doGetTvDetails_(d);
     if (action === 'saveTvRating')            return doSaveTvRating_(d.payload || d, username);
@@ -1767,6 +1784,10 @@ function setupActiveSheetTabs() {
   var futureTv = getOrCreateSheet_(FUTURE_TV_SHEET_NAME, FUTURE_TV_HEADER);
   var filmRecommendations = getOrCreateSheet_(FILM_RECOMMENDATIONS_SHEET_NAME, FILM_RECOMMENDATIONS_HEADER);
   var recommendationFeedback = getOrCreateSheet_(FILM_RECOMMENDATION_FEEDBACK_SHEET_NAME, FILM_RECOMMENDATION_FEEDBACK_HEADER);
+  var tvRecommendations = getOrCreateSheet_(TV_RECOMMENDATIONS_SHEET_NAME, GENERIC_RECOMMENDATIONS_HEADER);
+  var tvRecommendationFeedback = getOrCreateSheet_(TV_RECOMMENDATION_FEEDBACK_SHEET_NAME, GENERIC_RECOMMENDATION_FEEDBACK_HEADER);
+  var restaurantRecommendations = getOrCreateSheet_(RESTAURANT_RECOMMENDATIONS_SHEET_NAME, GENERIC_RECOMMENDATIONS_HEADER);
+  var restaurantRecommendationFeedback = getOrCreateSheet_(RESTAURANT_RECOMMENDATION_FEEDBACK_SHEET_NAME, GENERIC_RECOMMENDATION_FEEDBACK_HEADER);
   formatSheetAsTable_(filmDb);
   formatSheetAsTable_(restaurantDb);
   formatSheetAsTable_(futureFilms);
@@ -1775,6 +1796,10 @@ function setupActiveSheetTabs() {
   formatSheetAsTable_(futureTv);
   formatSheetAsTable_(filmRecommendations);
   formatSheetAsTable_(recommendationFeedback);
+  formatSheetAsTable_(tvRecommendations);
+  formatSheetAsTable_(tvRecommendationFeedback);
+  formatSheetAsTable_(restaurantRecommendations);
+  formatSheetAsTable_(restaurantRecommendationFeedback);
   var filmSummary = rebuildFilmSummary_();
   var restaurantSummary = rebuildRestaurantSummary_();
   var tvSummary = rebuildTvSummary_();
@@ -1791,6 +1816,10 @@ function setupActiveSheetTabs() {
     futureTv: FUTURE_TV_SHEET_NAME,
     filmRecommendations: FILM_RECOMMENDATIONS_SHEET_NAME,
     recommendationFeedback: FILM_RECOMMENDATION_FEEDBACK_SHEET_NAME,
+    tvRecommendations: TV_RECOMMENDATIONS_SHEET_NAME,
+    tvRecommendationFeedback: TV_RECOMMENDATION_FEEDBACK_SHEET_NAME,
+    restaurantRecommendations: RESTAURANT_RECOMMENDATIONS_SHEET_NAME,
+    restaurantRecommendationFeedback: RESTAURANT_RECOMMENDATION_FEEDBACK_SHEET_NAME,
     usersTabKept: true
   };
   console.log(JSON.stringify(result, null, 2));
@@ -2070,6 +2099,49 @@ function doRecordRecommendationFeedback_(payload, username) {
 }
 
 
+
+function genericRecommendationConfig_(kind) {
+  if (kind === 'tv') return {
+    category: 'tv', recommendationsSheet: TV_RECOMMENDATIONS_SHEET_NAME,
+    feedbackSheet: TV_RECOMMENDATION_FEEDBACK_SHEET_NAME
+  };
+  return {
+    category: 'restaurant', recommendationsSheet: RESTAURANT_RECOMMENDATIONS_SHEET_NAME,
+    feedbackSheet: RESTAURANT_RECOMMENDATION_FEEDBACK_SHEET_NAME
+  };
+}
+
+function persistGenericRecommendations_(kind, username, payload, source, items, recommendationId) {
+  var cfg=genericRecommendationConfig_(kind), tab=getOrCreateSheet_(cfg.recommendationsSheet,GENERIC_RECOMMENDATIONS_HEADER), now=new Date().toISOString();
+  (items||[]).forEach(function(r,i){
+    var itemId=kind==='tv'?r.tmdbTvId:r.placeId;
+    var title=kind==='tv'?r.title:r.name;
+    var yearOrCity=kind==='tv'?r.year:r.city;
+    var metadata=kind==='tv'?(Array.isArray(r.genres)?r.genres.join(' · '):String(r.genres||'')):[r.address,r.cuisine,r.price].filter(Boolean).join(' · ');
+    tab.appendRow(rowForHeader_(GENERIC_RECOMMENDATIONS_HEADER,{
+      recommendationId:recommendationId,user:username,sourceMode:payload.sourceMode||'taste',sourceId:kind==='tv'?(source&&source.id||''):(source&&source.placeId||''),
+      sourceTitle:kind==='tv'?(source&&source.name||''):(source&&source.name||''),pool:payload.pool||'new',style:payload.style||'balanced',category:cfg.category,
+      recommendedId:itemId,recommendedTitle:title,rank:i+1,role:r.role||'',explanation:r.explanation||'',yearOrCity:yearOrCity||'',metadata:metadata,createdAt:now,status:i<5?'shown':'backup'
+    }));
+  });
+}
+
+function doRecordGenericRecommendationFeedback_(payload, username, kind) {
+  var action=String(payload.action||'').trim(); if(!action) throw new Error('Feedback action is required.');
+  var cfg=genericRecommendationConfig_(kind), tab=getOrCreateSheet_(cfg.feedbackSheet,GENERIC_RECOMMENDATION_FEEDBACK_HEADER);
+  tab.appendRow(rowForHeader_(GENERIC_RECOMMENDATION_FEEDBACK_HEADER,{
+    recommendationId:payload.recommendationId||'',user:username,category:cfg.category,recommendedId:payload.recommendedId||payload.currentId||'',action:action,createdAt:new Date().toISOString()
+  }));
+  return jsonOut_({ok:true});
+}
+
+function genericRecommendationLearningContext_(kind, username) {
+  var cfg=genericRecommendationConfig_(kind), recs=sheetObjects_(getExistingSheet_(cfg.recommendationsSheet),GENERIC_RECOMMENDATIONS_HEADER), feedback=sheetObjects_(getExistingSheet_(cfg.feedbackSheet),GENERIC_RECOMMENDATION_FEEDBACK_HEADER);
+  var titles={};
+  recs.forEach(function(r){if(String(r.user||'').toLowerCase()===String(username||'').toLowerCase())titles[String(r.recommendationId||'')+'|'+String(r.recommendedId||'')]=r.recommendedTitle||'';});
+  return feedback.filter(function(f){return String(f.user||'').toLowerCase()===String(username||'').toLowerCase();}).slice(-60).map(function(f){return {title:titles[String(f.recommendationId||'')+'|'+String(f.recommendedId||'')]||'',action:f.action||'',date:f.createdAt||''};});
+}
+
 // ══════════════════════════════════════════════════════════════
 //  TV + RESTAURANT RECOMMENDATIONS — GEMINI FIRST, API VALIDATED
 // ══════════════════════════════════════════════════════════════
@@ -2088,12 +2160,12 @@ function tvStates_(username){var rated={},wished={};sheetObjects_(getExistingShe
 function callGeminiGeneric_(kind,prompt){var key=getGeminiKey_(),model='gemini-3.6-flash',diag={attempted:false,success:false,error:key?'':'GEMINI_API_KEY is not configured.',model:model,httpStatus:''};if(!key)return {items:null,diagnostic:diag};diag.attempted=true;try{var res=UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent?key='+encodeURIComponent(key),{method:'post',contentType:'application/json',muteHttpExceptions:true,payload:JSON.stringify({contents:[{parts:[{text:JSON.stringify(prompt)}]}],generationConfig:{responseMimeType:'application/json'}})});diag.httpStatus=res.getResponseCode();if(res.getResponseCode()<200||res.getResponseCode()>=300){diag.error='Gemini returned HTTP '+res.getResponseCode()+': '+String(res.getContentText()||'').slice(0,220);return {items:null,diagnostic:diag};}var data=JSON.parse(res.getContentText()),text=data.candidates&&data.candidates[0]&&data.candidates[0].content&&data.candidates[0].content.parts&&data.candidates[0].content.parts[0].text,parsed=JSON.parse(text||'{}'),items=parsed.recommendations;if(!Array.isArray(items)||!items.length){diag.error='Gemini returned no usable '+kind+' recommendations.';return {items:null,diagnostic:diag};}diag.success=true;diag.error='';return {items:items.slice(0,15),diagnostic:diag};}catch(e){diag.error='Gemini request failed: '+e.message;return {items:null,diagnostic:diag};}}
 function doGenerateTvRecommendations_(payload,username){payload=payload||{};var states=tvStates_(username),source=null;if(payload.sourceMode!=='taste'){if(!payload.sourceTmdbId)throw new Error('Choose a source TV show.');source=fetchJson_('https://api.themoviedb.org/3/tv/'+encodeURIComponent(payload.sourceTmdbId)+'?api_key='+encodeURIComponent(getTmdbKey()));}
   var exclusions=[];Object.keys(states.rated).forEach(function(id){if(payload.pool!=='all')exclusions.push({id:id,title:states.rated[id].seriesTitle,reason:'rated'});});if(payload.pool==='notWishlist')Object.keys(states.wished).forEach(function(id){exclusions.push({id:id,title:states.wished[id].seriesTitle,reason:'wishlisted'});});(payload.excludeIds||[]).forEach(function(id){exclusions.push({id:id,reason:'already shown'});});
-  var ai=callGeminiGeneric_('TV',{instruction:'Generate exactly 15 real television series recommendations. Use the user\'s actual ratings, category scores, notes, tone, pacing, themes, and viewing experience. Respect exclusions. Return strict JSON only.',mode:payload.sourceMode==='taste'?'overall taste':'source show plus taste',style:payload.style||'balanced',source:source?{title:source.name,year:String(source.first_air_date||'').slice(0,4),overview:source.overview,genres:(source.genres||[]).map(function(g){return g.name;})}:null,history:tvTasteContext_(username),exclusions:exclusions,outputSchema:{recommendations:[{title:'exact series title',year:'first air year',role:'short label',explanation:'specific reason'}]}});
-  if(!ai.items)throw new Error(ai.diagnostic.error||'TV recommendations could not be generated.');var req=ai.items.map(function(x){return {url:'https://api.themoviedb.org/3/search/tv?api_key='+encodeURIComponent(getTmdbKey())+'&query='+encodeURIComponent(x.title)+(x.year?'&first_air_date_year='+encodeURIComponent(x.year):''),muteHttpExceptions:true};}),resp=UrlFetchApp.fetchAll(req),seen={},valid=[];resp.forEach(function(r,i){if(r.getResponseCode()<200||r.getResponseCode()>=300)return;var d=JSON.parse(r.getContentText()),m=(d.results||[])[0];if(!m)return;var id=String(m.id);if(seen[id]||(payload.excludeIds||[]).map(String).indexOf(id)>-1)return;if(payload.pool!=='all'&&states.rated[id])return;if(payload.pool==='notWishlist'&&states.wished[id])return;seen[id]=true;valid.push({tmdbTvId:m.id,title:m.name,year:String(m.first_air_date||'').slice(0,4),posterPath:m.poster_path||'',genres:[],tmdbRating:Number(m.vote_average||0).toFixed(1),role:ai.items[i].role||recommendationRole_(valid.length,payload.style),explanation:ai.items[i].explanation||'',ratedScore:states.rated[id]?Number(states.rated[id].score10||0):'',wishlisted:!!states.wished[id]});});if(valid.length<5)throw new Error('Fewer than five eligible TV recommendations validated. Try a broader pool.');valid=valid.slice(0,10);var id=Utilities.getUuid();CacheService.getScriptCache().put('generic_rec_tv_'+id,JSON.stringify(valid.slice(5)),21600);return jsonOut_({recommendationId:id,recommendations:valid.slice(0,5),profileSummary:{ratingCount:tvTasteContext_(username).length},aiEnhanced:true,diagnostics:{engine:'Gemini-generated TV recommendations',validatedCount:valid.length,backupCount:Math.max(0,valid.length-5),aiCandidateCount:ai.items.length,model:ai.diagnostic.model,aiError:''}});}
+  var ai=callGeminiGeneric_('TV',{instruction:'Generate exactly 15 real television series recommendations. Use the user\'s actual ratings, category scores, notes, tone, pacing, themes, and viewing experience. Respect exclusions. Return strict JSON only.',mode:payload.sourceMode==='taste'?'overall taste':'source show plus taste',style:payload.style||'balanced',source:source?{title:source.name,year:String(source.first_air_date||'').slice(0,4),overview:source.overview,genres:(source.genres||[]).map(function(g){return g.name;})}:null,history:tvTasteContext_(username),recommendationFeedback:genericRecommendationLearningContext_('tv',username),exclusions:exclusions,outputSchema:{recommendations:[{title:'exact series title',year:'first air year',role:'short label',explanation:'specific reason'}]}});
+  if(!ai.items)throw new Error(ai.diagnostic.error||'TV recommendations could not be generated.');var req=ai.items.map(function(x){return {url:'https://api.themoviedb.org/3/search/tv?api_key='+encodeURIComponent(getTmdbKey())+'&query='+encodeURIComponent(x.title)+(x.year?'&first_air_date_year='+encodeURIComponent(x.year):''),muteHttpExceptions:true};}),resp=UrlFetchApp.fetchAll(req),seen={},valid=[];resp.forEach(function(r,i){if(r.getResponseCode()<200||r.getResponseCode()>=300)return;var d=JSON.parse(r.getContentText()),m=(d.results||[])[0];if(!m)return;var id=String(m.id);if(seen[id]||(payload.excludeIds||[]).map(String).indexOf(id)>-1)return;if(payload.pool!=='all'&&states.rated[id])return;if(payload.pool==='notWishlist'&&states.wished[id])return;seen[id]=true;valid.push({tmdbTvId:m.id,title:m.name,year:String(m.first_air_date||'').slice(0,4),posterPath:m.poster_path||'',genres:[],tmdbRating:Number(m.vote_average||0).toFixed(1),role:ai.items[i].role||recommendationRole_(valid.length,payload.style),explanation:ai.items[i].explanation||'',ratedScore:states.rated[id]?Number(states.rated[id].score10||0):'',wishlisted:!!states.wished[id]});});if(valid.length<5)throw new Error('Fewer than five eligible TV recommendations validated. Try a broader pool.');valid=valid.slice(0,10);var id=Utilities.getUuid();persistGenericRecommendations_('tv',username,payload,source,valid,id);CacheService.getScriptCache().put('generic_rec_tv_'+id,JSON.stringify(valid.slice(5)),21600);return jsonOut_({recommendationId:id,recommendations:valid.slice(0,5),profileSummary:{ratingCount:tvTasteContext_(username).length},aiEnhanced:true,diagnostics:{engine:'Gemini-generated TV recommendations',validatedCount:valid.length,backupCount:Math.max(0,valid.length-5),aiCandidateCount:ai.items.length,model:ai.diagnostic.model,aiError:''}});}
 function doGetRestaurantRecommendationSources_(username){var rows=sheetObjects_(getExistingSheet_(RESTAURANTS_SHEET_NAME),RESTAURANTS_HEADER).filter(function(r){return String(r.user||'').toLowerCase()===String(username||'').toLowerCase();}).map(function(r){return {placeId:r.placeId||'',name:r.name||'',city:r.city||'',cuisine:r.cuisine||'',score10:Number(r.score10||0),address:r.address||''};}).sort(function(a,b){return b.score10-a.score10||String(a.name).localeCompare(String(b.name));});return jsonOut_({rows:rows});}
 function restaurantTasteContext_(username){return sheetObjects_(getExistingSheet_(RESTAURANTS_SHEET_NAME),RESTAURANTS_HEADER).filter(function(r){return String(r.user||'').toLowerCase()===String(username||'').toLowerCase();}).sort(function(a,b){return Number(b.score10||0)-Number(a.score10||0);}).slice(0,70).map(function(r){return {name:r.name,city:r.city,cuisine:r.cuisine,price:r.price,score10:Number(r.score10||0),categories:{food:r.food,value:r.value,service:r.service,atmosphere:r.atmosphere,craving:r.craving},notes:r.overallNotes||''};});}
 function restaurantStates_(username){var rated={},wished={};sheetObjects_(getExistingSheet_(RESTAURANTS_SHEET_NAME),RESTAURANTS_HEADER).forEach(function(r){if(String(r.user||'').toLowerCase()===String(username).toLowerCase()&&r.placeId)rated[String(r.placeId)]=r;});sheetObjects_(getExistingSheet_(FUTURE_RESTAURANTS_SHEET_NAME),FUTURE_RESTAURANTS_HEADER).forEach(function(r){if(String(r.user||'').toLowerCase()===String(username).toLowerCase()&&r.placeId)wished[String(r.placeId)]=r;});return {rated:rated,wished:wished};}
-function doGenerateRestaurantRecommendations_(payload,username){payload=payload||{};var history=restaurantTasteContext_(username),states=restaurantStates_(username),source=null;if(payload.sourceMode!=='taste'){source=doGetRestaurantRecommendationSourcesData_(username,payload.sourcePlaceId);if(!source)throw new Error('Choose a source restaurant.');}var defaultCity=payload.city||(source&&source.city)||mostCommonCity_(history);if(!defaultCity)throw new Error('Choose or rate a restaurant with a city before generating restaurant recommendations.');var exclusions=[];Object.keys(states.rated).forEach(function(id){if(payload.pool!=='all')exclusions.push({name:states.rated[id].name,city:states.rated[id].city,reason:'rated'});});if(payload.pool==='notWishlist')Object.keys(states.wished).forEach(function(id){exclusions.push({name:states.wished[id].name,city:states.wished[id].city,reason:'wishlisted'});});var ai=callGeminiGeneric_('restaurant',{instruction:'Generate exactly 15 real operating restaurant recommendations in the requested city or metro. Use cuisine, food quality, value, service, atmosphere, craving, price, notes, and the user\'s actual history. Respect exclusions. Return strict JSON only.',mode:payload.sourceMode==='taste'?'overall restaurant taste':'source restaurant plus taste',style:payload.style||'balanced',city:defaultCity,source:source,history:history,exclusions:exclusions,outputSchema:{recommendations:[{name:'exact restaurant name',city:'city',role:'short label',explanation:'specific reason'}]}});if(!ai.items)throw new Error(ai.diagnostic.error||'Restaurant recommendations could not be generated.');var key=getPlacesKey(),req=ai.items.map(function(x){return {url:'https://maps.googleapis.com/maps/api/place/textsearch/json?query='+encodeURIComponent(x.name+' restaurant '+(x.city||defaultCity))+'&type=restaurant&key='+encodeURIComponent(key),muteHttpExceptions:true};}),resp=UrlFetchApp.fetchAll(req),seen={},valid=[];resp.forEach(function(r,i){if(r.getResponseCode()<200||r.getResponseCode()>=300)return;var d=JSON.parse(r.getContentText()),m=(d.results||[])[0];if(!m)return;var id=String(m.place_id);if(seen[id])return;if(payload.pool!=='all'&&states.rated[id])return;if(payload.pool==='notWishlist'&&states.wished[id])return;seen[id]=true;var parts=String(m.formatted_address||'').split(',');valid.push({placeId:id,name:m.name,address:m.formatted_address||'',city:parts.length>1?parts[parts.length-2].trim():defaultCity,cuisine:'',price:m.price_level===undefined?'':['','$','$$','$$$','$$$$'][m.price_level],googleRating:m.rating||'',photo:'',role:ai.items[i].role||recommendationRole_(valid.length,payload.style),explanation:ai.items[i].explanation||'',ratedScore:states.rated[id]?Number(states.rated[id].score10||0):'',wishlisted:!!states.wished[id]});});if(valid.length<5)throw new Error('Fewer than five eligible restaurant recommendations validated. Try a broader pool or another city.');valid=valid.slice(0,10);var id=Utilities.getUuid();CacheService.getScriptCache().put('generic_rec_restaurant_'+id,JSON.stringify(valid.slice(5)),21600);return jsonOut_({recommendationId:id,recommendations:valid.slice(0,5),profileSummary:{ratingCount:history.length},aiEnhanced:true,diagnostics:{engine:'Gemini-generated restaurant recommendations',validatedCount:valid.length,backupCount:Math.max(0,valid.length-5),aiCandidateCount:ai.items.length,model:ai.diagnostic.model,aiError:'',city:defaultCity}});}
+function doGenerateRestaurantRecommendations_(payload,username){payload=payload||{};var history=restaurantTasteContext_(username),states=restaurantStates_(username),source=null;if(payload.sourceMode!=='taste'){source=doGetRestaurantRecommendationSourcesData_(username,payload.sourcePlaceId);if(!source)throw new Error('Choose a source restaurant.');}var defaultCity=payload.city||(source&&source.city)||mostCommonCity_(history);if(!defaultCity)throw new Error('Choose or rate a restaurant with a city before generating restaurant recommendations.');var exclusions=[];Object.keys(states.rated).forEach(function(id){if(payload.pool!=='all')exclusions.push({name:states.rated[id].name,city:states.rated[id].city,reason:'rated'});});if(payload.pool==='notWishlist')Object.keys(states.wished).forEach(function(id){exclusions.push({name:states.wished[id].name,city:states.wished[id].city,reason:'wishlisted'});});var ai=callGeminiGeneric_('restaurant',{instruction:'Generate exactly 15 real operating restaurant recommendations in the requested city or metro. Use cuisine, food quality, value, service, atmosphere, craving, price, notes, and the user\'s actual history. Respect exclusions. Return strict JSON only.',mode:payload.sourceMode==='taste'?'overall restaurant taste':'source restaurant plus taste',style:payload.style||'balanced',city:defaultCity,source:source,history:history,recommendationFeedback:genericRecommendationLearningContext_('restaurant',username),exclusions:exclusions,outputSchema:{recommendations:[{name:'exact restaurant name',city:'city',role:'short label',explanation:'specific reason'}]}});if(!ai.items)throw new Error(ai.diagnostic.error||'Restaurant recommendations could not be generated.');var key=getPlacesKey(),req=ai.items.map(function(x){return {url:'https://maps.googleapis.com/maps/api/place/textsearch/json?query='+encodeURIComponent(x.name+' restaurant '+(x.city||defaultCity))+'&type=restaurant&key='+encodeURIComponent(key),muteHttpExceptions:true};}),resp=UrlFetchApp.fetchAll(req),seen={},valid=[];resp.forEach(function(r,i){if(r.getResponseCode()<200||r.getResponseCode()>=300)return;var d=JSON.parse(r.getContentText()),m=(d.results||[])[0];if(!m)return;var id=String(m.place_id);if(seen[id])return;if(payload.pool!=='all'&&states.rated[id])return;if(payload.pool==='notWishlist'&&states.wished[id])return;seen[id]=true;var parts=String(m.formatted_address||'').split(',');valid.push({placeId:id,name:m.name,address:m.formatted_address||'',city:parts.length>1?parts[parts.length-2].trim():defaultCity,cuisine:'',price:m.price_level===undefined?'':['','$','$$','$$$','$$$$'][m.price_level],googleRating:m.rating||'',photo:'',role:ai.items[i].role||recommendationRole_(valid.length,payload.style),explanation:ai.items[i].explanation||'',ratedScore:states.rated[id]?Number(states.rated[id].score10||0):'',wishlisted:!!states.wished[id]});});if(valid.length<5)throw new Error('Fewer than five eligible restaurant recommendations validated. Try a broader pool or another city.');valid=valid.slice(0,10);var id=Utilities.getUuid();persistGenericRecommendations_('restaurant',username,payload,source,valid,id);CacheService.getScriptCache().put('generic_rec_restaurant_'+id,JSON.stringify(valid.slice(5)),21600);return jsonOut_({recommendationId:id,recommendations:valid.slice(0,5),profileSummary:{ratingCount:history.length},aiEnhanced:true,diagnostics:{engine:'Gemini-generated restaurant recommendations',validatedCount:valid.length,backupCount:Math.max(0,valid.length-5),aiCandidateCount:ai.items.length,model:ai.diagnostic.model,aiError:'',city:defaultCity}});}
 function doGetRestaurantRecommendationSourcesData_(username,placeId){return sheetObjects_(getExistingSheet_(RESTAURANTS_SHEET_NAME),RESTAURANTS_HEADER).filter(function(r){return String(r.user||'').toLowerCase()===String(username||'').toLowerCase()&&String(r.placeId||'')===String(placeId||'');})[0]||null;}
 function mostCommonCity_(history){var c={};(history||[]).forEach(function(r){if(r.city)c[r.city]=(c[r.city]||0)+1;});return Object.keys(c).sort(function(a,b){return c[b]-c[a];})[0]||'';}
-function doReplaceGenericRecommendation_(payload,username,kind){var id=String(payload.recommendationId||'');if(!id)throw new Error('Recommendation session is missing.');var cache=CacheService.getScriptCache(),key='generic_rec_'+kind+'_'+id,raw=cache.get(key),arr=raw?JSON.parse(raw):[];if(!arr.length)return jsonOut_({exhausted:true});var next=arr.shift();cache.put(key,JSON.stringify(arr),21600);return jsonOut_({recommendation:next,remainingBackups:arr.length,exhausted:false});}
+function doReplaceGenericRecommendation_(payload,username,kind){var id=String(payload.recommendationId||'');if(!id)throw new Error('Recommendation session is missing.');var cache=CacheService.getScriptCache(),key='generic_rec_'+kind+'_'+id,raw=cache.get(key),arr=raw?JSON.parse(raw):[];if(!arr.length)return jsonOut_({exhausted:true});doRecordGenericRecommendationFeedback_({recommendationId:id,recommendedId:payload.currentId||'',action:payload.action||'replaced'},username,kind);var next=arr.shift();cache.put(key,JSON.stringify(arr),21600);return jsonOut_({recommendation:next,remainingBackups:arr.length,exhausted:false});}
