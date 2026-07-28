@@ -1,5 +1,7 @@
 # Cine-file Secure Ratings Dashboard
 
+**Current build:** `2026.07.27-cross-category-recommendations.8`
+
 This folder merges the latest restaurant UI work with the secure GitHub Pages + Apps Script backend approach.
 
 ## Project Overview
@@ -184,6 +186,15 @@ The GitHub site still exposes the Apps Script `/exec` URL in `CONFIG.GAS_URL`; t
 
 Restaurant thumbnails are fetched server-side and returned as small data URLs so Google Places photo URLs do not expose the API key.
 
+
+## AI-First Film Recommendations (v6)
+
+Film recommendations now use Gemini as the recommendation brain and TMDB only for validation and metadata. Gemini receives the selected source film (when used), the user's source rating categories and notes, a compact taste profile, representative rating history, and exclusion lists. It proposes 15 real movie titles with years and explanations. The backend validates those suggestions against TMDB, applies the selected rated/wishlist exclusions, and keeps up to 10 eligible movies.
+
+Each batch shows 5 movies and stores 5 instant replacements. After all 10 have been reviewed, the frontend automatically requests a fresh batch while excluding every movie already shown in that recommendation session. TMDB supplies IDs, posters, genres, runtime, and ratings; TMDB recommendations are used only as a fallback if Gemini is unavailable or fewer than 5 Gemini suggestions validate.
+
+Diagnostics now show the active engine, AI model, number of AI proposals, number of validated movies, and backup count. All recommendation controls and diagnostics continue to use the active site theme variables.
+
 ## Manual Deployment
 
 1. Replace GitHub `index.html` with this `index.html`.
@@ -254,3 +265,66 @@ Set the optional Apps Script property `GEMINI_API_KEY` to enable the Gemini rank
 - The existing `GEMINI_API_KEY` Script Property remains valid; API keys are associated with a Google Cloud project, not locked to one Gemini model.
 - Google AI Studio may be used to test the same key and model by selecting **Gemini 3.6 Flash** in the model selector. The live Cine-File website uses the model specified in `Code.gs`, regardless of the model last selected in AI Studio.
 - This update changes `Code.gs` and the README only. Replace and redeploy `Code.gs`; no sheet setup or frontend replacement is required when upgrading from v4.
+
+## Dynamic Rating Distribution and Food-Type Stats (v7)
+
+Rating-distribution charts for Film, TV, and Le Guide now use a dynamic lower bound instead of always displaying the entire 0–100 or 0–10 scale. The chart keeps 100 or 10 as the maximum, rounds the lower bound down to a readable interval, includes additional space below the lowest score, and enforces a minimum visible span of 20 points in `/100` mode or 2 points in `/10` mode. Bars remain 5-point bins in `/100` mode and 0.5-point bins in `/10` mode. The note below the chart identifies the visible range, and the average marker remains in place.
+
+Le Guide Stats now includes a **Food Type** filter matching the existing Film and TV genre-filter pattern. The selected food type applies to My Ratings, Group, Head to Head, and Individual Ratings. The selection is stored locally for the browser and follows the active Gold, Light, or Classic theme.
+
+Le Guide My Ratings also includes **Food Type Averages**, ranking cuisine/food types by the current user's average rating and showing the number of ratings behind each average. The backend restaurant summary response now includes cuisine metadata so Group, Head to Head, and Individual Ratings can be filtered consistently.
+
+This update changes both `index.html` and `Code.gs`. Replace both files and deploy a new Apps Script web-app version. No new sheet tabs or columns are required, and `setupActiveSheetTabs` does not need to be run solely for this update.
+
+
+## Cross-Category Recommendations — v8
+
+Film, TV, and Le Guide now each have a recommendation section below the category's saved-items list.
+
+### Film
+
+Film keeps the existing AI-first recommendation system. Gemini proposes titles from the logged-in user's ratings and notes, TMDB validates the titles and supplies metadata, five recommendations are shown, and five validated backups are held for replacement.
+
+### TV
+
+TV recommendations support:
+
+- **Based on a Show** — choose one of the logged-in user's rated series.
+- **Based on My Taste** — use the logged-in user's complete TV rating history.
+- **New to Me**, **Not Rated or Wishlisted**, and **Include Rated Shows** pools.
+- **Balanced**, **Hidden Gems**, and **Something Different** styles.
+- Five visible series and up to five replacement series.
+- TMDB validation before a recommendation is displayed.
+- Direct **Add to Wishlist**, **Replace**, and **Not Interested** actions.
+
+TV recommendations are personal to the authenticated user. Other users' ratings are not used unless a future group mode is deliberately added.
+
+### Le Guide / Restaurants
+
+Restaurant recommendations support:
+
+- **Based on a Restaurant** — choose one of the logged-in user's rated restaurants.
+- **Based on My Taste** — use the user's restaurant history and most common rated city.
+- The same recommendation-pool and style choices as Film and TV.
+- Five visible restaurants and up to five replacements.
+- Google Places validation before a restaurant is displayed.
+- Direct **Add to Wishlist**, **Replace**, and **Not Interested** actions.
+
+For source-restaurant mode, the source restaurant's city anchors the search. For taste-only mode, the backend uses the most common city in that user's restaurant history. A user must therefore have at least one restaurant rating with a city before taste-only restaurant recommendations can be generated.
+
+### Recommendation Architecture
+
+The recommendation engine is AI-first:
+
+1. Gemini reviews only the authenticated user's relevant rating history, category scores, and notes.
+2. Gemini proposes 15 real candidates.
+3. TMDB validates Film and TV titles; Google Places validates restaurants.
+4. Rated, wishlisted, and previously shown items are removed according to the selected pool.
+5. Up to 10 eligible items are retained: five shown and five held as replacements.
+6. After all replacements are exhausted, the frontend generates a fresh batch while excluding previously shown IDs.
+
+All recommendation controls reuse the existing recommendation CSS and theme variables. Gold, Light, and Classic themes therefore style the new TV and restaurant panels consistently with Film.
+
+### Deployment for v8
+
+Replace both `index.html` and `Code.gs`, save the Apps Script project, and deploy a new web-app version. No additional spreadsheet tabs or columns are required for the TV and restaurant recommendation rooms, so `setupActiveSheetTabs` does not need to be rerun when upgrading from v7.
