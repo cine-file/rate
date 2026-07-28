@@ -227,7 +227,7 @@ Run `setupActiveSheetTabs` once after deploying this version to create and forma
 
 ### Optional AI Jury
 
-Set the optional Apps Script property `GEMINI_API_KEY` to enable the Gemini ranking jury. The AI may select and explain recommendations only from the TMDB-validated candidate list. For source-movie recommendations, the jury receives the user's actual overall score, category scores, category notes, overall notes, source keywords, director, genres, and runtime. The website displays whether Gemini ran, whether deterministic fallback was used, the eligible candidate count, and a safe AI error when applicable. If this property is absent or the AI call fails, the deterministic taste-ranking engine still returns recommendations.
+Set the optional Apps Script property `GEMINI_API_KEY` to enable the Gemini ranking jury. The backend uses the stable `gemini-3.6-flash` model. The AI may select and explain recommendations only from the TMDB-validated candidate list. For source-movie recommendations, the jury receives the user's actual overall score, category scores, category notes, overall notes, source keywords, director, genres, and runtime. The website displays whether Gemini ran, whether deterministic fallback was used, the eligible candidate count, and a safe AI error when applicable. If this property is absent or the AI call fails, the deterministic taste-ranking engine still returns recommendations.
 
 ### Deployment for This Version
 
@@ -246,3 +246,11 @@ Set the optional Apps Script property `GEMINI_API_KEY` to enable the Gemini rank
 - Results identify `Gemini AI jury` or `Deterministic fallback`.
 - Safe diagnostics show candidate counts and Gemini failure details without exposing the API key.
 - This update changes both `index.html` and `Code.gs`; deploy a new Apps Script web-app version. Existing recommendation sheet tabs do not need to be recreated if they already exist.
+
+### Gemini 3.6 Model Update
+
+- The optional AI jury now calls the stable `gemini-3.6-flash` model.
+- The Gemini request no longer sends `temperature`, `top_p`, or `top_k`, because these sampling parameters are deprecated for Gemini 3.6 and later models.
+- The existing `GEMINI_API_KEY` Script Property remains valid; API keys are associated with a Google Cloud project, not locked to one Gemini model.
+- Google AI Studio may be used to test the same key and model by selecting **Gemini 3.6 Flash** in the model selector. The live Cine-File website uses the model specified in `Code.gs`, regardless of the model last selected in AI Studio.
+- This update changes `Code.gs` and the README only. Replace and redeploy `Code.gs`; no sheet setup or frontend replacement is required when upgrading from v4.
