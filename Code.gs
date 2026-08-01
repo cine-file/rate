@@ -22,7 +22,7 @@
 //  Original by friend, restaurant functions added by Claude
 // ─────────────────────────────────────────────────────────────
 
-const BACKEND_VERSION = '2026.08.01-activity-index-chart-fix.13';
+const BACKEND_VERSION = '2026.08.01-activity-snapshot.14';
 const SESSION_TTL_SECONDS = 6 * 60 * 60;
 
 const FILMS_SHEET_NAME = 'Database-Films';
@@ -41,6 +41,7 @@ const TV_RECOMMENDATION_FEEDBACK_SHEET_NAME = 'Recommendation-Feedback-TV';
 const RESTAURANT_RECOMMENDATIONS_SHEET_NAME = 'Recommendations-Restaurants';
 const RESTAURANT_RECOMMENDATION_FEEDBACK_SHEET_NAME = 'Recommendation-Feedback-Restaurants';
 const RECENT_ACTIVITY_SHEET_NAME = 'Recent-Activity';
+const RECENT_ACTIVITY_SNAPSHOT_PROPERTY = 'RECENT_ACTIVITY_SNAPSHOT_V14';
 
 const FILM_SUMMARY_BASE_COLUMNS = ['Title','Year','Genre','Director','Movie length','RT Audience','IMDb'];
 const FILM_SUMMARY_AVERAGE_COLUMN = 'Average Rating';
@@ -1883,6 +1884,19 @@ function activityDisplayDate_(r) {
 function recentActivityKey_(category, user, id, title) {
   return [String(category||'').toLowerCase(),String(user||'').toLowerCase(),String(id||title||'').toLowerCase()].join('|');
 }
+function recentActivitySnapshotRows_() {
+  var tab=getExistingSheet_(RECENT_ACTIVITY_SHEET_NAME);
+  if(!tab || tab.getLastRow()<2) return [];
+  return sheetObjects_(tab,RECENT_ACTIVITY_HEADER).map(function(r){
+    return {user:r.user||'',category:r.category||'',title:r.title||'',score10:Number(r.score10||0),sortDate:Number(r.sortDate||0),displayDate:r.displayDate||''};
+  }).filter(function(r){ return r.user&&r.title&&!isNaN(r.score10); })
+    .sort(function(a,b){ return b.sortDate-a.sortDate; }).slice(0,15);
+}
+function writeRecentActivitySnapshot_() {
+  var rows=recentActivitySnapshotRows_();
+  PropertiesService.getScriptProperties().setProperty(RECENT_ACTIVITY_SNAPSHOT_PROPERTY,JSON.stringify(rows));
+  return rows.length;
+}
 function upsertRecentActivity_(row) {
   var tab=getOrCreateSheet_(RECENT_ACTIVITY_SHEET_NAME,RECENT_ACTIVITY_HEADER);
   var key=String(row.activityKey||'');
@@ -1894,13 +1908,13 @@ function upsertRecentActivity_(row) {
   } else {
     tab.appendRow(rowForHeader_(RECENT_ACTIVITY_HEADER,row));
   }
-  CacheService.getScriptCache().remove('recent_activity_v13');
+  writeRecentActivitySnapshot_();
 }
 function removeRecentActivity_(activityKey) {
   var tab=getExistingSheet_(RECENT_ACTIVITY_SHEET_NAME);
   if(!tab) return;
   deleteMatchingRows_(tab,RECENT_ACTIVITY_HEADER,function(r){ return String(r.activityKey||'')===String(activityKey||''); });
-  CacheService.getScriptCache().remove('recent_activity_v13');
+  writeRecentActivitySnapshot_();
 }
 function rebuildRecentActivity_() {
   var tab=getOrCreateSheet_(RECENT_ACTIVITY_SHEET_NAME,RECENT_ACTIVITY_HEADER);
@@ -1912,18 +1926,17 @@ function rebuildRecentActivity_() {
   rows=rows.filter(function(r){ return r.user&&r.title&&!isNaN(r.score10); });
   if(rows.length) tab.getRange(2,1,rows.length,RECENT_ACTIVITY_HEADER.length).setValues(rows.map(function(r){ return rowForHeader_(RECENT_ACTIVITY_HEADER,r); }));
   formatSheetAsTable_(tab);
-  CacheService.getScriptCache().remove('recent_activity_v13');
+  writeRecentActivitySnapshot_();
   return rows.length;
 }
+function rebuildRecentActivitySnapshot() {
+  return {version:BACKEND_VERSION,activityCount:rebuildRecentActivity_(),snapshotCount:writeRecentActivitySnapshot_()};
+}
 function doGetRecentActivity_() {
-  var cache=CacheService.getScriptCache();
-  var cached=cache.get('recent_activity_v13');
-  if(cached) return jsonOut_({rows:JSON.parse(cached)});
-  var tab=getExistingSheet_(RECENT_ACTIVITY_SHEET_NAME);
-  if(!tab) { rebuildRecentActivity_(); tab=getExistingSheet_(RECENT_ACTIVITY_SHEET_NAME); }
-  var rows=sheetObjects_(tab,RECENT_ACTIVITY_HEADER).map(function(r){ return {user:r.user||'',category:r.category||'',title:r.title||'',score10:Number(r.score10||0),sortDate:Number(r.sortDate||0),displayDate:r.displayDate||''}; }).filter(function(r){ return r.user&&r.title&&!isNaN(r.score10); }).sort(function(a,b){ return b.sortDate-a.sortDate; }).slice(0,15);
-  cache.put('recent_activity_v13',JSON.stringify(rows),300);
-  return jsonOut_({rows:rows});
+  var raw=PropertiesService.getScriptProperties().getProperty(RECENT_ACTIVITY_SNAPSHOT_PROPERTY);
+  var rows=[];
+  if(raw){ try{ rows=JSON.parse(raw)||[]; }catch(e){ rows=[]; } }
+  return jsonOut_({rows:rows,snapshot:true});
 }
 
 function normalizedScore100_(r) {
