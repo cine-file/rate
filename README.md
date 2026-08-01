@@ -397,3 +397,13 @@ Replace both `index.html` and `Code.gs`, deploy a new Apps Script web-app versio
 - Keeps already-selected people out of the Add Person list and preserves the Add Person control after each selection.
 - Makes the Recent Activity score and `/10` label use the active Light or Gold theme accent instead of inheriting Classic green.
 - No spreadsheet tabs or columns are added in this maintenance update. Replace `index.html`; `Code.gs` is carried forward unchanged from v11. A new Apps Script deployment is only required if you also replace/redeploy the backend file.
+
+
+## v13 — Activity Performance + Group Distribution Fix
+
+- Added a lightweight `Recent-Activity` index tab. The homepage now reads the latest 15 activity rows from this small index instead of scanning the complete Film, TV, and Restaurant databases on every page load.
+- `setupActiveSheetTabs` creates and backfills `Recent-Activity` from existing ratings. New and updated ratings keep the index current automatically.
+- Recent Activity responses are cached for five minutes and the cache is invalidated whenever a rating is saved.
+- Fixed Group Rating Distribution normalization. Group values are now normalized internally to `/100`; `/10` mode then converts them exactly once, preventing scores such as 8.7 from being plotted as 0.87.
+
+Deployment: replace both `index.html` and `Code.gs`, deploy a new Apps Script web-app version, and run `setupActiveSheetTabs` once to create/backfill `Recent-Activity`.
