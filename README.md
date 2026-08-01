@@ -389,3 +389,11 @@ The homepage now displays the 15 most recent Film, TV, and Le Guide ratings acro
 ### Deployment
 
 Replace both `index.html` and `Code.gs`, deploy a new Apps Script web-app version, and run `setupActiveSheetTabs` once so the `groupMembers` header is added to `Recommendations-Films`. No new spreadsheet tabs are created.
+
+## v12 — Desktop Layout and Group Matchmaker Fixes
+
+- Restores centered desktop positioning for the Cine-File home content after the Recent Activity section was added.
+- Repairs Group Matchmaker person selection and removal by replacing fragile inline name-based click handlers with bound button event listeners.
+- Keeps already-selected people out of the Add Person list and preserves the Add Person control after each selection.
+- Makes the Recent Activity score and `/10` label use the active Light or Gold theme accent instead of inheriting Classic green.
+- No spreadsheet tabs or columns are added in this maintenance update. Replace `index.html`; `Code.gs` is carried forward unchanged from v11. A new Apps Script deployment is only required if you also replace/redeploy the backend file.
