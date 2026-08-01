@@ -407,3 +407,12 @@ Replace both `index.html` and `Code.gs`, deploy a new Apps Script web-app versio
 - Fixed Group Rating Distribution normalization. Group values are now normalized internally to `/100`; `/10` mode then converts them exactly once, preventing scores such as 8.7 from being plotted as 0.87.
 
 Deployment: replace both `index.html` and `Code.gs`, deploy a new Apps Script web-app version, and run `setupActiveSheetTabs` once to create/backfill `Recent-Activity`.
+
+
+## Recent Activity Snapshot — v14
+
+Recent Activity no longer reads or sorts Google Sheet rows when the homepage opens. The public `getRecentActivity` request reads a prebuilt 15-item JSON snapshot from Script Properties only.
+
+The snapshot is refreshed whenever a Film, TV, or Restaurant rating is saved or updated. Full database scanning is restricted to the manual `rebuildRecentActivitySnapshot` function and the manually run `setupActiveSheetTabs` setup process. The homepage loads activity after the rest of the interface is visible and stops waiting after 10 seconds, offering a Retry button rather than blocking other screens.
+
+After deploying v14, run `rebuildRecentActivitySnapshot` once, or run `setupActiveSheetTabs` once, to populate the initial snapshot from existing ratings. Future rating submissions maintain it automatically.
