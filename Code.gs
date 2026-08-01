@@ -97,7 +97,7 @@ const FUTURE_TV_HEADER = [
 const FILM_RECOMMENDATIONS_HEADER = [
   'recommendationId','user','sourceMode','sourceTmdbId','sourceTitle','pool','style',
   'recommendedTmdbId','recommendedTitle','rank','role','explanation','score',
-  'posterPath','year','genres','runtimeMinutes','createdAt','status'
+  'posterPath','year','genres','runtimeMinutes','createdAt','status','groupMembers'
 ];
 
 const FILM_RECOMMENDATION_FEEDBACK_HEADER = [
@@ -306,6 +306,7 @@ function doPost(e) {
     if (action === 'getMovieDetails')        return doGetMovieDetails_(d);
     if (action === 'saveRating')             return doSaveRating_(d.payload || d, username);
     if (action === 'getRatings')             return doGetRatings_(username);
+    if (action === 'getRecentActivity')      return doGetRecentActivity_();
     if (action === 'getSummary')             return doGetSummary_();
     if (action === 'getFutureFilms')         return doGetFutureFilms_(username);
     if (action === 'addFutureFilm')          return doAddFutureFilm_(d.payload || d, username);
@@ -1853,6 +1854,27 @@ function splitGenres_(value) {
   return String(value || '').split(/\s*[·,|]\s*/).map(function(v){ return v.trim(); }).filter(Boolean);
 }
 
+
+function activityDateValue_(r) {
+  var raw=r.updatedAt||r.createdAt||r.date||'';
+  var d=raw instanceof Date?raw:new Date(raw);
+  return isNaN(d.getTime())?0:d.getTime();
+}
+function activityDisplayDate_(r) {
+  var raw=r.date||r.updatedAt||r.createdAt||'';
+  var d=raw instanceof Date?raw:new Date(raw);
+  if(isNaN(d.getTime())) return String(raw||'');
+  return Utilities.formatDate(d, Session.getScriptTimeZone()||'America/Chicago', 'MMM d, yyyy');
+}
+function doGetRecentActivity_() {
+  var rows=[];
+  sheetObjects_(getExistingSheet_(FILMS_SHEET_NAME),FILMS_HEADER).forEach(function(r){rows.push({user:r.user||'',category:'film',title:r.title||'',score10:Number(r.score10||0),sortDate:activityDateValue_(r),displayDate:activityDisplayDate_(r)});});
+  sheetObjects_(getExistingSheet_(TV_SHEET_NAME),TV_HEADER).forEach(function(r){var title=r.seriesTitle||'';if(String(r.entryType||'').toLowerCase()==='season'&&r.seasonNumber)title+=' — Season '+r.seasonNumber;rows.push({user:r.user||'',category:'tv',title:title,score10:Number(r.score10||0),sortDate:activityDateValue_(r),displayDate:activityDisplayDate_(r)});});
+  sheetObjects_(getExistingSheet_(RESTAURANTS_SHEET_NAME),RESTAURANTS_HEADER).forEach(function(r){rows.push({user:r.user||'',category:'restaurant',title:r.name||'',score10:Number(r.score10||0),sortDate:activityDateValue_(r),displayDate:activityDisplayDate_(r)});});
+  rows=rows.filter(function(r){return r.user&&r.title&&!isNaN(r.score10);}).sort(function(a,b){return b.sortDate-a.sortDate;}).slice(0,15);
+  return jsonOut_({rows:rows});
+}
+
 function normalizedScore100_(r) {
   var raw = parseFloat(r.raw100);
   if (!isNaN(raw) && raw >= 0) return raw;
@@ -1937,6 +1959,35 @@ function compactFilmHistoryForAi_(username) {
       }:null,
       notes:[r.plotNotes,r.entNotes,r.actingNotes,r.visualsNotes,r.pacingNotes,r.emotionalNotes,r.overallNotes].filter(Boolean).join(' | ').slice(0,700)
     };});
+}
+
+
+function normalizeGroupMembers_(requested, username) {
+  var valid={};getUsers_().forEach(function(u){valid[String(u.name||'').toLowerCase()]=u.name;});
+  var out=[],seen={};
+  [username].concat(Array.isArray(requested)?requested:[]).forEach(function(name){var key=String(name||'').trim().toLowerCase();if(key&&valid[key]&&!seen[key]){seen[key]=true;out.push(valid[key]);}});
+  return out;
+}
+function groupFilmStates_(members) {
+  var rated={},wished={},memberKeys={};members.forEach(function(n){memberKeys[String(n).toLowerCase()]=true;});
+  sheetObjects_(getExistingSheet_(FILMS_SHEET_NAME),FILMS_HEADER).forEach(function(r){if(memberKeys[String(r.user||'').toLowerCase()]&&r.tmdbId){var id=String(r.tmdbId);if(!rated[id])rated[id]={title:r.title||'',year:r.year||'',users:[],scores:[]};rated[id].users.push(r.user);rated[id].scores.push(Number(r.score10||0));}});
+  Object.keys(rated).forEach(function(id){var x=rated[id],sum=x.scores.reduce(function(a,b){return a+b;},0);x.score10=x.scores.length?sum/x.scores.length:0;});
+  sheetObjects_(getExistingSheet_(FUTURE_FILMS_SHEET_NAME),FUTURE_FILMS_HEADER).forEach(function(r){if(memberKeys[String(r.user||'').toLowerCase()]&&r.tmdbId){var id=String(r.tmdbId);if(!wished[id])wished[id]={title:r.title||'',year:r.year||'',users:[]};wished[id].users.push(r.user);}});
+  return {rated:rated,wished:wished};
+}
+function groupFilmContext_(members) {
+  var total=0,people=members.map(function(name){var profile=buildFilmTasteProfile_(name),history=compactFilmHistoryForAi_(name).slice(0,35);total+=profile.ratingCount;return {name:name,profile:profile,representativeRatings:history};});
+  return {members:people,ratingCount:total,memberCount:members.length};
+}
+function callGeminiGroupMovieGenerator_(groupContext,payload,states) {
+  var key=getGeminiKey_(),diagnostic={attempted:false,success:false,error:key?'':'GEMINI_API_KEY is not configured.',httpStatus:'',model:'gemini-3.6-flash'};
+  if(!key)return {suggestions:null,diagnostic:diagnostic};diagnostic.attempted=true;
+  var pool=payload.pool||'new',excluded=[];
+  Object.keys(states.rated).forEach(function(id){if(pool==='new'||pool==='notWishlist')excluded.push({tmdbId:id,title:states.rated[id].title,reason:'already rated by '+states.rated[id].users.join(', ')});});
+  if(pool==='notWishlist')Object.keys(states.wished).forEach(function(id){excluded.push({tmdbId:id,title:states.wished[id].title,reason:'already wishlisted by '+states.wished[id].users.join(', ')});});
+  (payload.excludeTmdbIds||[]).forEach(function(id){excluded.push({tmdbId:String(id),reason:'already shown in this session'});});
+  var prompt={instruction:'You are a group movie matchmaker. Generate exactly 15 real feature films that create the strongest shared viewing experience for all selected people. Treat every person as important; do not simply follow the person with the most ratings. Identify overlapping tastes, avoid strong individual dislikes, and use thoughtful compromise when tastes differ. Respect every exclusion. Return strict JSON only with accurate title and release year for TMDB validation.',mode:'Group Matchmaker',style:payload.style||'balanced',pool:pool,group:groupContext.members,exclusions:excluded.slice(0,220),outputSchema:{recommendations:[{title:'exact movie title',year:'four-digit release year',role:'Best Shared Pick, Strong Match for Everyone, Slightly Adventurous, or Wildcard',explanation:'one or two specific sentences explaining why this works for the selected group and naming relevant members when useful'}]}};
+  try{var url='https://generativelanguage.googleapis.com/v1beta/models/'+diagnostic.model+':generateContent?key='+encodeURIComponent(key),res=UrlFetchApp.fetch(url,{method:'post',contentType:'application/json',muteHttpExceptions:true,payload:JSON.stringify({contents:[{parts:[{text:JSON.stringify(prompt)}]}],generationConfig:{responseMimeType:'application/json'}})});diagnostic.httpStatus=res.getResponseCode();if(res.getResponseCode()<200||res.getResponseCode()>=300){diagnostic.error='Gemini returned HTTP '+res.getResponseCode()+': '+String(res.getContentText()||'').slice(0,220);return {suggestions:null,diagnostic:diagnostic};}var data=JSON.parse(res.getContentText()),text=data.candidates&&data.candidates[0]&&data.candidates[0].content&&data.candidates[0].content.parts&&data.candidates[0].content.parts[0].text;if(!text){diagnostic.error='Gemini returned no recommendation JSON.';return {suggestions:null,diagnostic:diagnostic};}var parsed=JSON.parse(text),suggestions=parsed&&parsed.recommendations;if(!Array.isArray(suggestions))throw new Error('Gemini response did not match the required schema.');suggestions=suggestions.filter(function(x){return x&&x.title;}).slice(0,15);diagnostic.success=!!suggestions.length;diagnostic.error=diagnostic.success?'':'Gemini returned no usable movie titles.';return {suggestions:diagnostic.success?suggestions:null,diagnostic:diagnostic};}catch(e){diagnostic.error='Gemini request failed: '+e.message;return {suggestions:null,diagnostic:diagnostic};}
 }
 
 function callGeminiMovieGenerator_(source, sourceRating, profile, payload, username, states) {
@@ -2051,34 +2102,42 @@ function persistRecommendations_(username, payload, source, recommendations, bac
   var tab=getOrCreateSheet_(FILM_RECOMMENDATIONS_SHEET_NAME,FILM_RECOMMENDATIONS_HEADER), now=new Date().toISOString();
   recommendations.forEach(function(r,i){ tab.appendRow(rowForHeader_(FILM_RECOMMENDATIONS_HEADER,{
     recommendationId:recommendationId,user:username,sourceMode:payload.sourceMode||'movie',sourceTmdbId:source?source.id:'',sourceTitle:source?source.title:'',pool:payload.pool||'new',style:payload.style||'balanced',
-    recommendedTmdbId:r.tmdbId,recommendedTitle:r.title,rank:i+1,role:r.role,explanation:r.explanation,score:r.score,posterPath:r.posterPath,year:r.year,genres:(r.genres||[]).join(' · '),runtimeMinutes:r.runtimeMinutes,createdAt:now,status:'shown'
+    recommendedTmdbId:r.tmdbId,recommendedTitle:r.title,rank:i+1,role:r.role,explanation:r.explanation,score:r.score,posterPath:r.posterPath,year:r.year,genres:(r.genres||[]).join(' · '),runtimeMinutes:r.runtimeMinutes,createdAt:now,status:'shown',groupMembers:(payload.groupMembers||[]).join(' · ')
   })); });
   CacheService.getScriptCache().put('rec_backups_'+recommendationId,JSON.stringify(backups),21600);
 }
 
 function doGenerateFilmRecommendations_(payload, username) {
   payload=payload||{};
-  var started=Date.now(), mode=payload.sourceMode==='taste'?'taste':'movie', source=null, sourceRating=null;
-  if(mode==='movie'){
-    if(!payload.sourceTmdbId)throw new Error('Choose a source movie.');
-    source=tmdbMovieDetailsForRecommendation_(payload.sourceTmdbId);
-    sourceRating=sourceFilmRatingContext_(username,payload.sourceTmdbId);
+  var started=Date.now(),isGroup=payload.groupMode===true||payload.sourceMode==='group',mode=isGroup?'group':(payload.sourceMode==='taste'?'taste':'movie'),source=null,sourceRating=null,profile,states,ai,members=[];
+  if(isGroup){
+    members=normalizeGroupMembers_(payload.groupMembers,username);
+    if(members.length<2)throw new Error('Add at least one other person to use Group Matchmaker.');
+    payload.groupMembers=members;
+    profile=groupFilmContext_(members);
+    states=groupFilmStates_(members);
+    ai=callGeminiGroupMovieGenerator_(profile,payload,states);
+  }else{
+    if(mode==='movie'){
+      if(!payload.sourceTmdbId)throw new Error('Choose a source movie.');
+      source=tmdbMovieDetailsForRecommendation_(payload.sourceTmdbId);
+      sourceRating=sourceFilmRatingContext_(username,payload.sourceTmdbId);
+    }
+    profile=buildFilmTasteProfile_(username);states=ratedAndWishlistIds_(username);
+    ai=callGeminiMovieGenerator_(source,sourceRating,profile,payload,username,states);
   }
-  var profile=buildFilmTasteProfile_(username), states=ratedAndWishlistIds_(username);
-  var ai=callGeminiMovieGenerator_(source,sourceRating,profile,payload,username,states);
   var candidates=ai.suggestions?validateGeminiSuggestionsWithTmdb_(ai.suggestions,payload,username,states):[];
   if(candidates.length<5){
-    var fallback=deterministicFallbackCandidates_(source,payload,username,states), seen={};
+    var fallback=deterministicFallbackCandidates_(source,payload,username,states),seen={};
     candidates.forEach(function(c){seen[String(c.id)]=true;});
     fallback.forEach(function(c){if(candidates.length<10&&!seen[String(c.id)]){seen[String(c.id)]=true;candidates.push(c);}});
   }
   if(candidates.length<5)throw new Error('Not enough eligible movies were found. Try a broader recommendation pool.');
   candidates=candidates.slice(0,10);
   var hydrated=hydrateRecommendationMovies_(candidates);
-  hydrated.forEach(function(r,i){r.role=r.role||recommendationRole_(i,payload.style);r.explanation=r.explanation||'This is one of the strongest validated matches for your selected recommendation mode.';});
-  var recs=hydrated.slice(0,5), backups=hydrated.slice(5,10);
-  var recommendationId=Utilities.getUuid();persistRecommendations_(username,payload,source,recs,backups,recommendationId);
-  return jsonOut_({recommendationId:recommendationId,source:source?{tmdbId:source.id,title:source.title}:null,profileSummary:{ratingCount:profile.ratingCount,fullCount:profile.fullCount,quickCount:profile.quickCount},aiEnhanced:!!ai.diagnostic.success,recommendations:recs,diagnostics:{engine:ai.diagnostic.success?'Gemini-generated recommendations':'Deterministic fallback',candidateCount:candidates.length,aiCandidateCount:ai.suggestions?ai.suggestions.length:0,validatedCount:candidates.length,backupCount:backups.length,aiAttempted:ai.diagnostic.attempted,aiHttpStatus:ai.diagnostic.httpStatus,aiError:ai.diagnostic.error||'',model:ai.diagnostic.model,elapsedMs:Date.now()-started}});
+  hydrated.forEach(function(r,i){r.role=r.role||recommendationRole_(i,payload.style);r.explanation=r.explanation||(isGroup?'This is one of the strongest validated shared matches for the selected group.':'This is one of the strongest validated matches for your selected recommendation mode.');});
+  var recs=hydrated.slice(0,5),backups=hydrated.slice(5,10),recommendationId=Utilities.getUuid();persistRecommendations_(username,payload,source,recs,backups,recommendationId);
+  return jsonOut_({recommendationId:recommendationId,source:source?{tmdbId:source.id,title:source.title}:null,profileSummary:isGroup?{ratingCount:profile.ratingCount,memberCount:profile.memberCount,members:members}:{ratingCount:profile.ratingCount,fullCount:profile.fullCount,quickCount:profile.quickCount},aiEnhanced:!!ai.diagnostic.success,recommendations:recs,diagnostics:{engine:ai.diagnostic.success?(isGroup?'Gemini Group Matchmaker':'Gemini-generated recommendations'):'Deterministic fallback',candidateCount:candidates.length,aiCandidateCount:ai.suggestions?ai.suggestions.length:0,validatedCount:candidates.length,backupCount:backups.length,aiAttempted:ai.diagnostic.attempted,aiHttpStatus:ai.diagnostic.httpStatus,aiError:ai.diagnostic.error||'',model:ai.diagnostic.model,elapsedMs:Date.now()-started}});
 }
 
 function doReplaceFilmRecommendation_(payload, username) {
