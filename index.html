@@ -2247,6 +2247,17 @@ function summaryDisplayScores(row){
   const values=(source||[]).map(Number).filter(Number.isFinite);
   return _scoreMode==='raw' && source===row?.scores ? values.map(value=>value*10) : values;
 }
+function groupDistributionValues(summary){
+  const values=[];
+  (summary?.rows||[]).forEach(function(row){
+    const users=Object.keys(row?.userScores||{});
+    users.forEach(function(user){
+      const value=summaryUserDisplayScore(row,user);
+      if(value!==null && Number.isFinite(Number(value))) values.push(Number(value));
+    });
+  });
+  return values;
+}
 let _distributionPopupTimer=null;
 function showDistributionCount(event,count){
   const bar=event.currentTarget;
@@ -3851,6 +3862,7 @@ function renderGroupStats(summary){
 
   // Get all users from summary headers
   const allUsers = [...new Set(summary.rows.flatMap(r=>Object.keys(r.userScores||{})))];
+  const distributionValues=groupDistributionValues(summary);
 
   container.innerHTML=`
     <!-- Group member averages -->
@@ -3863,6 +3875,11 @@ function renderGroupStats(summary){
             <div class="stat-card-lbl">${escHtml(u.name)}</div>
           </div>`).join("")}
       </div>
+    </div>
+
+    <div class="stats-section">
+      <div class="stats-section-title">Group Rating Distribution — ${distributionValues.length} Individual Ratings</div>
+      ${renderDistributionChart(distributionValues)}
     </div>
 
     <div class="stats-section">
@@ -4077,6 +4094,7 @@ function renderSummaryGroupStats(options){
     return;
   }
   const users = summaryUsers(options.summary);
+  const distributionValues=groupDistributionValues(options.summary);
   const ranked = rows.slice().sort(function(a,b){ return averageScores(summaryDisplayScores(b))-averageScores(summaryDisplayScores(a)); });
   const userAverages = users.map(function(user){
     const values=allRows.map(function(row){ return summaryUserDisplayScore(row,user); }).filter(function(value){ return value!=null; });
@@ -4092,6 +4110,7 @@ function renderSummaryGroupStats(options){
     <div class="stats-section"><div class="stats-section-title">Average Rating by Person — ${scoreLabel()}</div><div class="stats-grid">
       ${userAverages.map(function(entry){ return '<div class="stat-card"><div class="stat-card-num">'+entry.average.toFixed(1)+'</div><div class="stat-card-lbl">'+escHtml(entry.user)+'</div></div>'; }).join('')}
     </div></div>
+    <div class="stats-section"><div class="stats-section-title">Group Rating Distribution — ${distributionValues.length} Individual Ratings</div>${renderDistributionChart(distributionValues,{restaurant:!!options.restaurant})}</div>
     <div class="stats-section"><div class="stats-section-title">Group Rankings — ${ranked.length} ${escHtml(options.itemLabel)}</div><div class="film-list">${ranked.slice(0,5).map(function(row,index){ return '<div class="film-row"><div class="film-row-rank">#'+(index+1)+'</div><div class="film-row-title">'+escHtml(options.title(row))+'</div><div class="film-row-year">'+escHtml(options.meta(row))+'</div><div class="film-row-score">'+averageScores(summaryDisplayScores(row)).toFixed(1)+'</div></div>'; }).join('')}</div>
       ${ranked.length>5?'<button class="view-all-btn" data-label="View All '+ranked.length+' '+escHtml(options.itemLabel)+' ↓" onclick="toggleSummaryRanking(\''+options.id+'\',this)">View All '+ranked.length+' '+escHtml(options.itemLabel)+' ↓</button><div class="all-ratings-wrap" id="summary-ranking-'+options.id+'"><div class="film-list">'+rankingRows+'</div></div>':''}
     </div>
@@ -4877,7 +4896,7 @@ function lgRenderCurrentTab(){
   const filteredSummary=filteredRestaurantSummary(_lgStatsData.summary);
   if(_lgStatsTab==='my')    lgRenderMyStats();
   if(_lgStatsTab==='group') renderSummaryGroupStats({
-    id:'restaurant', containerId:'lg-stats-content', summary:filteredSummary, itemLabel:'Restaurants',
+    id:'restaurant', containerId:'lg-stats-content', summary:filteredSummary, itemLabel:'Restaurants', restaurant:true,
     title:function(row){ return String(row.Name || ''); },
     meta:function(row){ return String(row.Address || ''); }
   });
