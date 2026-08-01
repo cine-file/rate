@@ -366,3 +366,26 @@ The Group tab for Film, TV, and Le Guide now includes a Group Rating Distributio
 - The section title reports the total number of individual ratings represented.
 
 This update changes only `index.html` and the README. `Code.gs` is carried forward unchanged from v9. No new spreadsheet tabs or columns are required, and `setupActiveSheetTabs` does not need to be run solely for v10.
+
+
+## Group Matchmaker and Recent Activity — v11
+
+### Group Matchmaker
+
+Film Recommendations now includes an audience selector with **For Me** and **Group Matchmaker**. The logged-in user is included automatically. Additional users can be added with **+ Add Person**; already selected users are removed from the available-user menu, and added users can be removed before generation. At least two people are required.
+
+Group Matchmaker uses every selected person's Film ratings, category scores, notes, genre/director/runtime preferences, and rating history. It treats each person as a separate taste profile, looks for overlap, avoids strong dislikes, and uses compromise picks where tastes differ. The default pool becomes **New to Everyone**, which excludes any film rated by any selected person. The stricter pool also excludes films wishlisted by anyone selected. Generated sessions continue to use the Film recommendation and feedback sheets. `Recommendations-Films` now includes a `groupMembers` column.
+
+### Recent Activity
+
+The homepage now displays the 15 most recent Film, TV, and Le Guide ratings across all users. Each entry shows the user, title, category, date, score, and sentiment:
+
+- Loved 😍: 9.0–10.0
+- Liked 🙂: 7.5–8.9
+- Meh 😐: 6.0–7.4
+- Disliked 😕: 4.0–5.9
+- Hated 😭: below 4.0
+
+### Deployment
+
+Replace both `index.html` and `Code.gs`, deploy a new Apps Script web-app version, and run `setupActiveSheetTabs` once so the `groupMembers` header is added to `Recommendations-Films`. No new spreadsheet tabs are created.
