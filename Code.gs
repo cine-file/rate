@@ -288,6 +288,7 @@ function doPost(e) {
     if (action === 'getDeploymentStatus') return doGetDeploymentStatus_(d);
     if (action === 'getSession') return doGetSession_(d);
     if (action === 'verifyUserPin') return doVerifyUserPin_(d);
+    if (action === 'getRecentActivity') return doGetRecentActivity_();
 
     // Admin actions
     if (action === 'saveUsers') {
@@ -312,7 +313,6 @@ function doPost(e) {
     if (action === 'getMovieDetails')        return doGetMovieDetails_(d);
     if (action === 'saveRating')             return doSaveRating_(d.payload || d, username);
     if (action === 'getRatings')             return doGetRatings_(username);
-    if (action === 'getRecentActivity')      return doGetRecentActivity_();
     if (action === 'getSummary')             return doGetSummary_();
     if (action === 'getFutureFilms')         return doGetFutureFilms_(username);
     if (action === 'addFutureFilm')          return doAddFutureFilm_(d.payload || d, username);
