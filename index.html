@@ -2543,7 +2543,8 @@ function goHome(){
   const lgToggle = document.getElementById('lg-quick-toggle');
   if(lgToggle) lgToggle.checked = true;
   showScreen("home");
-  loadRecentActivity();
+  window.clearTimeout(window.recentActivityLoadTimer);
+  window.recentActivityLoadTimer=window.setTimeout(loadRecentActivity,600);
 }
 
 function switchUser(){
@@ -3103,15 +3104,16 @@ async function loadRecentActivity(){
   const wrap=document.getElementById('recent-activity-list');if(!wrap)return;
   if(!getSessionToken()){wrap.innerHTML='<div class="stats-empty">Log in to see recent activity.</div>';return;}
   wrap.innerHTML='<div class="stats-loading">Loading recent ratings...</div>';
+  const timeout=new Promise((_,reject)=>window.setTimeout(()=>reject(new Error('Activity timed out')),10000));
   try{
-    const data=await apiCall('getRecentActivity',{token:getSessionToken()});
+    const data=await Promise.race([apiCall('getRecentActivity',{token:getSessionToken()}),timeout]);
     const rows=data.rows||[];
-    if(!rows.length){wrap.innerHTML='<div class="stats-empty">No ratings yet.</div>';return;}
+    if(!rows.length){wrap.innerHTML='<div class="stats-empty">No recent activity is available yet.</div>';return;}
     wrap.innerHTML=rows.map(function(r){
       const s=activitySentiment(r.score10),category=r.category==='restaurant'?'Le Guide':(r.category==='tv'?'TV':'Film');
       return '<div class="activity-item"><div class="activity-emoji">'+s.emoji+'</div><div class="activity-main"><div class="activity-line"><strong>'+escHtml(r.user||'Someone')+'</strong> '+s.word+' <span class="activity-title-name">'+escHtml(r.title||'')+'</span></div><div class="activity-meta">'+escHtml(category)+' · '+escHtml(r.displayDate||'')+'</div></div><div class="activity-score">'+Number(r.score10||0).toFixed(1)+'<span>/10</span></div></div>';
     }).join('');
-  }catch(e){wrap.innerHTML='<div class="stats-empty">Recent activity could not be loaded.</div>';}
+  }catch(e){wrap.innerHTML='<div class="stats-empty">Recent activity took too long to load. <button type="button" class="activity-retry" id="activity-retry">Retry</button></div>';document.getElementById('activity-retry')?.addEventListener('click',loadRecentActivity);}
 }
 
 // ── SEARCH ───────────────────────────────────────────────────
