@@ -354,3 +354,15 @@ Run `setupActiveSheetTabs` once after deploying v9 to create and format the four
 ### Theme Search Cleanup
 
 Gold and Light/Cream themes no longer inherit Classic green or Le Guide red glow effects behind search controls. The search fields retain the active theme's surface and border styling without colored halos.
+
+## Group Rating Distribution — v10
+
+The Group tab for Film, TV, and Le Guide now includes a Group Rating Distribution chart.
+
+- Every individual submitted rating is one observation. Ratings are not averaged by title before being placed into the chart.
+- Film genre, TV genre/type, and restaurant food-type filters apply to the group chart.
+- The chart follows the active `/10` or `/100` display mode.
+- It uses the same dynamic lower-bound scaling, fixed maximum, bin sizes, average line, count popup, and theme styling as the individual distribution chart.
+- The section title reports the total number of individual ratings represented.
+
+This update changes only `index.html` and the README. `Code.gs` is carried forward unchanged from v9. No new spreadsheet tabs or columns are required, and `setupActiveSheetTabs` does not need to be run solely for v10.
