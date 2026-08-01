@@ -1286,6 +1286,51 @@ body.theme-cream .lg-search-field,body.theme-gold .lg-search-field,
 body.theme-cream .wishlist-search-wrap .search-field,body.theme-gold .wishlist-search-wrap .search-field,
 body.theme-cream .stats-search,body.theme-gold .stats-search{box-shadow:none!important;}
 
+
+/* v11 Group Matchmaker + Recent Activity */
+.recommend-audience-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid #1a3a1a;}
+.group-matchmaker{display:none;margin-bottom:16px;padding:14px;background:#090f09;border:1px solid #1a3a1a;border-radius:3px;}
+.group-matchmaker.open{display:block;}
+.group-member-list{display:flex;flex-direction:column;gap:8px;margin:10px 0;}
+.group-member{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 11px;background:#0b120b;border:1px solid #1e3a1e;border-radius:2px;color:#c0e0c0;font-size:13px;}
+.group-member.host:after{content:'You';font:9px 'Barlow Condensed',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#5a9a5a;}
+.group-member-remove{border:0;background:transparent;color:#8a5a5a;cursor:pointer;font-size:17px;line-height:1;}
+.group-add-wrap{position:relative;}
+.group-add-btn{width:100%;padding:9px 11px;background:transparent;border:1px dashed #2e5a2e;border-radius:2px;color:#78a878;font:11px 'Barlow Condensed',sans-serif;letter-spacing:.13em;text-transform:uppercase;cursor:pointer;text-align:left;}
+.group-person-menu{display:none;position:absolute;left:0;right:0;top:calc(100% + 5px);z-index:12;background:#0b120b;border:1px solid #1e3a1e;border-radius:2px;max-height:210px;overflow:auto;}
+.group-person-menu.open{display:block;}
+.group-person-option{display:block;width:100%;padding:10px 12px;background:transparent;border:0;border-bottom:1px solid #142814;color:#c0e0c0;text-align:left;cursor:pointer;font-family:'Barlow',sans-serif;}
+.group-person-option:last-child{border-bottom:0;}.group-person-option:hover{background:#102010;}
+.activity-section{width:min(720px,calc(100% - 32px));margin:34px auto 48px;padding:0 0 8px;}
+.activity-head{display:flex;align-items:end;justify-content:space-between;gap:12px;margin-bottom:12px;}
+.activity-title{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:.04em;color:#e8f8e8;}
+.activity-sub{font-size:11px;color:#4a7a4a;}
+.activity-list{display:flex;flex-direction:column;gap:7px;}
+.activity-item{display:grid;grid-template-columns:34px 1fr auto;gap:11px;align-items:center;padding:11px 13px;background:#0b120b;border:1px solid #1a3a1a;border-radius:3px;}
+.activity-emoji{font-size:22px;text-align:center;}.activity-main{min-width:0;}
+.activity-line{font-size:13px;color:#b8d8b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.activity-line strong{color:#e8f8e8;font-weight:600;}.activity-title-name{font-style:italic;}
+.activity-meta{margin-top:3px;font-size:10px;color:#4a7a4a;text-transform:uppercase;letter-spacing:.08em;}
+.activity-score{font-family:'Bebas Neue',sans-serif;font-size:25px;color:#80d080;text-align:right;line-height:1;}.activity-score span{display:block;font:9px 'Barlow Condensed',sans-serif;color:#3d6a3d;letter-spacing:.1em;}
+body.theme-cream .recommend-audience-row,body.theme-gold .recommend-audience-row{border-color:var(--theme-border);}
+body.theme-cream .group-matchmaker,body.theme-gold .group-matchmaker,
+body.theme-cream .group-member,body.theme-gold .group-member,
+body.theme-cream .group-person-menu,body.theme-gold .group-person-menu,
+body.theme-cream .activity-item,body.theme-gold .activity-item{background:var(--theme-panel);border-color:var(--theme-border);}
+body.theme-cream .group-member,body.theme-gold .group-member,
+body.theme-cream .group-person-option,body.theme-gold .group-person-option,
+body.theme-cream .activity-line,body.theme-gold .activity-line{color:var(--theme-text);}
+body.theme-cream .group-person-option,body.theme-gold .group-person-option{border-color:var(--theme-border);}
+body.theme-cream .group-person-option:hover,body.theme-gold .group-person-option:hover{background:var(--theme-panel-2);}
+body.theme-cream .group-add-btn,body.theme-gold .group-add-btn{border-color:var(--theme-accent);color:var(--theme-accent);}
+body.theme-cream .activity-title,body.theme-gold .activity-title,
+body.theme-cream .activity-line strong,body.theme-gold .activity-line strong{color:var(--theme-text);}
+body.theme-cream .activity-sub,body.theme-gold .activity-sub,
+body.theme-cream .activity-meta,body.theme-gold .activity-meta{color:var(--theme-muted);}
+body.theme-cream .activity-score,body.theme-gold .activity-score,
+body.theme-cream .group-member.host:after,body.theme-gold .group-member.host:after{color:var(--theme-accent);}
+@media(max-width:640px){.activity-section{width:calc(100% - 24px);margin-top:24px}.activity-item{grid-template-columns:30px 1fr auto}.activity-line{white-space:normal}.home-center{padding-top:54px;}}
+
 </style>
 </head>
 <body>
@@ -1334,8 +1379,9 @@ const SITE_NAME = "Cine-file";
 <!-- ══════════════════════════════════════
      HOME
 ══════════════════════════════════════ -->
-<div id="screen-home" class="screen">
-  <div class="home-center">
+<div id="screen-home" class="screen" style="overflow-y:auto;align-items:flex-start">
+  <div style="width:100%">
+  <div class="home-center" style="padding-top:80px">
     <div class="home-eyebrow">What are you rating?</div>
     <h1 class="home-title">Cine-file</h1>
     <p class="home-sub">Your personal rating system</p>
@@ -1356,6 +1402,11 @@ const SITE_NAME = "Cine-file";
         <div class="home-card-sub" style="color:#8a4a4a">Rate a restaurant</div>
       </div>
     </div>
+  </div>
+  <section class="activity-section" id="recent-activity-section">
+    <div class="activity-head"><div><div class="activity-title">Recent Activity</div><div class="activity-sub">The latest 15 ratings across Film, TV, and Le Guide.</div></div></div>
+    <div class="activity-list" id="recent-activity-list"><div class="stats-loading">Loading recent ratings...</div></div>
+  </section>
   </div>
 </div>
 
@@ -1973,7 +2024,20 @@ const SITE_NAME = "Cine-file";
         <div><div class="recommend-title">Recommendation Room</div><div class="recommend-copy">Generate five validated movies from your ratings, with backups ready when you replace a pick.</div></div>
         <button class="recommend-close" onclick="toggleRecommendationPanel(false)" aria-label="Close">×</button>
       </div>
-      <div class="recommend-mode-row">
+      <div class="recommend-audience-row">
+        <button class="recommend-mode-btn active" id="rec-audience-me" onclick="setRecommendationAudience('me')">For Me</button>
+        <button class="recommend-mode-btn" id="rec-audience-group" onclick="setRecommendationAudience('group')">Group Matchmaker</button>
+      </div>
+      <div class="group-matchmaker" id="group-matchmaker">
+        <div class="recommend-field"><label>Watching Group</label></div>
+        <div class="group-member-list" id="group-member-list"></div>
+        <div class="group-add-wrap">
+          <button class="group-add-btn" type="button" onclick="toggleGroupPersonMenu()">+ Add Person</button>
+          <div class="group-person-menu" id="group-person-menu"></div>
+        </div>
+        <div class="recommend-copy" style="margin-top:10px">Recommendations balance each selected person's ratings and avoid movies already rated by anyone in the group.</div>
+      </div>
+      <div class="recommend-mode-row" id="personal-recommendation-modes">
         <button class="recommend-mode-btn active" id="rec-mode-movie" onclick="setRecommendationMode('movie')">Based on a Movie</button>
         <button class="recommend-mode-btn" id="rec-mode-taste" onclick="setRecommendationMode('taste')">Based on My Taste</button>
       </div>
@@ -2476,6 +2540,7 @@ function goHome(){
   const lgToggle = document.getElementById('lg-quick-toggle');
   if(lgToggle) lgToggle.checked = true;
   showScreen("home");
+  loadRecentActivity();
 }
 
 function switchUser(){
@@ -2840,6 +2905,9 @@ let recommendationSources=[];
 let recommendationSessionId='';
 let recommendationResults=[];
 let recommendationSeenIds=[];
+let recommendationAudience='me';
+let groupRecommendationMembers=[];
+let groupAvailableUsers=[];
 
 function toggleRecommendationPanel(force){
   if(wishlistMode!=='film') return;
@@ -2849,11 +2917,53 @@ function toggleRecommendationPanel(force){
   if(open && !recommendationSources.length) loadRecommendationSources();
 }
 
+function currentUserName(){ return String((currentUser&&currentUser.name)||currentUser||'').trim(); }
+
+async function setRecommendationAudience(mode){
+  recommendationAudience=mode==='group'?'group':'me';
+  document.getElementById('rec-audience-me').classList.toggle('active',recommendationAudience==='me');
+  document.getElementById('rec-audience-group').classList.toggle('active',recommendationAudience==='group');
+  document.getElementById('group-matchmaker').classList.toggle('open',recommendationAudience==='group');
+  document.getElementById('personal-recommendation-modes').style.display=recommendationAudience==='group'?'none':'flex';
+  document.getElementById('rec-source-wrap').style.display=recommendationAudience==='group'?'none':(recommendationMode==='movie'?'block':'none');
+  const pool=document.getElementById('rec-pool');
+  if(recommendationAudience==='group'){
+    pool.options[0].textContent='New to Everyone';
+    pool.options[1].textContent='Not Rated or Wishlisted by Anyone';
+    if(!groupRecommendationMembers.length){ const me=currentUserName(); if(me) groupRecommendationMembers=[me]; }
+    await loadGroupUsers();
+  }else{ pool.options[0].textContent='New to Me';pool.options[1].textContent='Not Rated or Wishlisted'; }
+  renderGroupMembers();
+}
+
+async function loadGroupUsers(){
+  try{ const data=await apiCall('getUsers',{}); groupAvailableUsers=(data.users||[]).map(function(u){return String(u.name||u);}).filter(Boolean); renderGroupPersonMenu(); }
+  catch(e){ document.getElementById('rec-status').textContent='Could not load the user list.'; }
+}
+function renderGroupMembers(){
+  const wrap=document.getElementById('group-member-list');if(!wrap)return;
+  const me=currentUserName();
+  wrap.innerHTML=groupRecommendationMembers.map(function(name){
+    const host=name.toLowerCase()===me.toLowerCase();
+    return '<div class="group-member '+(host?'host':'')+'"><span>'+escHtml(name)+'</span>'+(host?'':'<button class="group-member-remove" type="button" onclick="removeGroupMember('+JSON.stringify(name)+')" aria-label="Remove '+escHtml(name)+'">×</button>')+'</div>';
+  }).join('');
+  renderGroupPersonMenu();
+}
+function renderGroupPersonMenu(){
+  const menu=document.getElementById('group-person-menu');if(!menu)return;
+  const used={};groupRecommendationMembers.forEach(function(n){used[n.toLowerCase()]=true;});
+  const available=groupAvailableUsers.filter(function(n){return !used[n.toLowerCase()];});
+  menu.innerHTML=available.length?available.map(function(n){return '<button class="group-person-option" type="button" onclick="addGroupMember('+JSON.stringify(n)+')">'+escHtml(n)+'</button>';}).join(''):'<div class="group-person-option" style="cursor:default">Everyone is already included.</div>';
+}
+function toggleGroupPersonMenu(){document.getElementById('group-person-menu').classList.toggle('open');}
+function addGroupMember(name){if(!groupRecommendationMembers.some(function(n){return n.toLowerCase()===String(name).toLowerCase();}))groupRecommendationMembers.push(String(name));document.getElementById('group-person-menu').classList.remove('open');renderGroupMembers();}
+function removeGroupMember(name){groupRecommendationMembers=groupRecommendationMembers.filter(function(n){return n.toLowerCase()!==String(name).toLowerCase();});renderGroupMembers();}
+
 function setRecommendationMode(mode){
   recommendationMode=mode==='taste'?'taste':'movie';
   document.getElementById('rec-mode-movie').classList.toggle('active',recommendationMode==='movie');
   document.getElementById('rec-mode-taste').classList.toggle('active',recommendationMode==='taste');
-  document.getElementById('rec-source-wrap').style.display=recommendationMode==='movie'?'block':'none';
+  document.getElementById('rec-source-wrap').style.display=(recommendationAudience==='me'&&recommendationMode==='movie')?'block':'none';
 }
 
 async function loadRecommendationSources(){
@@ -2873,14 +2983,16 @@ async function generateFilmRecommendations(options){
   options=options||{};
   const btn=document.getElementById('rec-generate'),status=document.getElementById('rec-status'),results=document.getElementById('rec-results');
   const sourceTmdbId=document.getElementById('rec-source').value;
-  if(recommendationMode==='movie'&&!sourceTmdbId){status.textContent='Choose a source movie first.';return;}
-  btn.disabled=true;btn.textContent='Building Recommendations...';status.textContent='Reviewing your ratings and validating movie candidates...';results.innerHTML='';document.getElementById('rec-diagnostics').style.display='none';
+  if(recommendationAudience==='me'&&recommendationMode==='movie'&&!sourceTmdbId){status.textContent='Choose a source movie first.';return;}
+  if(recommendationAudience==='group'&&groupRecommendationMembers.length<2){status.textContent='Add at least one other person to use Group Matchmaker.';return;}
+  btn.disabled=true;btn.textContent='Building Recommendations...';status.textContent=recommendationAudience==='group'?'Balancing the group’s ratings and validating shared movie candidates...':'Reviewing your ratings and validating movie candidates...';results.innerHTML='';document.getElementById('rec-diagnostics').style.display='none';
   try{
-    const data=await apiCall('generateFilmRecommendations',{token:getSessionToken(),payload:{sourceMode:recommendationMode,sourceTmdbId:sourceTmdbId,pool:document.getElementById('rec-pool').value,style:document.getElementById('rec-style').value,excludeTmdbIds:options.continueBatch?recommendationSeenIds:[]}});
+    const payload={sourceMode:recommendationAudience==='group'?'group':recommendationMode,sourceTmdbId:sourceTmdbId,pool:document.getElementById('rec-pool').value,style:document.getElementById('rec-style').value,excludeTmdbIds:options.continueBatch?recommendationSeenIds:[],groupMode:recommendationAudience==='group',groupMembers:recommendationAudience==='group'?groupRecommendationMembers.slice():[]};
+    const data=await apiCall('generateFilmRecommendations',{token:getSessionToken(),payload:payload});
     recommendationSessionId=data.recommendationId||'';recommendationResults=data.recommendations||[];
     if(!options.continueBatch) recommendationSeenIds=[];
     recommendationResults.forEach(function(r){if(r&&r.tmdbId&&!recommendationSeenIds.includes(String(r.tmdbId)))recommendationSeenIds.push(String(r.tmdbId));});
-    status.textContent=(data.aiEnhanced?'AI jury enhanced · ':'Taste engine · ')+(data.profileSummary?.ratingCount||0)+' ratings reviewed';
+    status.textContent=(data.aiEnhanced?'AI jury enhanced · ':'Taste engine · ')+(data.profileSummary?.ratingCount||0)+' ratings reviewed'+(data.profileSummary?.memberCount?' across '+data.profileSummary.memberCount+' people':'');
     const diagnostics=document.getElementById('rec-diagnostics');
     const d=data.diagnostics||{};
     diagnostics.style.display='block';
@@ -2960,6 +3072,31 @@ async function notInterestedGenericRecommendation(kind,index){
     st.results[index]=data.recommendation;const nextId=kind==='tv'?data.recommendation.tmdbTvId:data.recommendation.placeId;if(nextId&&!st.seen.includes(String(nextId)))st.seen.push(String(nextId));
     status.textContent='Marked not interested · '+data.remainingBackups+' backups remaining.';renderGenericRecommendations(kind);
   }catch(e){status.textContent=e.message||'Could not update this recommendation.';}
+}
+
+
+// ── RECENT ACTIVITY ──────────────────────────────────────────
+function activitySentiment(score){
+  score=Number(score||0);
+  if(score>=9)return {emoji:'😍',word:'loved'};
+  if(score>=7.5)return {emoji:'🙂',word:'liked'};
+  if(score>=6)return {emoji:'😐',word:'felt meh about'};
+  if(score>=4)return {emoji:'😕',word:'disliked'};
+  return {emoji:'😭',word:'hated'};
+}
+async function loadRecentActivity(){
+  const wrap=document.getElementById('recent-activity-list');if(!wrap)return;
+  if(!getSessionToken()){wrap.innerHTML='<div class="stats-empty">Log in to see recent activity.</div>';return;}
+  wrap.innerHTML='<div class="stats-loading">Loading recent ratings...</div>';
+  try{
+    const data=await apiCall('getRecentActivity',{token:getSessionToken()});
+    const rows=data.rows||[];
+    if(!rows.length){wrap.innerHTML='<div class="stats-empty">No ratings yet.</div>';return;}
+    wrap.innerHTML=rows.map(function(r){
+      const s=activitySentiment(r.score10),category=r.category==='restaurant'?'Le Guide':(r.category==='tv'?'TV':'Film');
+      return '<div class="activity-item"><div class="activity-emoji">'+s.emoji+'</div><div class="activity-main"><div class="activity-line"><strong>'+escHtml(r.user||'Someone')+'</strong> '+s.word+' <span class="activity-title-name">'+escHtml(r.title||'')+'</span></div><div class="activity-meta">'+escHtml(category)+' · '+escHtml(r.displayDate||'')+'</div></div><div class="activity-score">'+Number(r.score10||0).toFixed(1)+'<span>/10</span></div></div>';
+    }).join('');
+  }catch(e){wrap.innerHTML='<div class="stats-empty">Recent activity could not be loaded.</div>';}
 }
 
 // ── SEARCH ───────────────────────────────────────────────────
