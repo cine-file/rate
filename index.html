@@ -40,7 +40,7 @@ input[type=number]{-moz-appearance:textfield;}
    HOME SCREEN
 ══════════════════════════════════════ */
 #screen-home{align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% -10%,#0d200d 0%,#060908 65%);}
-.home-center{max-width:640px;width:100%;text-align:center;padding:48px 24px;}
+.home-center{max-width:640px;width:100%;text-align:center;padding:48px 24px;margin-left:auto;margin-right:auto;}
 .home-eyebrow{font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:0.4em;text-transform:uppercase;color:#3d7a3d;margin-bottom:16px;}
 .home-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(64px,14vw,112px);color:#e8f8e8;line-height:0.88;letter-spacing:0.02em;margin-bottom:20px;text-shadow:0 0 80px rgba(60,160,60,0.25);}
 .home-sub{font-size:14px;color:#3d6a3d;font-style:italic;margin-bottom:52px;}
@@ -1328,6 +1328,7 @@ body.theme-cream .activity-line strong,body.theme-gold .activity-line strong{col
 body.theme-cream .activity-sub,body.theme-gold .activity-sub,
 body.theme-cream .activity-meta,body.theme-gold .activity-meta{color:var(--theme-muted);}
 body.theme-cream .activity-score,body.theme-gold .activity-score,
+body.theme-cream .activity-score span,body.theme-gold .activity-score span,
 body.theme-cream .group-member.host:after,body.theme-gold .group-member.host:after{color:var(--theme-accent);}
 @media(max-width:640px){.activity-section{width:calc(100% - 24px);margin-top:24px}.activity-item{grid-template-columns:30px 1fr auto}.activity-line{white-space:normal}.home-center{padding-top:54px;}}
 
@@ -2943,17 +2944,29 @@ async function loadGroupUsers(){
 function renderGroupMembers(){
   const wrap=document.getElementById('group-member-list');if(!wrap)return;
   const me=currentUserName();
-  wrap.innerHTML=groupRecommendationMembers.map(function(name){
+  wrap.innerHTML=groupRecommendationMembers.map(function(name,index){
     const host=name.toLowerCase()===me.toLowerCase();
-    return '<div class="group-member '+(host?'host':'')+'"><span>'+escHtml(name)+'</span>'+(host?'':'<button class="group-member-remove" type="button" onclick="removeGroupMember('+JSON.stringify(name)+')" aria-label="Remove '+escHtml(name)+'">×</button>')+'</div>';
+    return '<div class="group-member '+(host?'host':'')+'"><span>'+escHtml(name)+'</span>'+(host?'':'<button class="group-member-remove" type="button" data-member-index="'+index+'" aria-label="Remove '+escHtml(name)+'">×</button>')+'</div>';
   }).join('');
+  wrap.querySelectorAll('.group-member-remove').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      const index=Number(btn.getAttribute('data-member-index'));
+      if(Number.isInteger(index)&&groupRecommendationMembers[index]) removeGroupMember(groupRecommendationMembers[index]);
+    });
+  });
   renderGroupPersonMenu();
 }
 function renderGroupPersonMenu(){
   const menu=document.getElementById('group-person-menu');if(!menu)return;
   const used={};groupRecommendationMembers.forEach(function(n){used[n.toLowerCase()]=true;});
   const available=groupAvailableUsers.filter(function(n){return !used[n.toLowerCase()];});
-  menu.innerHTML=available.length?available.map(function(n){return '<button class="group-person-option" type="button" onclick="addGroupMember('+JSON.stringify(n)+')">'+escHtml(n)+'</button>';}).join(''):'<div class="group-person-option" style="cursor:default">Everyone is already included.</div>';
+  menu.innerHTML=available.length?available.map(function(n,index){return '<button class="group-person-option" type="button" data-person-index="'+index+'">'+escHtml(n)+'</button>';}).join(''):'<div class="group-person-option" style="cursor:default">Everyone is already included.</div>';
+  menu.querySelectorAll('.group-person-option[data-person-index]').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      const index=Number(btn.getAttribute('data-person-index'));
+      if(Number.isInteger(index)&&available[index]) addGroupMember(available[index]);
+    });
+  });
 }
 function toggleGroupPersonMenu(){document.getElementById('group-person-menu').classList.toggle('open');}
 function addGroupMember(name){if(!groupRecommendationMembers.some(function(n){return n.toLowerCase()===String(name).toLowerCase();}))groupRecommendationMembers.push(String(name));document.getElementById('group-person-menu').classList.remove('open');renderGroupMembers();}
