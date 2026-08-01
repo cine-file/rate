@@ -423,3 +423,10 @@ After deploying v14, run `rebuildRecentActivitySnapshot` once, or run `setupActi
 - Fixes the first homepage visit so Recent Activity is requested immediately after session restoration. The site now enters Home through `goHome()` instead of only displaying the Home screen, so users no longer need to visit Stats and return before activity loads.
 - Formats Recent Activity dates as `Month Day, Year` (for example, `July 31, 2026`). ISO timestamps are parsed by their date portion first so midnight UTC values do not shift to the prior day in local time.
 - This update changes only `index.html` and the README. `Code.gs` is carried forward unchanged from v14. No Apps Script setup function or new spreadsheet tab is required.
+
+- Adds category emojis to Recent Activity labels: 🎬 Film, 📺 TV, and 🍽️ Le Guide.
+
+
+## Public Recent Activity — v16
+
+Recent Activity now loads on the public homepage before login. The `getRecentActivity` endpoint is intentionally read-only and public, returning only the prepared 15-item activity snapshot. Rating submission, personal stats, wishlists, recommendations, and all other user-specific features still require a valid session. No spreadsheet changes or setup run are required when upgrading from v15. Replace both `index.html` and `Code.gs`, then deploy a new Apps Script web-app version.
