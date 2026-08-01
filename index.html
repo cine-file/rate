@@ -2317,8 +2317,10 @@ function groupDistributionValues(summary){
   (summary?.rows||[]).forEach(function(row){
     const users=Object.keys(row?.userScores||{});
     users.forEach(function(user){
-      const value=summaryUserDisplayScore(row,user);
-      if(value!==null && Number.isFinite(Number(value))) values.push(Number(value));
+      const raw=storedNumber(row?.userRawScores?.[user]);
+      const score10=storedNumber(row?.userScores?.[user]);
+      const normalizedRaw=raw!==null ? raw : (score10===null ? null : score10*10);
+      if(normalizedRaw!==null && Number.isFinite(Number(normalizedRaw))) values.push(Number(normalizedRaw));
     });
   });
   return values;
