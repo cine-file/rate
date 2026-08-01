@@ -3115,11 +3115,10 @@ function formatActivityDate(value){
 }
 async function loadRecentActivity(){
   const wrap=document.getElementById('recent-activity-list');if(!wrap)return;
-  if(!getSessionToken()){wrap.innerHTML='<div class="stats-empty">Log in to see recent activity.</div>';return;}
   wrap.innerHTML='<div class="stats-loading">Loading recent ratings...</div>';
   const timeout=new Promise((_,reject)=>window.setTimeout(()=>reject(new Error('Activity timed out')),10000));
   try{
-    const data=await Promise.race([apiCall('getRecentActivity',{token:getSessionToken()}),timeout]);
+    const data=await Promise.race([apiCall('getRecentActivity',{}),timeout]);
     const rows=data.rows||[];
     if(!rows.length){wrap.innerHTML='<div class="stats-empty">No recent activity is available yet.</div>';return;}
     wrap.innerHTML=rows.map(function(r){
