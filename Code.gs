@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 //  CINE-FILE — Google Apps Script
-//  Version: 2026.07.28-cross-category-learning.9
+//  Version: 2026.08.01-activity-index-chart-fix.13
 //  Runtime: GitHub Pages frontend + Apps Script JSON backend
 //
 //  Version notes:
@@ -22,7 +22,7 @@
 //  Original by friend, restaurant functions added by Claude
 // ─────────────────────────────────────────────────────────────
 
-const BACKEND_VERSION = '2026.07.28-cross-category-learning.9';
+const BACKEND_VERSION = '2026.08.01-activity-index-chart-fix.13';
 const SESSION_TTL_SECONDS = 6 * 60 * 60;
 
 const FILMS_SHEET_NAME = 'Database-Films';
@@ -40,6 +40,7 @@ const TV_RECOMMENDATIONS_SHEET_NAME = 'Recommendations-TV';
 const TV_RECOMMENDATION_FEEDBACK_SHEET_NAME = 'Recommendation-Feedback-TV';
 const RESTAURANT_RECOMMENDATIONS_SHEET_NAME = 'Recommendations-Restaurants';
 const RESTAURANT_RECOMMENDATION_FEEDBACK_SHEET_NAME = 'Recommendation-Feedback-Restaurants';
+const RECENT_ACTIVITY_SHEET_NAME = 'Recent-Activity';
 
 const FILM_SUMMARY_BASE_COLUMNS = ['Title','Year','Genre','Director','Movie length','RT Audience','IMDb'];
 const FILM_SUMMARY_AVERAGE_COLUMN = 'Average Rating';
@@ -111,6 +112,10 @@ const GENERIC_RECOMMENDATIONS_HEADER = [
 
 const GENERIC_RECOMMENDATION_FEEDBACK_HEADER = [
   'recommendationId','user','category','recommendedId','action','createdAt'
+];
+
+const RECENT_ACTIVITY_HEADER = [
+  'activityKey','user','category','title','score10','displayDate','sortDate','updatedAt'
 ];
 
 
@@ -1035,6 +1040,7 @@ function doSaveRating_(d, username) {
     tab.appendRow(rowForHeader_(FILMS_HEADER, rowObj));
   }
   removeFutureFilm_(rowObj, username);
+  upsertRecentActivity_({activityKey:recentActivityKey_('film',username,rowObj.tmdbId,rowObj.title+'|'+rowObj.year),user:username,category:'film',title:rowObj.title||'',score10:Number(rowObj.score10||0),displayDate:activityDisplayDate_(rowObj),sortDate:activityDateValue_(rowObj),updatedAt:rowObj.updatedAt||''});
   rebuildFilmSummary_();
   return jsonOut_({ ok: true });
 }
@@ -1359,6 +1365,8 @@ function doSaveTvRating_(d, username) {
     tab.appendRow(rowForHeader_(TV_HEADER, rowObj));
   }
   removeFutureTv_(rowObj, username);
+  var activityTitle=rowObj.seriesTitle||''; if(String(rowObj.entryType||'').toLowerCase()==='season'&&rowObj.seasonNumber) activityTitle+=' — Season '+rowObj.seasonNumber;
+  upsertRecentActivity_({activityKey:recentActivityKey_('tv',username,(rowObj.tmdbTvId||'')+'|'+(rowObj.entryType||'')+'|'+(rowObj.seasonNumber||''),activityTitle),user:username,category:'tv',title:activityTitle,score10:Number(rowObj.score10||0),displayDate:activityDisplayDate_(rowObj),sortDate:activityDateValue_(rowObj),updatedAt:rowObj.updatedAt||''});
   rebuildTvSummary_();
   return jsonOut_({ ok:true });
 }
@@ -1635,6 +1643,7 @@ function doSaveRestaurantRating_(d, username) {
     tab.appendRow(rowForHeader_(RESTAURANTS_HEADER, rowObj));
   }
   removeFutureRestaurant_(rowObj, username);
+  upsertRecentActivity_({activityKey:recentActivityKey_('restaurant',username,rowObj.placeId,rowObj.name+'|'+rowObj.address),user:username,category:'restaurant',title:rowObj.name||'',score10:Number(rowObj.score10||0),displayDate:activityDisplayDate_(rowObj),sortDate:activityDateValue_(rowObj),updatedAt:rowObj.updatedAt||''});
   rebuildRestaurantSummary_();
   return jsonOut_({ ok: true });
 }
@@ -1789,6 +1798,7 @@ function setupActiveSheetTabs() {
   var tvRecommendationFeedback = getOrCreateSheet_(TV_RECOMMENDATION_FEEDBACK_SHEET_NAME, GENERIC_RECOMMENDATION_FEEDBACK_HEADER);
   var restaurantRecommendations = getOrCreateSheet_(RESTAURANT_RECOMMENDATIONS_SHEET_NAME, GENERIC_RECOMMENDATIONS_HEADER);
   var restaurantRecommendationFeedback = getOrCreateSheet_(RESTAURANT_RECOMMENDATION_FEEDBACK_SHEET_NAME, GENERIC_RECOMMENDATION_FEEDBACK_HEADER);
+  var recentActivity = getOrCreateSheet_(RECENT_ACTIVITY_SHEET_NAME, RECENT_ACTIVITY_HEADER);
   formatSheetAsTable_(filmDb);
   formatSheetAsTable_(restaurantDb);
   formatSheetAsTable_(futureFilms);
@@ -1801,9 +1811,11 @@ function setupActiveSheetTabs() {
   formatSheetAsTable_(tvRecommendationFeedback);
   formatSheetAsTable_(restaurantRecommendations);
   formatSheetAsTable_(restaurantRecommendationFeedback);
+  formatSheetAsTable_(recentActivity);
   var filmSummary = rebuildFilmSummary_();
   var restaurantSummary = rebuildRestaurantSummary_();
   var tvSummary = rebuildTvSummary_();
+  var recentActivityCount = rebuildRecentActivity_();
   var result = {
     version: BACKEND_VERSION,
     databaseFilms: FILMS_SHEET_NAME,
@@ -1813,6 +1825,8 @@ function setupActiveSheetTabs() {
     futureFilms: FUTURE_FILMS_SHEET_NAME,
     futureRestaurants: FUTURE_RESTAURANTS_SHEET_NAME,
     databaseTv: TV_SHEET_NAME,
+    recentActivity: RECENT_ACTIVITY_SHEET_NAME,
+    recentActivityCount: recentActivityCount,
     summaryTv: tvSummary,
     futureTv: FUTURE_TV_SHEET_NAME,
     filmRecommendations: FILM_RECOMMENDATIONS_SHEET_NAME,
@@ -1866,12 +1880,49 @@ function activityDisplayDate_(r) {
   if(isNaN(d.getTime())) return String(raw||'');
   return Utilities.formatDate(d, Session.getScriptTimeZone()||'America/Chicago', 'MMM d, yyyy');
 }
-function doGetRecentActivity_() {
+function recentActivityKey_(category, user, id, title) {
+  return [String(category||'').toLowerCase(),String(user||'').toLowerCase(),String(id||title||'').toLowerCase()].join('|');
+}
+function upsertRecentActivity_(row) {
+  var tab=getOrCreateSheet_(RECENT_ACTIVITY_SHEET_NAME,RECENT_ACTIVITY_HEADER);
+  var key=String(row.activityKey||'');
+  if(!key) return;
+  var rows=findExistingRows_(tab,RECENT_ACTIVITY_HEADER,row,function(r){ return String(r.activityKey||''); });
+  if(rows.length){
+    tab.getRange(rows[0],1,1,RECENT_ACTIVITY_HEADER.length).setValues([rowForHeader_(RECENT_ACTIVITY_HEADER,row)]);
+    deleteExtraRows_(tab,rows);
+  } else {
+    tab.appendRow(rowForHeader_(RECENT_ACTIVITY_HEADER,row));
+  }
+  CacheService.getScriptCache().remove('recent_activity_v13');
+}
+function removeRecentActivity_(activityKey) {
+  var tab=getExistingSheet_(RECENT_ACTIVITY_SHEET_NAME);
+  if(!tab) return;
+  deleteMatchingRows_(tab,RECENT_ACTIVITY_HEADER,function(r){ return String(r.activityKey||'')===String(activityKey||''); });
+  CacheService.getScriptCache().remove('recent_activity_v13');
+}
+function rebuildRecentActivity_() {
+  var tab=getOrCreateSheet_(RECENT_ACTIVITY_SHEET_NAME,RECENT_ACTIVITY_HEADER);
+  if(tab.getLastRow()>1) tab.getRange(2,1,tab.getLastRow()-1,tab.getLastColumn()).clearContent();
   var rows=[];
-  sheetObjects_(getExistingSheet_(FILMS_SHEET_NAME),FILMS_HEADER).forEach(function(r){rows.push({user:r.user||'',category:'film',title:r.title||'',score10:Number(r.score10||0),sortDate:activityDateValue_(r),displayDate:activityDisplayDate_(r)});});
-  sheetObjects_(getExistingSheet_(TV_SHEET_NAME),TV_HEADER).forEach(function(r){var title=r.seriesTitle||'';if(String(r.entryType||'').toLowerCase()==='season'&&r.seasonNumber)title+=' — Season '+r.seasonNumber;rows.push({user:r.user||'',category:'tv',title:title,score10:Number(r.score10||0),sortDate:activityDateValue_(r),displayDate:activityDisplayDate_(r)});});
-  sheetObjects_(getExistingSheet_(RESTAURANTS_SHEET_NAME),RESTAURANTS_HEADER).forEach(function(r){rows.push({user:r.user||'',category:'restaurant',title:r.name||'',score10:Number(r.score10||0),sortDate:activityDateValue_(r),displayDate:activityDisplayDate_(r)});});
-  rows=rows.filter(function(r){return r.user&&r.title&&!isNaN(r.score10);}).sort(function(a,b){return b.sortDate-a.sortDate;}).slice(0,15);
+  sheetObjects_(getExistingSheet_(FILMS_SHEET_NAME),FILMS_HEADER).forEach(function(r){ rows.push({activityKey:recentActivityKey_('film',r.user,r.tmdbId,r.title+'|'+r.year),user:r.user||'',category:'film',title:r.title||'',score10:Number(r.score10||0),displayDate:activityDisplayDate_(r),sortDate:activityDateValue_(r),updatedAt:r.updatedAt||r.createdAt||''}); });
+  sheetObjects_(getExistingSheet_(TV_SHEET_NAME),TV_HEADER).forEach(function(r){ var title=r.seriesTitle||''; if(String(r.entryType||'').toLowerCase()==='season'&&r.seasonNumber) title+=' — Season '+r.seasonNumber; rows.push({activityKey:recentActivityKey_('tv',r.user,(r.tmdbTvId||'')+'|'+(r.entryType||'')+'|'+(r.seasonNumber||''),title),user:r.user||'',category:'tv',title:title,score10:Number(r.score10||0),displayDate:activityDisplayDate_(r),sortDate:activityDateValue_(r),updatedAt:r.updatedAt||r.createdAt||''}); });
+  sheetObjects_(getExistingSheet_(RESTAURANTS_SHEET_NAME),RESTAURANTS_HEADER).forEach(function(r){ rows.push({activityKey:recentActivityKey_('restaurant',r.user,r.placeId,r.name+'|'+r.address),user:r.user||'',category:'restaurant',title:r.name||'',score10:Number(r.score10||0),displayDate:activityDisplayDate_(r),sortDate:activityDateValue_(r),updatedAt:r.updatedAt||r.createdAt||''}); });
+  rows=rows.filter(function(r){ return r.user&&r.title&&!isNaN(r.score10); });
+  if(rows.length) tab.getRange(2,1,rows.length,RECENT_ACTIVITY_HEADER.length).setValues(rows.map(function(r){ return rowForHeader_(RECENT_ACTIVITY_HEADER,r); }));
+  formatSheetAsTable_(tab);
+  CacheService.getScriptCache().remove('recent_activity_v13');
+  return rows.length;
+}
+function doGetRecentActivity_() {
+  var cache=CacheService.getScriptCache();
+  var cached=cache.get('recent_activity_v13');
+  if(cached) return jsonOut_({rows:JSON.parse(cached)});
+  var tab=getExistingSheet_(RECENT_ACTIVITY_SHEET_NAME);
+  if(!tab) { rebuildRecentActivity_(); tab=getExistingSheet_(RECENT_ACTIVITY_SHEET_NAME); }
+  var rows=sheetObjects_(tab,RECENT_ACTIVITY_HEADER).map(function(r){ return {user:r.user||'',category:r.category||'',title:r.title||'',score10:Number(r.score10||0),sortDate:Number(r.sortDate||0),displayDate:r.displayDate||''}; }).filter(function(r){ return r.user&&r.title&&!isNaN(r.score10); }).sort(function(a,b){ return b.sortDate-a.sortDate; }).slice(0,15);
+  cache.put('recent_activity_v13',JSON.stringify(rows),300);
   return jsonOut_({rows:rows});
 }
 
