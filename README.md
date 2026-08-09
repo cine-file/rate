@@ -1,7 +1,5 @@
 # Cine-file Secure Ratings Dashboard
 
-**Current build:** `2026.07.27-cross-category-recommendations.8`
-
 This folder merges the latest restaurant UI work with the secure GitHub Pages + Apps Script backend approach.
 
 ## Project Overview
@@ -10,14 +8,14 @@ Cine-file is a small private ratings dashboard for a group of friends. GitHub Pa
 
 The app currently has three rating areas:
 
-- **Cine-file / Film** - movie search, advanced title/year search, full category rating, quick rating, generated rating card, already-rated detection, full personal/group/head-to-head/individual stats, genre-filtered comparisons, interactive score histograms, and secure self-service rating deletion.
-- **Cine-file / TV** - series and advanced title/year search, season ratings, optional manual overall-series ratings, quick and full category scoring, generated rating cards, separate season/overall full stats, genre-filtered comparisons, interactive score histograms, secure deletion, and a TV wishlist.
-- **Le Guide / Restaurant** - restaurant search, full category rating, quick rating, generated restaurant card, already-rated detection, full personal/group/head-to-head/individual stats, interactive score histograms, and secure deletion.
+- **Cine-file / Film** - movie search, full category rating, quick rating, generated rating card, already-rated detection, personal stats, group stats, and head-to-head stats.
+- **Cine-file / TV** - series search, season ratings, optional manual overall-series ratings, quick and full category scoring, generated rating cards, separate season/overall stats, and a TV wishlist.
+- **Le Guide / Restaurant** - restaurant search, full category rating, quick rating, generated restaurant card, already-rated detection, personal, group, head-to-head, and individual stats.
 
 The dashboard is intentionally still a single-page app. Screens are shown/hidden with CSS classes rather than separate routes. The main user flow is:
 
 1. User opens the GitHub Pages site.
-2. User chooses Film, TV, or Restaurant.
+2. User chooses Film or Restaurant.
 3. User logs in with name + PIN.
 4. Frontend receives a temporary session token from Apps Script.
 5. Search/rating/stats actions call Apps Script with that token.
@@ -145,21 +143,6 @@ Grade bands are:
 - **Group Stats** includes a film search that shows the current user's score when available, each group member's score, the group average, IMDb, and RT Audience.
 - **Group Rankings** and all three Head-to-Head lists initially show five rows with an option to expand the full list.
 - Film group data is returned by the authenticated `getSummary` action from `Database-Films`; the frontend does not read legacy sheet tabs.
-- Film and TV stats have a persistent **Genre** filter above the stats tabs. The selected genre applies to My Stats, Group, Head to Head, and Individual Ratings, so averages and comparisons are calculated only from matching titles.
-
-## Stats and Score Views
-
-Film, TV, and Restaurant stats use the same four views: **My Stats**, **Group**, **Head to Head**, and **Individual Ratings**. The `/10 Score` and `Raw /100` toggle is shared across all three categories and all comparison views. Group summary API responses include both final `/10` values and raw `/100` values so the toggle does not have to estimate raw scores.
-
-The score distribution is an interactive bar chart. In `/100` mode it uses 5-point bins on a 0-100 x-axis; in `/10` mode the same bins display as 0.5-point increments on a 0-10 x-axis. The y-axis counts ratings, the dashed vertical line marks the arithmetic average, and clicking a bar briefly shows only the number of ratings in that bin.
-
-## Advanced Film and TV Search
-
-Normal search remains fast and shows the first seven TMDB matches. The **Advanced Search** control can optionally narrow by release/first-air year and searches up to three result pages, returning up to 30 unique matches.
-
-## Secure Rating Deletion
-
-The bottom of each **My Stats** view contains **Delete a Rating**. Deletion requires the logged-in user to re-enter their PIN, choose a rating, and complete a separate final confirmation. The backend verifies the PIN again when processing the delete request, removes only that user's matching database row, and rebuilds the corresponding summary tab.
 
 ## Security Model
 
@@ -186,15 +169,6 @@ The GitHub site still exposes the Apps Script `/exec` URL in `CONFIG.GAS_URL`; t
 
 Restaurant thumbnails are fetched server-side and returned as small data URLs so Google Places photo URLs do not expose the API key.
 
-
-## AI-First Film Recommendations (v6)
-
-Film recommendations now use Gemini as the recommendation brain and TMDB only for validation and metadata. Gemini receives the selected source film (when used), the user's source rating categories and notes, a compact taste profile, representative rating history, and exclusion lists. It proposes 15 real movie titles with years and explanations. The backend validates those suggestions against TMDB, applies the selected rated/wishlist exclusions, and keeps up to 10 eligible movies.
-
-Each batch shows 5 movies and stores 5 instant replacements. After all 10 have been reviewed, the frontend automatically requests a fresh batch while excluding every movie already shown in that recommendation session. TMDB supplies IDs, posters, genres, runtime, and ratings; TMDB recommendations are used only as a fallback if Gemini is unavailable or fewer than 5 Gemini suggestions validate.
-
-Diagnostics now show the active engine, AI model, number of AI proposals, number of validated movies, and backup count. All recommendation controls and diagnostics continue to use the active site theme variables.
-
 ## Manual Deployment
 
 1. Replace GitHub `index.html` with this `index.html`.
@@ -205,228 +179,4 @@ Diagnostics now show the active engine, AI model, number of AI proposals, number
 6. Deploy a new web app version.
 7. Confirm `CONFIG.GAS_URL` in `index.html` points to the deployed `/exec` URL.
 
-Run `setupActiveSheetTabs` when setting up the active tabs, after deploying a version that adds new tabs, rebuilding summary tabs, or repairing formatting. This TV version creates `Database-TV`, `Summary-TV`, and `Future-TV`. A normal frontend-only change does not require it. This version changes `Code.gs` so Film group summaries include genre data; deploy a new Apps Script web-app version for genre filtering to work across group and head-to-head Film stats. This update changes both `index.html` and `Code.gs`; deploy a new Apps Script version after pasting the backend. No new sheet tabs or setup run are required.
-## Film Recommendations
-
-Film Wishlist now includes an additive recommendation room below the Saved Films to Watch list. Existing Film, TV, Restaurant, Wishlist, Stats, theme, rating, advanced-search, and deletion behavior remains in place.
-
-Recommendation modes:
-
-- **Based on a Movie** uses one of the current user's rated films as the source.
-- **Based on My Taste** uses the user's complete film-rating history without requiring a source movie.
-
-Recommendation pools:
-
-- **New to Me** excludes films the user has already rated.
-- **Not Rated or Wishlisted** excludes both rated films and existing wishlist films.
-- **Include Rated Movies** permits previously rated films and labels the user's score.
-
-Recommendation styles:
-
-- Balanced
-- Hidden Gems
-- Something Different
-
-The backend builds a validated candidate pool from TMDB recommendations, similar films, separate genre branches, source keywords, director work, lead-cast work, and taste-profile discovery. It scores candidates using the user's genres, directors, decades, runtimes, rating strength, and source-film similarity, then returns five films plus stored backups. Replace uses a backup without regenerating the whole set. Backup metadata is hydrated only when used, reducing initial generation time. Add to Wishlist uses the existing `Future-Films` flow.
-
-New sheet tabs:
-
-- `Recommendations-Films` records displayed recommendation sets and explanations.
-- `Recommendation-Feedback` records actions such as add to wishlist, replace, and not interested.
-
-Run `setupActiveSheetTabs` once after deploying this version to create and format the two new tabs.
-
-### Optional AI Jury
-
-Set the optional Apps Script property `GEMINI_API_KEY` to enable the Gemini ranking jury. The backend uses the stable `gemini-3.6-flash` model. The AI may select and explain recommendations only from the TMDB-validated candidate list. For source-movie recommendations, the jury receives the user's actual overall score, category scores, category notes, overall notes, source keywords, director, genres, and runtime. The website displays whether Gemini ran, whether deterministic fallback was used, the eligible candidate count, and a safe AI error when applicable. If this property is absent or the AI call fails, the deterministic taste-ranking engine still returns recommendations.
-
-### Deployment for This Version
-
-1. Replace GitHub `index.html`.
-2. Replace the version-control copy of `Code.gs`.
-3. Paste `Code.gs` into the Apps Script project.
-4. Optionally add `GEMINI_API_KEY` in Apps Script Project Settings.
-5. Save and deploy a new web-app version.
-6. Run `setupActiveSheetTabs` once.
-
-
-### Recommendation Diagnostics Update
-
-- The Generate Film Recommendations control appears below the saved-film list.
-- All diagnostic and recommendation elements use the existing theme variables and follow Gold, Light, and Classic schemes.
-- Results identify `Gemini AI jury` or `Deterministic fallback`.
-- Safe diagnostics show candidate counts and Gemini failure details without exposing the API key.
-- This update changes both `index.html` and `Code.gs`; deploy a new Apps Script web-app version. Existing recommendation sheet tabs do not need to be recreated if they already exist.
-
-### Gemini 3.6 Model Update
-
-- The optional AI jury now calls the stable `gemini-3.6-flash` model.
-- The Gemini request no longer sends `temperature`, `top_p`, or `top_k`, because these sampling parameters are deprecated for Gemini 3.6 and later models.
-- The existing `GEMINI_API_KEY` Script Property remains valid; API keys are associated with a Google Cloud project, not locked to one Gemini model.
-- Google AI Studio may be used to test the same key and model by selecting **Gemini 3.6 Flash** in the model selector. The live Cine-File website uses the model specified in `Code.gs`, regardless of the model last selected in AI Studio.
-- This update changes `Code.gs` and the README only. Replace and redeploy `Code.gs`; no sheet setup or frontend replacement is required when upgrading from v4.
-
-## Dynamic Rating Distribution and Food-Type Stats (v7)
-
-Rating-distribution charts for Film, TV, and Le Guide now use a dynamic lower bound instead of always displaying the entire 0–100 or 0–10 scale. The chart keeps 100 or 10 as the maximum, rounds the lower bound down to a readable interval, includes additional space below the lowest score, and enforces a minimum visible span of 20 points in `/100` mode or 2 points in `/10` mode. Bars remain 5-point bins in `/100` mode and 0.5-point bins in `/10` mode. The note below the chart identifies the visible range, and the average marker remains in place.
-
-Le Guide Stats now includes a **Food Type** filter matching the existing Film and TV genre-filter pattern. The selected food type applies to My Ratings, Group, Head to Head, and Individual Ratings. The selection is stored locally for the browser and follows the active Gold, Light, or Classic theme.
-
-Le Guide My Ratings also includes **Food Type Averages**, ranking cuisine/food types by the current user's average rating and showing the number of ratings behind each average. The backend restaurant summary response now includes cuisine metadata so Group, Head to Head, and Individual Ratings can be filtered consistently.
-
-This update changes both `index.html` and `Code.gs`. Replace both files and deploy a new Apps Script web-app version. No new sheet tabs or columns are required, and `setupActiveSheetTabs` does not need to be run solely for this update.
-
-
-## Cross-Category Recommendations — v8
-
-Film, TV, and Le Guide now each have a recommendation section below the category's saved-items list.
-
-### Film
-
-Film keeps the existing AI-first recommendation system. Gemini proposes titles from the logged-in user's ratings and notes, TMDB validates the titles and supplies metadata, five recommendations are shown, and five validated backups are held for replacement.
-
-### TV
-
-TV recommendations support:
-
-- **Based on a Show** — choose one of the logged-in user's rated series.
-- **Based on My Taste** — use the logged-in user's complete TV rating history.
-- **New to Me**, **Not Rated or Wishlisted**, and **Include Rated Shows** pools.
-- **Balanced**, **Hidden Gems**, and **Something Different** styles.
-- Five visible series and up to five replacement series.
-- TMDB validation before a recommendation is displayed.
-- Direct **Add to Wishlist**, **Replace**, and **Not Interested** actions.
-
-TV recommendations are personal to the authenticated user. Other users' ratings are not used unless a future group mode is deliberately added.
-
-### Le Guide / Restaurants
-
-Restaurant recommendations support:
-
-- **Based on a Restaurant** — choose one of the logged-in user's rated restaurants.
-- **Based on My Taste** — use the user's restaurant history and most common rated city.
-- The same recommendation-pool and style choices as Film and TV.
-- Five visible restaurants and up to five replacements.
-- Google Places validation before a restaurant is displayed.
-- Direct **Add to Wishlist**, **Replace**, and **Not Interested** actions.
-
-For source-restaurant mode, the source restaurant's city anchors the search. For taste-only mode, the backend uses the most common city in that user's restaurant history. A user must therefore have at least one restaurant rating with a city before taste-only restaurant recommendations can be generated.
-
-### Recommendation Architecture
-
-The recommendation engine is AI-first:
-
-1. Gemini reviews only the authenticated user's relevant rating history, category scores, and notes.
-2. Gemini proposes 15 real candidates.
-3. TMDB validates Film and TV titles; Google Places validates restaurants.
-4. Rated, wishlisted, and previously shown items are removed according to the selected pool.
-5. Up to 10 eligible items are retained: five shown and five held as replacements.
-6. After all replacements are exhausted, the frontend generates a fresh batch while excluding previously shown IDs.
-
-All recommendation controls reuse the existing recommendation CSS and theme variables. Gold, Light, and Classic themes therefore style the new TV and restaurant panels consistently with Film.
-
-### Deployment for v8
-
-Replace both `index.html` and `Code.gs`, save the Apps Script project, and deploy a new web-app version. In v8, TV and restaurant recommendations did not yet use persistent recommendation tabs. The v9 learning update below supersedes that behavior and requires one `setupActiveSheetTabs` run.
-
-
-## Persistent TV and Restaurant Recommendation Learning — v9
-
-TV and Le Guide recommendations now mirror the persistent Film recommendation pattern.
-
-New tabs created by `setupActiveSheetTabs`:
-
-- `Recommendations-TV`
-- `Recommendation-Feedback-TV`
-- `Recommendations-Restaurants`
-- `Recommendation-Feedback-Restaurants`
-
-Each generated batch stores all validated recommendations, including the five initially shown and the backup recommendations. User actions are stored permanently:
-
-- Added to Wishlist
-- Replaced
-- Not Interested
-
-Future Gemini prompts include the logged-in user's recent recommendation feedback so later TV and restaurant suggestions can avoid repeatedly rejected titles and learn from accepted recommendations. Recommendation history remains user-specific.
-
-Run `setupActiveSheetTabs` once after deploying v9 to create and format the four new tabs.
-
-### Theme Search Cleanup
-
-Gold and Light/Cream themes no longer inherit Classic green or Le Guide red glow effects behind search controls. The search fields retain the active theme's surface and border styling without colored halos.
-
-## Group Rating Distribution — v10
-
-The Group tab for Film, TV, and Le Guide now includes a Group Rating Distribution chart.
-
-- Every individual submitted rating is one observation. Ratings are not averaged by title before being placed into the chart.
-- Film genre, TV genre/type, and restaurant food-type filters apply to the group chart.
-- The chart follows the active `/10` or `/100` display mode.
-- It uses the same dynamic lower-bound scaling, fixed maximum, bin sizes, average line, count popup, and theme styling as the individual distribution chart.
-- The section title reports the total number of individual ratings represented.
-
-This update changes only `index.html` and the README. `Code.gs` is carried forward unchanged from v9. No new spreadsheet tabs or columns are required, and `setupActiveSheetTabs` does not need to be run solely for v10.
-
-
-## Group Matchmaker and Recent Activity — v11
-
-### Group Matchmaker
-
-Film Recommendations now includes an audience selector with **For Me** and **Group Matchmaker**. The logged-in user is included automatically. Additional users can be added with **+ Add Person**; already selected users are removed from the available-user menu, and added users can be removed before generation. At least two people are required.
-
-Group Matchmaker uses every selected person's Film ratings, category scores, notes, genre/director/runtime preferences, and rating history. It treats each person as a separate taste profile, looks for overlap, avoids strong dislikes, and uses compromise picks where tastes differ. The default pool becomes **New to Everyone**, which excludes any film rated by any selected person. The stricter pool also excludes films wishlisted by anyone selected. Generated sessions continue to use the Film recommendation and feedback sheets. `Recommendations-Films` now includes a `groupMembers` column.
-
-### Recent Activity
-
-The homepage now displays the 15 most recent Film, TV, and Le Guide ratings across all users. Each entry shows the user, title, category, date, score, and sentiment:
-
-- Loved 😍: 9.0–10.0
-- Liked 🙂: 7.5–8.9
-- Meh 😐: 6.0–7.4
-- Disliked 😕: 4.0–5.9
-- Hated 😭: below 4.0
-
-### Deployment
-
-Replace both `index.html` and `Code.gs`, deploy a new Apps Script web-app version, and run `setupActiveSheetTabs` once so the `groupMembers` header is added to `Recommendations-Films`. No new spreadsheet tabs are created.
-
-## v12 — Desktop Layout and Group Matchmaker Fixes
-
-- Restores centered desktop positioning for the Cine-File home content after the Recent Activity section was added.
-- Repairs Group Matchmaker person selection and removal by replacing fragile inline name-based click handlers with bound button event listeners.
-- Keeps already-selected people out of the Add Person list and preserves the Add Person control after each selection.
-- Makes the Recent Activity score and `/10` label use the active Light or Gold theme accent instead of inheriting Classic green.
-- No spreadsheet tabs or columns are added in this maintenance update. Replace `index.html`; `Code.gs` is carried forward unchanged from v11. A new Apps Script deployment is only required if you also replace/redeploy the backend file.
-
-
-## v13 — Activity Performance + Group Distribution Fix
-
-- Added a lightweight `Recent-Activity` index tab. The homepage now reads the latest 15 activity rows from this small index instead of scanning the complete Film, TV, and Restaurant databases on every page load.
-- `setupActiveSheetTabs` creates and backfills `Recent-Activity` from existing ratings. New and updated ratings keep the index current automatically.
-- Recent Activity responses are cached for five minutes and the cache is invalidated whenever a rating is saved.
-- Fixed Group Rating Distribution normalization. Group values are now normalized internally to `/100`; `/10` mode then converts them exactly once, preventing scores such as 8.7 from being plotted as 0.87.
-
-Deployment: replace both `index.html` and `Code.gs`, deploy a new Apps Script web-app version, and run `setupActiveSheetTabs` once to create/backfill `Recent-Activity`.
-
-
-## Recent Activity Snapshot — v14
-
-Recent Activity no longer reads or sorts Google Sheet rows when the homepage opens. The public `getRecentActivity` request reads a prebuilt 15-item JSON snapshot from Script Properties only.
-
-The snapshot is refreshed whenever a Film, TV, or Restaurant rating is saved or updated. Full database scanning is restricted to the manual `rebuildRecentActivitySnapshot` function and the manually run `setupActiveSheetTabs` setup process. The homepage loads activity after the rest of the interface is visible and stops waiting after 10 seconds, offering a Retry button rather than blocking other screens.
-
-After deploying v14, run `rebuildRecentActivitySnapshot` once, or run `setupActiveSheetTabs` once, to populate the initial snapshot from existing ratings. Future rating submissions maintain it automatically.
-
-
-## v15 — Initial Activity Load + Date Formatting
-
-- Fixes the first homepage visit so Recent Activity is requested immediately after session restoration. The site now enters Home through `goHome()` instead of only displaying the Home screen, so users no longer need to visit Stats and return before activity loads.
-- Formats Recent Activity dates as `Month Day, Year` (for example, `July 31, 2026`). ISO timestamps are parsed by their date portion first so midnight UTC values do not shift to the prior day in local time.
-- This update changes only `index.html` and the README. `Code.gs` is carried forward unchanged from v14. No Apps Script setup function or new spreadsheet tab is required.
-
-- Adds category emojis to Recent Activity labels: 🎬 Film, 📺 TV, and 🍽️ Le Guide.
-
-
-## Public Recent Activity — v16
-
-Recent Activity now loads on the public homepage before login. The `getRecentActivity` endpoint is intentionally read-only and public, returning only the prepared 15-item activity snapshot. Rating submission, personal stats, wishlists, recommendations, and all other user-specific features still require a valid session. No spreadsheet changes or setup run are required when upgrading from v15. Replace both `index.html` and `Code.gs`, then deploy a new Apps Script web-app version.
+Run `setupActiveSheetTabs` when setting up the active tabs, after deploying a version that adds new tabs, rebuilding summary tabs, or repairing formatting. This TV version creates `Database-TV`, `Summary-TV`, and `Future-TV`. A normal frontend-only change does not require it. A `Code.gs` change does require a new Apps Script deployment for the live GitHub Pages site to use it.
