@@ -40,7 +40,7 @@ input[type=number]{-moz-appearance:textfield;}
    HOME SCREEN
 ══════════════════════════════════════ */
 #screen-home{align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% -10%,#0d200d 0%,#060908 65%);}
-.home-center{max-width:640px;width:100%;text-align:center;padding:48px 24px;margin-left:auto;margin-right:auto;}
+.home-center{max-width:640px;width:100%;text-align:center;padding:48px 24px;}
 .home-eyebrow{font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:0.4em;text-transform:uppercase;color:#3d7a3d;margin-bottom:16px;}
 .home-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(64px,14vw,112px);color:#e8f8e8;line-height:0.88;letter-spacing:0.02em;margin-bottom:20px;text-shadow:0 0 80px rgba(60,160,60,0.25);}
 .home-sub{font-size:14px;color:#3d6a3d;font-style:italic;margin-bottom:52px;}
@@ -292,10 +292,6 @@ table.card-table{width:100%;border-collapse:collapse;margin-bottom:4px;}
 #screen-lg-stats .film-row-title{color:var(--lg-cream);}
 #screen-lg-stats .film-row-score{color:var(--lg-red);}
 #screen-lg-stats .stats-search{background:#1a0608;border-color:#4a1a1a;color:var(--lg-cream);}
-
-#screen-lg-stats .stat-card{background:#1a0608;border-color:#3a1a1a;}
-#screen-lg-stats .stat-card-num{color:var(--lg-cream);}
-#screen-lg-stats .stat-card-lbl{color:#8a4a4a;}
 
 /* ══════════════════════════════════════
    SETTINGS SCREEN
@@ -1043,112 +1039,6 @@ body.theme-cream #admin-modal .pin-error,body.theme-gold #admin-modal .pin-error
 .stats-search-results{margin-top:10px;display:flex;flex-direction:column;gap:6px;}
 .stats-search-result{display:flex;align-items:center;gap:12px;width:100%;padding:10px 12px;background:#0b120b;border:1px solid #1a3a1a;border-radius:2px;color:#c0e0c0;text-align:left;cursor:pointer;font:13px 'Barlow',sans-serif;}
 .stats-search-result:hover{border-color:#4a9a4a;background:#0f1c0f;}
-.advanced-search-toggle{margin-top:14px;background:transparent;border:0;color:#4a7a4a;font:12px 'Barlow Condensed',sans-serif;letter-spacing:.12em;text-transform:uppercase;text-decoration:underline;cursor:pointer;}
-.advanced-search-panel{display:none;margin-top:14px;padding:14px;background:#0b120b;border:1px solid #1e3a1e;border-radius:2px;text-align:left;}
-.advanced-search-panel.open{display:block;}
-.advanced-search-row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;}
-.advanced-search-field{flex:1;min-width:130px;}
-.advanced-search-label{display:block;margin-bottom:5px;color:#3d6a3d;font:10px 'Barlow Condensed',sans-serif;letter-spacing:.16em;text-transform:uppercase;}
-.advanced-search-input{width:100%;padding:10px 11px;background:#060908;border:1px solid #1e3a1e;border-radius:2px;color:#dff0df;font:14px 'Barlow',sans-serif;outline:none;}
-.advanced-search-input:focus{border-color:#4a9a4a;}
-.advanced-search-help{margin-top:8px;color:#3d5a3d;font-size:11px;line-height:1.45;}
-.dropdown.advanced-results{max-height:440px;overflow-y:auto;}
-.stats-filter-row{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin:-8px 0 24px;padding:13px 15px;background:#090f09;border:1px solid #1a3a1a;border-radius:3px;}
-.stats-filter-field{min-width:190px;flex:0 1 280px;}
-.stats-filter-label{display:block;margin-bottom:6px;color:#3d6a3d;font:10px 'Barlow Condensed',sans-serif;letter-spacing:.18em;text-transform:uppercase;}
-.stats-genre-select{width:100%;padding:9px 12px;background:#0b120b;border:1px solid #1e3a1e;border-radius:2px;color:#c0e0c0;font:13px 'Barlow Condensed',sans-serif;letter-spacing:.06em;outline:none;cursor:pointer;}
-.stats-genre-select:focus{border-color:#4a9a4a;}
-.stats-filter-summary{color:#3d6a3d;font-size:12px;font-style:italic;padding-bottom:9px;}
-.distribution-chart-wrap{position:relative;padding:16px 12px 8px;background:#090f09;border:1px solid #1a3a1a;border-radius:3px;overflow:hidden;}
-.distribution-chart{display:block;width:100%;height:auto;color:#4a9a4a;overflow:visible;}
-.distribution-grid{stroke:#183018;stroke-width:1;}
-.distribution-axis{stroke:#315231;stroke-width:1.2;}
-.distribution-label{fill:#4f774f;font:11px 'Barlow Condensed',sans-serif;}
-.distribution-axis-title{fill:#5f8a5f;font:10px 'Barlow Condensed',sans-serif;letter-spacing:.12em;text-transform:uppercase;}
-.distribution-bar{fill:currentColor;opacity:.7;cursor:pointer;transition:opacity .15s;}
-.distribution-bar:hover,.distribution-bar:focus{opacity:1;outline:none;}
-.distribution-average{stroke:#e8f8e8;stroke-width:2;stroke-dasharray:6 5;pointer-events:none;}
-.distribution-average-label{fill:#e8f8e8;font:700 11px 'Barlow Condensed',sans-serif;letter-spacing:.08em;pointer-events:none;}
-.distribution-popup{position:absolute;z-index:3;min-width:30px;padding:5px 8px;border-radius:3px;background:#e8f8e8;color:#091009;font:700 15px 'Barlow Condensed',sans-serif;text-align:center;transform:translate(-50%,-115%);opacity:0;pointer-events:none;box-shadow:0 6px 20px rgba(0,0,0,.35);transition:opacity .1s;}
-.distribution-popup.visible{opacity:1;}
-.distribution-note{margin-top:7px;color:#3d6a3d;font-size:11px;text-align:center;}
-#screen-lg-stats .distribution-chart{color:#C41E3A;}
-#screen-lg-stats .distribution-chart-wrap{background:#1a0608;border-color:#3a1a1a;}
-#screen-lg-stats .distribution-grid{stroke:#321315;}
-#screen-lg-stats .distribution-axis{stroke:#6a3035;}
-#screen-lg-stats .distribution-label,#screen-lg-stats .distribution-axis-title{fill:#9a6267;}
-.stats-danger-zone{margin-top:50px;padding-top:24px;border-top:1px solid #2b1717;text-align:center;}
-.delete-rating-btn{padding:10px 18px;background:transparent;border:1px solid #6b2b2b;border-radius:2px;color:#b86464;cursor:pointer;font:12px 'Barlow Condensed',sans-serif;letter-spacing:.14em;text-transform:uppercase;}
-.delete-rating-btn:hover{background:#2a0b0d;border-color:#b64c55;color:#e59aa0;}
-.rating-delete-overlay{display:none;position:fixed;inset:0;z-index:1200;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.82);}
-.rating-delete-overlay.open{display:flex;}
-.rating-delete-card{width:min(560px,100%);max-height:calc(100vh - 40px);overflow:auto;padding:28px;background:#0b120b;border:1px solid #6b2b2b;border-radius:3px;box-shadow:0 24px 80px rgba(0,0,0,.55);}
-.rating-delete-eyebrow{color:#b86464;font:10px 'Barlow Condensed',sans-serif;letter-spacing:.22em;text-transform:uppercase;margin-bottom:8px;}
-.rating-delete-title{font:30px 'Bebas Neue',sans-serif;color:#e8f8e8;margin-bottom:7px;}
-.rating-delete-copy{color:#6f8a6f;font-size:13px;line-height:1.55;margin-bottom:18px;}
-.rating-delete-pin{width:100%;padding:13px 14px;background:#060908;border:1px solid #3f2525;border-radius:2px;color:#e8f8e8;font-size:18px;letter-spacing:.28em;text-align:center;outline:none;}
-.rating-delete-pin:focus{border-color:#b64c55;}
-.rating-delete-search{width:100%;padding:11px 12px;margin-bottom:12px;background:#060908;border:1px solid #263b26;border-radius:2px;color:#dff0df;outline:none;}
-.rating-delete-list{display:flex;flex-direction:column;gap:8px;max-height:360px;overflow:auto;}
-.rating-delete-choice{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;padding:12px;background:#0e170e;border:1px solid #1e3a1e;border-radius:2px;color:#cfe3cf;text-align:left;cursor:pointer;}
-.rating-delete-choice:hover{border-color:#8f3f46;background:#19100f;}
-.rating-delete-choice-title{font-weight:600;}
-.rating-delete-choice-meta{margin-top:3px;color:#607860;font-size:11px;}
-.rating-delete-choice-score{font:22px 'Bebas Neue',sans-serif;color:#b86464;white-space:nowrap;}
-.rating-delete-actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:18px;}
-.rating-delete-confirm{padding:11px 18px;background:#5d171d;border:1px solid #a23d47;border-radius:2px;color:#ffd8db;cursor:pointer;font:12px 'Barlow Condensed',sans-serif;letter-spacing:.13em;text-transform:uppercase;}
-.rating-delete-confirm:hover{background:#7a1d25;}
-.rating-delete-error{min-height:18px;margin-top:10px;color:#d07078;font-size:12px;text-align:center;}
-body.theme-cream .advanced-search-panel,body.theme-gold .advanced-search-panel,
-body.theme-cream .distribution-chart-wrap,body.theme-gold .distribution-chart-wrap,
-body.theme-cream .stats-filter-row,body.theme-gold .stats-filter-row,
-body.theme-cream .rating-delete-card,body.theme-gold .rating-delete-card{background:var(--theme-panel);border-color:var(--theme-border);}
-body.theme-cream .advanced-search-input,body.theme-gold .advanced-search-input,
-body.theme-cream .stats-genre-select,body.theme-gold .stats-genre-select,
-body.theme-cream .rating-delete-pin,body.theme-gold .rating-delete-pin,
-body.theme-cream .rating-delete-search,body.theme-gold .rating-delete-search,
-body.theme-cream .rating-delete-choice,body.theme-gold .rating-delete-choice{background:var(--theme-bg-2);border-color:var(--theme-border);color:var(--theme-text);}
-body.theme-cream .advanced-search-toggle,body.theme-gold .advanced-search-toggle{color:var(--theme-accent) !important;}
-body.theme-cream .advanced-search-label,body.theme-gold .advanced-search-label,
-body.theme-cream .advanced-search-help,body.theme-gold .advanced-search-help,
-body.theme-cream .stats-filter-label,body.theme-gold .stats-filter-label,
-body.theme-cream .stats-filter-summary,body.theme-gold .stats-filter-summary,
-body.theme-cream .distribution-note,body.theme-gold .distribution-note,
-body.theme-cream .rating-delete-copy,body.theme-gold .rating-delete-copy,
-body.theme-cream .rating-delete-choice-meta,body.theme-gold .rating-delete-choice-meta{color:var(--theme-muted) !important;}
-body.theme-cream .advanced-search-input:focus,body.theme-gold .advanced-search-input:focus,
-body.theme-cream .stats-genre-select:focus,body.theme-gold .stats-genre-select:focus,
-body.theme-cream .stats-search:focus,body.theme-gold .stats-search:focus{border-color:var(--theme-accent);}
-body.theme-cream .distribution-chart,body.theme-gold .distribution-chart{color:var(--theme-accent);}
-body.theme-cream .distribution-grid,body.theme-gold .distribution-grid{stroke:var(--theme-border);}
-body.theme-cream .distribution-axis,body.theme-gold .distribution-axis{stroke:var(--theme-muted);}
-body.theme-cream .distribution-label,body.theme-gold .distribution-label,
-body.theme-cream .distribution-axis-title,body.theme-gold .distribution-axis-title{fill:var(--theme-muted);}
-body.theme-cream .distribution-average,body.theme-gold .distribution-average{stroke:var(--theme-text);}
-body.theme-cream .distribution-average-label,body.theme-gold .distribution-average-label{fill:var(--theme-text);}
-body.theme-cream .distribution-popup,body.theme-gold .distribution-popup{background:var(--theme-text);color:var(--theme-bg);}
-body.theme-cream .rating-delete-title,body.theme-gold .rating-delete-title{color:var(--theme-text);}
-/* Le Guide's classic red rules use an ID selector, so these stronger selectors prevent theme-color leakage. */
-body.theme-cream #screen-lg-stats .h2h-select,body.theme-gold #screen-lg-stats .h2h-select,
-body.theme-cream #screen-lg-stats .stats-search,body.theme-gold #screen-lg-stats .stats-search{background:var(--theme-bg-2);border-color:var(--theme-border);color:var(--theme-text);}
-body.theme-cream #screen-lg-stats .h2h-vs,body.theme-gold #screen-lg-stats .h2h-vs,
-body.theme-cream #screen-lg-stats .h2h-stat-lbl,body.theme-gold #screen-lg-stats .h2h-stat-lbl,
-body.theme-cream #screen-lg-stats .film-row-rank,body.theme-gold #screen-lg-stats .film-row-rank,
-body.theme-cream #screen-lg-stats .film-row-year,body.theme-gold #screen-lg-stats .film-row-year,
-body.theme-cream #screen-lg-stats .stat-card-lbl,body.theme-gold #screen-lg-stats .stat-card-lbl{color:var(--theme-muted) !important;}
-body.theme-cream #screen-lg-stats .h2h-stat,body.theme-gold #screen-lg-stats .h2h-stat,
-body.theme-cream #screen-lg-stats .film-row,body.theme-gold #screen-lg-stats .film-row,
-body.theme-cream #screen-lg-stats .stat-card,body.theme-gold #screen-lg-stats .stat-card,
-body.theme-cream #screen-lg-stats .distribution-chart-wrap,body.theme-gold #screen-lg-stats .distribution-chart-wrap{background:var(--theme-panel);border-color:var(--theme-border);}
-body.theme-cream #screen-lg-stats .h2h-stat-num,body.theme-gold #screen-lg-stats .h2h-stat-num,
-body.theme-cream #screen-lg-stats .film-row-title,body.theme-gold #screen-lg-stats .film-row-title,
-body.theme-cream #screen-lg-stats .stat-card-num,body.theme-gold #screen-lg-stats .stat-card-num{color:var(--theme-text) !important;}
-body.theme-cream #screen-lg-stats .film-row-score,body.theme-gold #screen-lg-stats .film-row-score,
-body.theme-cream #screen-lg-stats .distribution-chart,body.theme-gold #screen-lg-stats .distribution-chart{color:var(--theme-accent) !important;}
-body.theme-cream #screen-lg-stats .distribution-grid,body.theme-gold #screen-lg-stats .distribution-grid{stroke:var(--theme-border);}
-body.theme-cream #screen-lg-stats .distribution-axis,body.theme-gold #screen-lg-stats .distribution-axis{stroke:var(--theme-muted);}
-body.theme-cream #screen-lg-stats .distribution-label,body.theme-gold #screen-lg-stats .distribution-label,
-body.theme-cream #screen-lg-stats .distribution-axis-title,body.theme-gold #screen-lg-stats .distribution-axis-title{fill:var(--theme-muted);}
 .stats-search-result-title{flex:1;font-weight:600;}
 .stats-search-result-score{font-family:'Bebas Neue',sans-serif;font-size:20px;color:#80d080;}
 .stats-extra-row{display:none;}
@@ -1226,112 +1116,6 @@ body.theme-cream .wishlist-item-score span,body.theme-gold .wishlist-item-score 
 body.theme-cream .wishlist-item-score,body.theme-gold .wishlist-item-score{color:var(--theme-accent);}
 body.theme-cream .wishlist-remove,body.theme-gold .wishlist-remove{border-color:var(--theme-border);color:var(--theme-muted);}
 
-
-/* Film recommendations */
-.recommend-panel{display:none;margin:0 0 30px;padding:22px;background:#0b120b;border:1px solid #1a3a1a;border-radius:3px;}
-.recommend-panel.open{display:block;}
-.recommend-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px;}
-.recommend-title{font-family:'Bebas Neue',sans-serif;font-size:28px;color:#e8f8e8;letter-spacing:.04em;}
-.recommend-copy{font-size:12px;color:#4a7a4a;line-height:1.55;margin-top:3px;}
-.recommend-close{background:transparent;border:0;color:#4a7a4a;font-size:20px;cursor:pointer;}
-.recommend-mode-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;}
-.recommend-mode-btn{padding:8px 14px;background:transparent;border:1px solid #1e3a1e;color:#5a8a5a;border-radius:2px;font:12px 'Barlow Condensed',sans-serif;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;}
-.recommend-mode-btn.active{background:#142414;border-color:#3a7a3a;color:#90d090;}
-.recommend-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:16px;}
-.recommend-field label{display:block;margin-bottom:6px;font:10px 'Barlow Condensed',sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#3d6a3d;}
-.recommend-select{width:100%;padding:10px 11px;background:#090f09;border:1px solid #1e3a1e;border-radius:2px;color:#c0e0c0;font-family:'Barlow',sans-serif;outline:none;}
-.recommend-generate{width:100%;padding:12px;background:#142414;border:1px solid #2e6a2e;border-radius:2px;color:#a0e0a0;font:13px 'Barlow Condensed',sans-serif;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;}
-.recommend-generate:disabled{opacity:.5;cursor:default;}
-.recommend-results{display:flex;flex-direction:column;gap:12px;margin-top:22px;}
-.recommend-card{display:grid;grid-template-columns:70px 1fr auto;gap:14px;padding:14px;background:#090f09;border:1px solid #1a3a1a;border-radius:3px;align-items:start;}
-.recommend-poster{width:70px;height:105px;object-fit:cover;border-radius:2px;background:#111d11;}
-.recommend-role{font:10px 'Barlow Condensed',sans-serif;letter-spacing:.18em;text-transform:uppercase;color:#5aaa5a;margin-bottom:4px;}
-.recommend-movie{font-family:'Bebas Neue',sans-serif;font-size:23px;color:#e8f8e8;line-height:1;}
-.recommend-meta{font-size:11px;color:#4a7a4a;margin-top:5px;}
-.recommend-reason{font-size:12px;color:#7aa47a;line-height:1.55;margin-top:9px;}
-.recommend-actions{display:flex;flex-direction:column;gap:7px;min-width:106px;}
-.recommend-action{padding:7px 9px;background:transparent;border:1px solid #1e3a1e;border-radius:2px;color:#6a9a6a;font:10px 'Barlow Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;}
-.recommend-action.primary{background:#142414;border-color:#2e6a2e;color:#a0e0a0;}
-.recommend-status{margin-top:10px;min-height:18px;font-size:12px;color:#5a9a5a;}
-.recommend-launch{width:100%;margin:0 0 22px;padding:12px;background:#0b120b;border:1px solid #2a5a2a;border-radius:2px;color:#80d080;font:13px 'Barlow Condensed',sans-serif;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;}
-body.theme-cream .recommend-panel,body.theme-gold .recommend-panel,
-body.theme-cream .recommend-card,body.theme-gold .recommend-card{background:var(--theme-panel);border-color:var(--theme-border);}
-body.theme-cream .recommend-title,body.theme-gold .recommend-title,
-body.theme-cream .recommend-movie,body.theme-gold .recommend-movie{color:var(--theme-text);}
-body.theme-cream .recommend-copy,body.theme-gold .recommend-copy,
-body.theme-cream .recommend-meta,body.theme-gold .recommend-meta,
-body.theme-cream .recommend-reason,body.theme-gold .recommend-reason,
-body.theme-cream .recommend-field label,body.theme-gold .recommend-field label{color:var(--theme-muted);}
-body.theme-cream .recommend-role,body.theme-gold .recommend-role,
-body.theme-cream .recommend-status,body.theme-gold .recommend-status{color:var(--theme-accent);}
-body.theme-cream .recommend-select,body.theme-gold .recommend-select{background:var(--theme-bg-2);border-color:var(--theme-border);color:var(--theme-text);}
-body.theme-cream .recommend-mode-btn,body.theme-gold .recommend-mode-btn,
-body.theme-cream .recommend-action,body.theme-gold .recommend-action,
-body.theme-cream .recommend-launch,body.theme-gold .recommend-launch{border-color:var(--theme-border);color:var(--theme-muted);background:transparent;}
-body.theme-cream .recommend-mode-btn.active,body.theme-gold .recommend-mode-btn.active,
-body.theme-cream .recommend-action.primary,body.theme-gold .recommend-action.primary,
-body.theme-cream .recommend-generate,body.theme-gold .recommend-generate{background:var(--theme-panel-2);border-color:var(--theme-accent);color:var(--theme-accent);}
-
-.recommend-diagnostics{margin-top:10px;padding:10px 12px;background:#090f09;border:1px solid #1a3a1a;border-radius:2px;font-size:11px;line-height:1.55;color:#5a8a5a;}
-.recommend-diagnostics strong{color:#80d080;font-weight:600;}
-body.theme-cream .recommend-diagnostics,body.theme-gold .recommend-diagnostics{background:var(--theme-bg-2);border-color:var(--theme-border);color:var(--theme-muted);}
-body.theme-cream .recommend-diagnostics strong,body.theme-gold .recommend-diagnostics strong{color:var(--theme-accent);}
-#film-recommendation-section .recommend-launch{margin-top:0;}
-@media(max-width:640px){.recommend-grid{grid-template-columns:1fr}.recommend-card{grid-template-columns:58px 1fr}.recommend-poster{width:58px;height:87px}.recommend-actions{grid-column:1/-1;flex-direction:row}.recommend-action{flex:1}}
-
-
-/* Theme-safe search surfaces: non-Classic schemes must not inherit green/red glows. */
-body.theme-cream .search-field,body.theme-gold .search-field,
-body.theme-cream .lg-search-field,body.theme-gold .lg-search-field,
-body.theme-cream .wishlist-search-wrap .search-field,body.theme-gold .wishlist-search-wrap .search-field,
-body.theme-cream .stats-search,body.theme-gold .stats-search{box-shadow:none!important;}
-
-
-/* v11 Group Matchmaker + Recent Activity */
-.recommend-audience-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid #1a3a1a;}
-.group-matchmaker{display:none;margin-bottom:16px;padding:14px;background:#090f09;border:1px solid #1a3a1a;border-radius:3px;}
-.group-matchmaker.open{display:block;}
-.group-member-list{display:flex;flex-direction:column;gap:8px;margin:10px 0;}
-.group-member{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 11px;background:#0b120b;border:1px solid #1e3a1e;border-radius:2px;color:#c0e0c0;font-size:13px;}
-.group-member.host:after{content:'You';font:9px 'Barlow Condensed',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#5a9a5a;}
-.group-member-remove{border:0;background:transparent;color:#8a5a5a;cursor:pointer;font-size:17px;line-height:1;}
-.group-add-wrap{position:relative;}
-.group-add-btn{width:100%;padding:9px 11px;background:transparent;border:1px dashed #2e5a2e;border-radius:2px;color:#78a878;font:11px 'Barlow Condensed',sans-serif;letter-spacing:.13em;text-transform:uppercase;cursor:pointer;text-align:left;}
-.group-person-menu{display:none;position:absolute;left:0;right:0;top:calc(100% + 5px);z-index:12;background:#0b120b;border:1px solid #1e3a1e;border-radius:2px;max-height:210px;overflow:auto;}
-.group-person-menu.open{display:block;}
-.group-person-option{display:block;width:100%;padding:10px 12px;background:transparent;border:0;border-bottom:1px solid #142814;color:#c0e0c0;text-align:left;cursor:pointer;font-family:'Barlow',sans-serif;}
-.group-person-option:last-child{border-bottom:0;}.group-person-option:hover{background:#102010;}
-.activity-section{width:min(720px,calc(100% - 32px));margin:34px auto 48px;padding:0 0 8px;}
-.activity-head{display:flex;align-items:end;justify-content:space-between;gap:12px;margin-bottom:12px;}
-.activity-title{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:.04em;color:#e8f8e8;}
-.activity-sub{font-size:11px;color:#4a7a4a;}
-.activity-list{display:flex;flex-direction:column;gap:7px;}
-.activity-item{display:grid;grid-template-columns:34px 1fr auto;gap:11px;align-items:center;padding:11px 13px;background:#0b120b;border:1px solid #1a3a1a;border-radius:3px;}
-.activity-emoji{font-size:22px;text-align:center;}.activity-main{min-width:0;}
-.activity-line{font-size:13px;color:#b8d8b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.activity-line strong{color:#e8f8e8;font-weight:600;}.activity-title-name{font-style:italic;}
-.activity-meta{margin-top:3px;font-size:10px;color:#4a7a4a;text-transform:uppercase;letter-spacing:.08em;}
-.activity-score{font-family:'Bebas Neue',sans-serif;font-size:25px;color:#80d080;text-align:right;line-height:1;}.activity-score span{display:block;font:9px 'Barlow Condensed',sans-serif;color:#3d6a3d;letter-spacing:.1em;}
-body.theme-cream .recommend-audience-row,body.theme-gold .recommend-audience-row{border-color:var(--theme-border);}
-body.theme-cream .group-matchmaker,body.theme-gold .group-matchmaker,
-body.theme-cream .group-member,body.theme-gold .group-member,
-body.theme-cream .group-person-menu,body.theme-gold .group-person-menu,
-body.theme-cream .activity-item,body.theme-gold .activity-item{background:var(--theme-panel);border-color:var(--theme-border);}
-body.theme-cream .group-member,body.theme-gold .group-member,
-body.theme-cream .group-person-option,body.theme-gold .group-person-option,
-body.theme-cream .activity-line,body.theme-gold .activity-line{color:var(--theme-text);}
-body.theme-cream .group-person-option,body.theme-gold .group-person-option{border-color:var(--theme-border);}
-body.theme-cream .group-person-option:hover,body.theme-gold .group-person-option:hover{background:var(--theme-panel-2);}
-body.theme-cream .group-add-btn,body.theme-gold .group-add-btn{border-color:var(--theme-accent);color:var(--theme-accent);}
-body.theme-cream .activity-title,body.theme-gold .activity-title,
-body.theme-cream .activity-line strong,body.theme-gold .activity-line strong{color:var(--theme-text);}
-body.theme-cream .activity-sub,body.theme-gold .activity-sub,
-body.theme-cream .activity-meta,body.theme-gold .activity-meta{color:var(--theme-muted);}
-body.theme-cream .activity-score,body.theme-gold .activity-score,
-body.theme-cream .activity-score span,body.theme-gold .activity-score span,
-body.theme-cream .group-member.host:after,body.theme-gold .group-member.host:after{color:var(--theme-accent);}
-@media(max-width:640px){.activity-section{width:calc(100% - 24px);margin-top:24px}.activity-item{grid-template-columns:30px 1fr auto}.activity-line{white-space:normal}.home-center{padding-top:54px;}}
-
 </style>
 </head>
 <body>
@@ -1342,7 +1126,7 @@ body.theme-cream .group-member.host:after,body.theme-gold .group-member.host:aft
 <script>
 const CONFIG = {
   // Public backend endpoint. All sensitive actions are validated in Apps Script.
-  GAS_URL: "https://script.google.com/macros/s/AKfycbwfRY4_RIqhC5WCZAmAa-4fVeiy-u_wFtdECBcPE7SctEa1fYYhCA1CfaLVxwfiS5f3aA/exec",
+  GAS_URL: "https://script.google.com/macros/s/AKfycbzXTffnVTML1LDXcO75NMkG8N3pFSbCOwfrOJdf3Tm7HRGA6SWxQu-OhiCcmvvD_1j5GA/exec",
 };
 const SITE_NAME = "Cine-file";
 </script>
@@ -1380,9 +1164,8 @@ const SITE_NAME = "Cine-file";
 <!-- ══════════════════════════════════════
      HOME
 ══════════════════════════════════════ -->
-<div id="screen-home" class="screen" style="overflow-y:auto;align-items:flex-start">
-  <div style="width:100%">
-  <div class="home-center" style="padding-top:80px">
+<div id="screen-home" class="screen">
+  <div class="home-center">
     <div class="home-eyebrow">What are you rating?</div>
     <h1 class="home-title">Cine-file</h1>
     <p class="home-sub">Your personal rating system</p>
@@ -1403,11 +1186,6 @@ const SITE_NAME = "Cine-file";
         <div class="home-card-sub" style="color:#8a4a4a">Rate a restaurant</div>
       </div>
     </div>
-  </div>
-  <section class="activity-section" id="recent-activity-section">
-    <div class="activity-head"><div><div class="activity-title">Recent Activity</div><div class="activity-sub">The latest 15 ratings across Film, TV, and Le Guide.</div></div></div>
-    <div class="activity-list" id="recent-activity-list"><div class="stats-loading">Loading recent ratings...</div></div>
-  </section>
   </div>
 </div>
 
@@ -1466,17 +1244,6 @@ const SITE_NAME = "Cine-file";
       </div>
       <div class="dropdown" id="dropdown"></div>
     </div>
-    <button class="advanced-search-toggle" type="button" onclick="toggleAdvancedSearch('movie')">Can't find it? Advanced Search</button>
-    <div class="advanced-search-panel" id="movie-advanced-panel">
-      <div class="advanced-search-row">
-        <div class="advanced-search-field">
-          <label class="advanced-search-label" for="movie-advanced-year">Release year (optional)</label>
-          <input class="advanced-search-input" id="movie-advanced-year" type="number" min="1880" max="2100" inputmode="numeric" placeholder="Example: 1999"/>
-        </div>
-        <button class="btn-pri" type="button" onclick="runAdvancedMovieSearch()">Search More Results</button>
-      </div>
-      <div class="advanced-search-help">Searches up to three pages of TMDB results and can narrow by release year.</div>
-    </div>
     <label class="quick-toggle">
       <input type="checkbox" id="quick-mode-toggle" onchange="toggleQuickMode(this.checked)" checked/>
       <span class="quick-toggle-label">⚡ Quick Rating — rate out of 10 without categories</span>
@@ -1504,17 +1271,6 @@ const SITE_NAME = "Cine-file";
         <span class="search-spinner" id="tv-spinner">⟳</span>
       </div>
       <div class="dropdown" id="tv-dropdown"></div>
-    </div>
-    <button class="advanced-search-toggle" type="button" onclick="toggleAdvancedSearch('tv')">Can't find it? Advanced Search</button>
-    <div class="advanced-search-panel" id="tv-advanced-panel">
-      <div class="advanced-search-row">
-        <div class="advanced-search-field">
-          <label class="advanced-search-label" for="tv-advanced-year">First-air year (optional)</label>
-          <input class="advanced-search-input" id="tv-advanced-year" type="number" min="1880" max="2100" inputmode="numeric" placeholder="Example: 2014"/>
-        </div>
-        <button class="btn-pri" type="button" onclick="runAdvancedTvSearch()">Search More Results</button>
-      </div>
-      <div class="advanced-search-help">Searches up to three pages of TMDB results and can narrow by first-air year.</div>
     </div>
     <label class="quick-toggle">
       <input type="checkbox" id="tv-quick-mode-toggle" onchange="toggleQuickMode(this.checked)" checked/>
@@ -1644,7 +1400,7 @@ const SITE_NAME = "Cine-file";
       </div>
       <div class="round-raw-sub">out of 100 · Your final /10 score is calculated automatically</div>
     </div>
-    <p class="round-prompt">Your weighted score is rounded to the nearest tenth:</p>
+    <p class="round-prompt">Round up or down based on your overall feel:</p>
     <div class="round-options" id="round-options"></div>
     <button class="round-confirm" id="round-confirm" onclick="confirmRound()" disabled>Generate Rating Card →</button>
   </div>
@@ -1787,7 +1543,7 @@ const SITE_NAME = "Cine-file";
       </div>
       <div class="round-raw-sub" style="color:#6a3a3a">out of 100 · Your final /10 score is calculated automatically</div>
     </div>
-    <p class="round-prompt" style="color:#8a4a4a">Your weighted score is rounded to the nearest tenth:</p>
+    <p class="round-prompt" style="color:#8a4a4a">Round up or down based on your overall feel:</p>
     <div class="round-options" id="lg-round-options"></div>
     <button class="lg-round-confirm" id="lg-round-confirm" onclick="lgConfirmRound()" disabled>Generate Rating Card →</button>
   </div>
@@ -1895,17 +1651,6 @@ const SITE_NAME = "Cine-file";
 ══════════════════════════════════════ -->
 <div id="screen-lg-stats" class="screen">
   <div class="inner">
-    <div class="score-mode-toggle">
-      <button class="score-mode-btn" data-mode="10" onclick="setScoreMode('10')">/10 Score</button>
-      <button class="score-mode-btn" data-mode="raw" onclick="setScoreMode('raw')">Raw /100</button>
-    </div>
-    <div class="stats-filter-row">
-      <div class="stats-filter-field">
-        <label class="stats-filter-label" for="restaurant-cuisine-filter">Food Type</label>
-        <select class="stats-genre-select" id="restaurant-cuisine-filter" onchange="setRestaurantCuisine(this.value)"><option value="">All Food Types</option></select>
-      </div>
-      <div class="stats-filter-summary" id="restaurant-cuisine-summary">Showing all food types</div>
-    </div>
     <div class="lg-stats-tabs">
       <button class="lg-stats-tab active" id="lg-tab-my" onclick="lgSwitchTab('my')">My Ratings</button>
       <button class="lg-stats-tab" id="lg-tab-group" onclick="lgSwitchTab('group')">Group</button>
@@ -1946,17 +1691,6 @@ const SITE_NAME = "Cine-file";
 ══════════════════════════════════════ -->
 <div id="screen-stats" class="screen">
   <div class="inner">
-    <div class="score-mode-toggle">
-      <button class="score-mode-btn" data-mode="10" onclick="setScoreMode('10')">/10 Score</button>
-      <button class="score-mode-btn" data-mode="raw" onclick="setScoreMode('raw')">Raw /100</button>
-    </div>
-    <div class="stats-filter-row">
-      <div class="stats-filter-field">
-        <label class="stats-filter-label" for="film-genre-filter">Genre</label>
-        <select class="stats-genre-select" id="film-genre-filter" onchange="setStatsGenre('film',this.value)"><option value="">All Genres</option></select>
-      </div>
-      <div class="stats-filter-summary" id="film-genre-summary">Showing all genres</div>
-    </div>
     <!-- Stats Tab Bar -->
     <div class="stats-tabs" id="stats-tabs">
       <button class="stats-tab active" id="tab-my"    onclick="switchStatsTab('my')">My Stats</button>
@@ -1973,17 +1707,6 @@ const SITE_NAME = "Cine-file";
     <div class="score-mode-toggle">
       <button class="score-mode-btn active" id="tv-type-season" onclick="setTvStatsType('season')">Seasons</button>
       <button class="score-mode-btn" id="tv-type-overall" onclick="setTvStatsType('overall')">Overall Shows</button>
-    </div>
-    <div class="score-mode-toggle">
-      <button class="score-mode-btn" data-mode="10" onclick="setScoreMode('10')">/10 Score</button>
-      <button class="score-mode-btn" data-mode="raw" onclick="setScoreMode('raw')">Raw /100</button>
-    </div>
-    <div class="stats-filter-row">
-      <div class="stats-filter-field">
-        <label class="stats-filter-label" for="tv-genre-filter">Genre</label>
-        <select class="stats-genre-select" id="tv-genre-filter" onchange="setStatsGenre('tv',this.value)"><option value="">All Genres</option></select>
-      </div>
-      <div class="stats-filter-summary" id="tv-genre-summary">Showing all genres</div>
     </div>
     <div class="stats-tabs">
       <button class="stats-tab active" id="tv-tab-my" onclick="switchTvStatsTab('my')">My Stats</button>
@@ -2003,7 +1726,6 @@ const SITE_NAME = "Cine-file";
     <div class="s-eyebrow">Saved for Later</div>
     <h1 class="s-title" id="wishlist-title">Film Wishlist</h1>
     <p class="s-sub" id="wishlist-sub">Search for films you want to watch.</p>
-
     <div class="wishlist-search-wrap">
       <div class="search-field">
         <span class="search-icon" id="wishlist-search-icon">🎬</span>
@@ -2016,67 +1738,6 @@ const SITE_NAME = "Cine-file";
     <div class="stats-section" style="margin-top:28px">
       <div class="stats-section-title" id="wishlist-list-title">Your Saved Films</div>
       <div class="wishlist-items" id="wishlist-items"></div>
-    </div>
-
-    <div id="film-recommendation-section" style="margin-top:34px">
-    <button class="recommend-launch" id="recommend-launch" onclick="toggleRecommendationPanel()">Generate Film Recommendations</button>
-    <div class="recommend-panel" id="recommend-panel">
-      <div class="recommend-head">
-        <div><div class="recommend-title">Recommendation Room</div><div class="recommend-copy">Generate five validated movies from your ratings, with backups ready when you replace a pick.</div></div>
-        <button class="recommend-close" onclick="toggleRecommendationPanel(false)" aria-label="Close">×</button>
-      </div>
-      <div class="recommend-audience-row">
-        <button class="recommend-mode-btn active" id="rec-audience-me" onclick="setRecommendationAudience('me')">For Me</button>
-        <button class="recommend-mode-btn" id="rec-audience-group" onclick="setRecommendationAudience('group')">Group Matchmaker</button>
-      </div>
-      <div class="group-matchmaker" id="group-matchmaker">
-        <div class="recommend-field"><label>Watching Group</label></div>
-        <div class="group-member-list" id="group-member-list"></div>
-        <div class="group-add-wrap">
-          <button class="group-add-btn" type="button" onclick="toggleGroupPersonMenu()">+ Add Person</button>
-          <div class="group-person-menu" id="group-person-menu"></div>
-        </div>
-        <div class="recommend-copy" style="margin-top:10px">Recommendations balance each selected person's ratings and avoid movies already rated by anyone in the group.</div>
-      </div>
-      <div class="recommend-mode-row" id="personal-recommendation-modes">
-        <button class="recommend-mode-btn active" id="rec-mode-movie" onclick="setRecommendationMode('movie')">Based on a Movie</button>
-        <button class="recommend-mode-btn" id="rec-mode-taste" onclick="setRecommendationMode('taste')">Based on My Taste</button>
-      </div>
-      <div class="recommend-field" id="rec-source-wrap" style="margin-bottom:12px">
-        <label>Source Movie</label>
-        <select class="recommend-select" id="rec-source"><option value="">Choose one of your rated movies...</option></select>
-      </div>
-      <div class="recommend-grid">
-        <div class="recommend-field"><label>Recommendation Pool</label><select class="recommend-select" id="rec-pool"><option value="new">New to Me</option><option value="notWishlist">Not Rated or Wishlisted</option><option value="all">Include Rated Movies</option></select></div>
-        <div class="recommend-field"><label>Style</label><select class="recommend-select" id="rec-style"><option value="balanced">Balanced</option><option value="hidden">Hidden Gems</option><option value="different">Something Different</option></select></div>
-      </div>
-      <button class="recommend-generate" id="rec-generate" onclick="generateFilmRecommendations()">Generate 5 Movies</button>
-      <div class="recommend-status" id="rec-status"></div>
-      <div class="recommend-diagnostics" id="rec-diagnostics" style="display:none"></div>
-      <div class="recommend-results" id="rec-results"></div>
-    </div>
-    </div>
-
-    <div id="tv-recommendation-section" style="margin-top:34px;display:none">
-      <button class="recommend-launch" onclick="toggleGenericRecommendationPanel('tv')">Generate TV Recommendations</button>
-      <div class="recommend-panel" id="tv-recommend-panel">
-        <div class="recommend-head"><div><div class="recommend-title">TV Recommendation Room</div><div class="recommend-copy">Generate five series from your own TV ratings, with five replacements ready.</div></div><button class="recommend-close" onclick="toggleGenericRecommendationPanel('tv',false)">×</button></div>
-        <div class="recommend-mode-row"><button class="recommend-mode-btn active" id="tv-rec-mode-source" onclick="setGenericRecommendationMode('tv','source')">Based on a Show</button><button class="recommend-mode-btn" id="tv-rec-mode-taste" onclick="setGenericRecommendationMode('tv','taste')">Based on My Taste</button></div>
-        <div class="recommend-field" id="tv-rec-source-wrap" style="margin-bottom:12px"><label>Source Show</label><select class="recommend-select" id="tv-rec-source"><option value="">Choose one of your rated shows...</option></select></div>
-        <div class="recommend-grid"><div class="recommend-field"><label>Recommendation Pool</label><select class="recommend-select" id="tv-rec-pool"><option value="new">New to Me</option><option value="notWishlist">Not Rated or Wishlisted</option><option value="all">Include Rated Shows</option></select></div><div class="recommend-field"><label>Style</label><select class="recommend-select" id="tv-rec-style"><option value="balanced">Balanced</option><option value="hidden">Hidden Gems</option><option value="different">Something Different</option></select></div></div>
-        <button class="recommend-generate" id="tv-rec-generate" onclick="generateGenericRecommendations('tv')">Generate 5 Shows</button><div class="recommend-status" id="tv-rec-status"></div><div class="recommend-diagnostics" id="tv-rec-diagnostics" style="display:none"></div><div class="recommend-results" id="tv-rec-results"></div>
-      </div>
-    </div>
-
-    <div id="restaurant-recommendation-section" style="margin-top:34px;display:none">
-      <button class="recommend-launch" onclick="toggleGenericRecommendationPanel('restaurant')">Generate Restaurant Recommendations</button>
-      <div class="recommend-panel" id="restaurant-recommend-panel">
-        <div class="recommend-head"><div><div class="recommend-title">Restaurant Recommendation Room</div><div class="recommend-copy">Generate five real restaurants based on your Le Guide ratings, with five replacements ready.</div></div><button class="recommend-close" onclick="toggleGenericRecommendationPanel('restaurant',false)">×</button></div>
-        <div class="recommend-mode-row"><button class="recommend-mode-btn active" id="restaurant-rec-mode-source" onclick="setGenericRecommendationMode('restaurant','source')">Based on a Restaurant</button><button class="recommend-mode-btn" id="restaurant-rec-mode-taste" onclick="setGenericRecommendationMode('restaurant','taste')">Based on My Taste</button></div>
-        <div class="recommend-field" id="restaurant-rec-source-wrap" style="margin-bottom:12px"><label>Source Restaurant</label><select class="recommend-select" id="restaurant-rec-source"><option value="">Choose one of your rated restaurants...</option></select></div>
-        <div class="recommend-grid"><div class="recommend-field"><label>Recommendation Pool</label><select class="recommend-select" id="restaurant-rec-pool"><option value="new">New to Me</option><option value="notWishlist">Not Rated or Wishlisted</option><option value="all">Include Rated Restaurants</option></select></div><div class="recommend-field"><label>Style</label><select class="recommend-select" id="restaurant-rec-style"><option value="balanced">Balanced</option><option value="hidden">Hidden Gems</option><option value="different">Something Different</option></select></div></div>
-        <button class="recommend-generate" id="restaurant-rec-generate" onclick="generateGenericRecommendations('restaurant')">Generate 5 Restaurants</button><div class="recommend-status" id="restaurant-rec-status"></div><div class="recommend-diagnostics" id="restaurant-rec-diagnostics" style="display:none"></div><div class="recommend-results" id="restaurant-rec-results"></div>
-      </div>
     </div>
   </div>
 </div>
@@ -2183,13 +1844,6 @@ const SITE_NAME = "Cine-file";
   </div>
 </div>
 
-<!-- Secure rating deletion: PIN verification, selection, and final confirmation -->
-<div class="rating-delete-overlay" id="rating-delete-modal" onclick="closeDeleteRating(event)">
-  <div class="rating-delete-card" onclick="event.stopPropagation()">
-    <div id="rating-delete-content"></div>
-  </div>
-</div>
-
 <!-- ══════════════════════════════════════
      JAVASCRIPT
 ══════════════════════════════════════ -->
@@ -2266,149 +1920,13 @@ function grade(s) {
   return"F";
 }
 function gradeFromRaw(raw){ return grade(Number(raw)/10); }
-function weightedTotal(categories, values){
-  const weightTotal=(categories||[]).reduce((sum,category)=>sum+Number(category.w||0),0) || 1;
-  const weighted=(categories||[]).reduce((sum,category)=>sum+Number(values[category.id]||0)*Number(category.w||0),0);
-  return weighted/weightTotal;
-}
 function calcTotal(){
-  const values={};
-  CATS.forEach(category=>{ values[category.id]=Number(document.getElementById("inp-"+category.id)?.value||0); });
-  return weightedTotal(CATS,values);
+  return CATS.reduce((s,c)=>s+Number(document.getElementById("inp-"+c.id)?.value||0)*c.w,0);
 }
 function escHtml(s){
   return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
 }
-function scoreToTenth(raw){
-  const score=Number(raw||0)/10;
-  return Math.round((score+Number.EPSILON)*10)/10;
-}
-function storedNumber(value){
-  if(value===null || value===undefined || String(value).trim()==='') return null;
-  const number=Number(value);
-  return Number.isFinite(number) ? number : null;
-}
-function rawScoreForRating(rating){
-  const raw=storedNumber(rating?.['Raw /100']);
-  if(raw!==null) return raw;
-  const score10=storedNumber(rating?.['Score /10']);
-  return score10===null ? null : score10*10;
-}
-function ratingDisplayScore(rating){
-  if(_scoreMode==='raw') return rawScoreForRating(rating) ?? 0;
-  return storedNumber(rating?.['Score /10']) ?? 0;
-}
-function summaryUserDisplayScore(row,user){
-  if(_scoreMode==='raw'){
-    const raw=storedNumber(row?.userRawScores?.[user]);
-    if(raw!==null) return raw;
-    const score10=storedNumber(row?.userScores?.[user]);
-    return score10===null ? null : score10*10;
-  }
-  return storedNumber(row?.userScores?.[user]);
-}
-function summaryDisplayScores(row){
-  const source=_scoreMode==='raw' && Array.isArray(row?.rawScores) && row.rawScores.length ? row.rawScores : row?.scores;
-  const values=(source||[]).map(Number).filter(Number.isFinite);
-  return _scoreMode==='raw' && source===row?.scores ? values.map(value=>value*10) : values;
-}
-function groupDistributionValues(summary){
-  const values=[];
-  (summary?.rows||[]).forEach(function(row){
-    const users=Object.keys(row?.userScores||{});
-    users.forEach(function(user){
-      const raw=storedNumber(row?.userRawScores?.[user]);
-      const score10=storedNumber(row?.userScores?.[user]);
-      const normalizedRaw=raw!==null ? raw : (score10===null ? null : score10*10);
-      if(normalizedRaw!==null && Number.isFinite(Number(normalizedRaw))) values.push(Number(normalizedRaw));
-    });
-  });
-  return values;
-}
-let _distributionPopupTimer=null;
-function showDistributionCount(event,count){
-  const bar=event.currentTarget;
-  const wrap=bar?.closest('.distribution-chart-wrap');
-  if(!wrap) return;
-  let popup=wrap.querySelector('.distribution-popup');
-  if(!popup){
-    popup=document.createElement('div');
-    popup.className='distribution-popup';
-    wrap.appendChild(popup);
-  }
-  popup.textContent=String(count);
-  const wrapRect=wrap.getBoundingClientRect();
-  const barRect=bar.getBoundingClientRect();
-  const x=event.clientX ? event.clientX-wrapRect.left : barRect.left-wrapRect.left+(barRect.width/2);
-  const y=event.clientY ? event.clientY-wrapRect.top : barRect.top-wrapRect.top;
-  popup.style.left=Math.max(18,Math.min(wrapRect.width-18,x))+'px';
-  popup.style.top=Math.max(40,y)+'px';
-  popup.classList.add('visible');
-  clearTimeout(_distributionPopupTimer);
-  _distributionPopupTimer=setTimeout(function(){ popup.classList.remove('visible'); },1400);
-}
-function distributionBarKeydown(event,count){
-  if(event.key==='Enter' || event.key===' '){
-    event.preventDefault();
-    showDistributionCount(event,count);
-  }
-}
-function renderDistributionChart(values,{restaurant=false}={}){
-  const rawScores=(values||[]).map(Number).filter(Number.isFinite).map(function(value){ return Math.max(0,Math.min(100,value)); });
-  if(!rawScores.length) return '<div class="stats-empty">No score distribution is available yet.</div>';
-  const useRaw=_scoreMode==='raw';
-  const maxScore=useRaw ? 100 : 10;
-  const binSize=useRaw ? 5 : 0.5;
-  const minSpan=useRaw ? 20 : 2;
-  const scores=rawScores.map(function(value){ return useRaw ? value : value/10; });
-  const lowest=Math.min.apply(null,scores);
-  let axisMin=Math.floor(lowest/(useRaw?10:1))*(useRaw?10:1)-binSize;
-  axisMin=Math.max(0,axisMin);
-  axisMin=Math.min(axisMin,maxScore-minSpan);
-  axisMin=Math.floor(axisMin/binSize)*binSize;
-  const binCount=Math.max(1,Math.round((maxScore-axisMin)/binSize));
-  const counts=Array.from({length:binCount},function(){ return 0; });
-  scores.forEach(function(value){
-    const index=Math.min(binCount-1,Math.max(0,Math.floor((value-axisMin)/binSize)));
-    counts[index]++;
-  });
-  const average=scores.reduce(function(sum,value){ return sum+value; },0)/scores.length;
-  const width=760,height=290,left=48,right=18,top=24,bottom=48;
-  const chartWidth=width-left-right, chartHeight=height-top-bottom;
-  const maxCount=Math.max.apply(null,counts.concat([1]));
-  const x=function(value){ return left+((value-axisMin)/(maxScore-axisMin))*chartWidth; };
-  const y=function(count){ return top+chartHeight-(count/maxCount)*chartHeight; };
-  const barWidth=chartWidth/binCount;
-  const yTicks=[...new Set([0,Math.ceil(maxCount/3),Math.ceil(maxCount*2/3),maxCount])].sort(function(a,b){ return a-b; });
-  const majorStep=useRaw ? 10 : 1;
-  const xTicks=[];
-  for(let value=Math.ceil(axisMin/majorStep)*majorStep; value<=maxScore+0.0001; value+=majorStep) xTicks.push(Number(value.toFixed(1)));
-  if(!xTicks.length || xTicks[0]!==axisMin) xTicks.unshift(Number(axisMin.toFixed(1)));
-  const axisTitle=useRaw ? 'Score /100 · 5-point bins' : 'Score /10 · 0.5-point bins';
-  const rangeText=`Distribution shown from ${axisMin.toFixed(useRaw?0:1)}–${maxScore.toFixed(useRaw?0:1)}`;
-  return `<div class="distribution-chart-wrap${restaurant?' restaurant':''}">
-    <svg class="distribution-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="Score distribution from ${axisMin} to ${maxScore} with an average of ${average.toFixed(1)}">
-      ${yTicks.map(function(tick){ return `<line class="distribution-grid" x1="${left}" y1="${y(tick)}" x2="${width-right}" y2="${y(tick)}"></line><text class="distribution-label" x="${left-9}" y="${y(tick)+4}" text-anchor="end">${tick}</text>`; }).join('')}
-      ${xTicks.map(function(value){ return `<text class="distribution-label" x="${x(value)}" y="${height-22}" text-anchor="middle">${value}</text>`; }).join('')}
-      <line class="distribution-axis" x1="${left}" y1="${top+chartHeight}" x2="${width-right}" y2="${top+chartHeight}"></line>
-      <line class="distribution-axis" x1="${left}" y1="${top}" x2="${left}" y2="${top+chartHeight}"></line>
-      ${counts.map(function(count,index){
-        const barHeight=count ? Math.max(2,top+chartHeight-y(count)) : 0;
-        const barY=top+chartHeight-barHeight;
-        const low=axisMin+index*binSize;
-        const high=Math.min(maxScore,low+binSize);
-        const interaction=count ? `tabindex="0" role="button" aria-label="${count} ratings from ${low.toFixed(useRaw?0:1)} to ${high.toFixed(useRaw?0:1)}" onclick="showDistributionCount(event,${count})" onkeydown="distributionBarKeydown(event,${count})"` : 'aria-hidden="true"';
-        return `<rect class="distribution-bar" ${interaction} data-count="${count}" x="${left+index*barWidth+2}" y="${barY}" width="${Math.max(1,barWidth-4)}" height="${barHeight}" rx="2"></rect>`;
-      }).join('')}
-      <line class="distribution-average" x1="${x(average)}" y1="${top-4}" x2="${x(average)}" y2="${top+chartHeight}"></line>
-      <text class="distribution-average-label" x="${Math.min(width-right-4,Math.max(left+4,x(average)+6))}" y="${top+9}">AVG ${average.toFixed(1)}</text>
-      <text class="distribution-axis-title" x="${left+chartWidth/2}" y="${height-4}" text-anchor="middle">${axisTitle}</text>
-      <text class="distribution-axis-title" transform="translate(12 ${top+chartHeight/2}) rotate(-90)" text-anchor="middle">Number of ratings</text>
-    </svg>
-    <div class="distribution-popup" aria-live="polite"></div>
-    <div class="distribution-note">${rangeText}. Click a bar to see its count. The dashed line marks the average.</div>
-  </div>`;
-}
+function scoreToTenth(raw){ return Number((Number(raw||0) / 10).toFixed(1)); }
 
 // ── STATE ────────────────────────────────────────────────────
 let currentMovie  = null;
@@ -2543,8 +2061,6 @@ function goHome(){
   const lgToggle = document.getElementById('lg-quick-toggle');
   if(lgToggle) lgToggle.checked = true;
   showScreen("home");
-  window.clearTimeout(window.recentActivityLoadTimer);
-  window.recentActivityLoadTimer=window.setTimeout(loadRecentActivity,600);
 }
 
 function switchUser(){
@@ -2772,12 +2288,6 @@ function renderWishlistMode(){
   document.getElementById('wishlist-search-input').value = '';
   document.getElementById('wishlist-dropdown').classList.remove('open');
   document.getElementById('wishlist-msg').textContent = '';
-  document.getElementById('film-recommendation-section').style.display = films ? 'block' : 'none';
-  document.getElementById('tv-recommendation-section').style.display = tv ? 'block' : 'none';
-  document.getElementById('restaurant-recommendation-section').style.display = (!films && !tv) ? 'block' : 'none';
-  if(!films) document.getElementById('recommend-panel').classList.remove('open');
-  if(!tv) document.getElementById('tv-recommend-panel').classList.remove('open');
-  if(films||tv) document.getElementById('restaurant-recommend-panel').classList.remove('open');
 }
 
 async function loadWishlist(){
@@ -2901,252 +2411,8 @@ document.getElementById('wishlist-search-input').addEventListener('blur', functi
   setTimeout(function(){ document.getElementById('wishlist-dropdown').classList.remove('open'); }, 160);
 });
 
-
-
-// ── FILM RECOMMENDATIONS ─────────────────────────────────────
-let recommendationMode='movie';
-let recommendationSources=[];
-let recommendationSessionId='';
-let recommendationResults=[];
-let recommendationSeenIds=[];
-let recommendationAudience='me';
-let groupRecommendationMembers=[];
-let groupAvailableUsers=[];
-
-function toggleRecommendationPanel(force){
-  if(wishlistMode!=='film') return;
-  const panel=document.getElementById('recommend-panel');
-  const open=typeof force==='boolean'?force:!panel.classList.contains('open');
-  panel.classList.toggle('open',open);
-  if(open && !recommendationSources.length) loadRecommendationSources();
-}
-
-function currentUserName(){ return String((currentUser&&currentUser.name)||currentUser||'').trim(); }
-
-async function setRecommendationAudience(mode){
-  recommendationAudience=mode==='group'?'group':'me';
-  document.getElementById('rec-audience-me').classList.toggle('active',recommendationAudience==='me');
-  document.getElementById('rec-audience-group').classList.toggle('active',recommendationAudience==='group');
-  document.getElementById('group-matchmaker').classList.toggle('open',recommendationAudience==='group');
-  document.getElementById('personal-recommendation-modes').style.display=recommendationAudience==='group'?'none':'flex';
-  document.getElementById('rec-source-wrap').style.display=recommendationAudience==='group'?'none':(recommendationMode==='movie'?'block':'none');
-  const pool=document.getElementById('rec-pool');
-  if(recommendationAudience==='group'){
-    pool.options[0].textContent='New to Everyone';
-    pool.options[1].textContent='Not Rated or Wishlisted by Anyone';
-    if(!groupRecommendationMembers.length){ const me=currentUserName(); if(me) groupRecommendationMembers=[me]; }
-    await loadGroupUsers();
-  }else{ pool.options[0].textContent='New to Me';pool.options[1].textContent='Not Rated or Wishlisted'; }
-  renderGroupMembers();
-}
-
-async function loadGroupUsers(){
-  try{ const data=await apiCall('getUsers',{}); groupAvailableUsers=(data.users||[]).map(function(u){return String(u.name||u);}).filter(Boolean); renderGroupPersonMenu(); }
-  catch(e){ document.getElementById('rec-status').textContent='Could not load the user list.'; }
-}
-function renderGroupMembers(){
-  const wrap=document.getElementById('group-member-list');if(!wrap)return;
-  const me=currentUserName();
-  wrap.innerHTML=groupRecommendationMembers.map(function(name,index){
-    const host=name.toLowerCase()===me.toLowerCase();
-    return '<div class="group-member '+(host?'host':'')+'"><span>'+escHtml(name)+'</span>'+(host?'':'<button class="group-member-remove" type="button" data-member-index="'+index+'" aria-label="Remove '+escHtml(name)+'">×</button>')+'</div>';
-  }).join('');
-  wrap.querySelectorAll('.group-member-remove').forEach(function(btn){
-    btn.addEventListener('click',function(){
-      const index=Number(btn.getAttribute('data-member-index'));
-      if(Number.isInteger(index)&&groupRecommendationMembers[index]) removeGroupMember(groupRecommendationMembers[index]);
-    });
-  });
-  renderGroupPersonMenu();
-}
-function renderGroupPersonMenu(){
-  const menu=document.getElementById('group-person-menu');if(!menu)return;
-  const used={};groupRecommendationMembers.forEach(function(n){used[n.toLowerCase()]=true;});
-  const available=groupAvailableUsers.filter(function(n){return !used[n.toLowerCase()];});
-  menu.innerHTML=available.length?available.map(function(n,index){return '<button class="group-person-option" type="button" data-person-index="'+index+'">'+escHtml(n)+'</button>';}).join(''):'<div class="group-person-option" style="cursor:default">Everyone is already included.</div>';
-  menu.querySelectorAll('.group-person-option[data-person-index]').forEach(function(btn){
-    btn.addEventListener('click',function(){
-      const index=Number(btn.getAttribute('data-person-index'));
-      if(Number.isInteger(index)&&available[index]) addGroupMember(available[index]);
-    });
-  });
-}
-function toggleGroupPersonMenu(){document.getElementById('group-person-menu').classList.toggle('open');}
-function addGroupMember(name){if(!groupRecommendationMembers.some(function(n){return n.toLowerCase()===String(name).toLowerCase();}))groupRecommendationMembers.push(String(name));document.getElementById('group-person-menu').classList.remove('open');renderGroupMembers();}
-function removeGroupMember(name){groupRecommendationMembers=groupRecommendationMembers.filter(function(n){return n.toLowerCase()!==String(name).toLowerCase();});renderGroupMembers();}
-
-function setRecommendationMode(mode){
-  recommendationMode=mode==='taste'?'taste':'movie';
-  document.getElementById('rec-mode-movie').classList.toggle('active',recommendationMode==='movie');
-  document.getElementById('rec-mode-taste').classList.toggle('active',recommendationMode==='taste');
-  document.getElementById('rec-source-wrap').style.display=(recommendationAudience==='me'&&recommendationMode==='movie')?'block':'none';
-}
-
-async function loadRecommendationSources(){
-  const select=document.getElementById('rec-source');
-  try{
-    const data=await apiCall('getRecommendationSources',{token:getSessionToken()});
-    recommendationSources=data.rows||[];
-    select.innerHTML='<option value="">Choose one of your rated movies...</option>'+recommendationSources.map(function(r){
-      return '<option value="'+escHtml(String(r.tmdbId||''))+'">'+escHtml(r.title+' ('+r.year+') — '+Number(r.score10).toFixed(1)+'/10')+'</option>';
-    }).join('');
-  }catch(e){
-    document.getElementById('rec-status').textContent=e.message||'Could not load your rated movies.';
-  }
-}
-
-async function generateFilmRecommendations(options){
-  options=options||{};
-  const btn=document.getElementById('rec-generate'),status=document.getElementById('rec-status'),results=document.getElementById('rec-results');
-  const sourceTmdbId=document.getElementById('rec-source').value;
-  if(recommendationAudience==='me'&&recommendationMode==='movie'&&!sourceTmdbId){status.textContent='Choose a source movie first.';return;}
-  if(recommendationAudience==='group'&&groupRecommendationMembers.length<2){status.textContent='Add at least one other person to use Group Matchmaker.';return;}
-  btn.disabled=true;btn.textContent='Building Recommendations...';status.textContent=recommendationAudience==='group'?'Balancing the group’s ratings and validating shared movie candidates...':'Reviewing your ratings and validating movie candidates...';results.innerHTML='';document.getElementById('rec-diagnostics').style.display='none';
-  try{
-    const payload={sourceMode:recommendationAudience==='group'?'group':recommendationMode,sourceTmdbId:sourceTmdbId,pool:document.getElementById('rec-pool').value,style:document.getElementById('rec-style').value,excludeTmdbIds:options.continueBatch?recommendationSeenIds:[],groupMode:recommendationAudience==='group',groupMembers:recommendationAudience==='group'?groupRecommendationMembers.slice():[]};
-    const data=await apiCall('generateFilmRecommendations',{token:getSessionToken(),payload:payload});
-    recommendationSessionId=data.recommendationId||'';recommendationResults=data.recommendations||[];
-    if(!options.continueBatch) recommendationSeenIds=[];
-    recommendationResults.forEach(function(r){if(r&&r.tmdbId&&!recommendationSeenIds.includes(String(r.tmdbId)))recommendationSeenIds.push(String(r.tmdbId));});
-    status.textContent=(data.aiEnhanced?'AI jury enhanced · ':'Taste engine · ')+(data.profileSummary?.ratingCount||0)+' ratings reviewed'+(data.profileSummary?.memberCount?' across '+data.profileSummary.memberCount+' people':'');
-    const diagnostics=document.getElementById('rec-diagnostics');
-    const d=data.diagnostics||{};
-    diagnostics.style.display='block';
-    diagnostics.innerHTML='<strong>Recommendation engine:</strong> '+escHtml(d.engine|| (data.aiEnhanced?'Gemini-generated recommendations':'Deterministic fallback'))+'<br><strong>Recommendation batch:</strong> '+escHtml(String(d.validatedCount||d.candidateCount||0))+' validated movies · 5 shown · '+escHtml(String(d.backupCount||0))+' backups'+(d.aiCandidateCount?('<br><strong>AI proposals:</strong> '+escHtml(String(d.aiCandidateCount))+' movies generated for TMDB validation'):'')+(d.model?('<br><strong>AI model:</strong> '+escHtml(d.model)):'')+(d.aiError?('<br><strong>AI status:</strong> '+escHtml(d.aiError)):'');
-    renderFilmRecommendations();
-  }catch(e){status.textContent=e.message||'Could not generate recommendations.';}
-  btn.disabled=false;btn.textContent='Generate 5 Movies';
-}
-
-function renderFilmRecommendations(){
-  const wrap=document.getElementById('rec-results');
-  wrap.innerHTML=recommendationResults.map(function(r,index){
-    const poster=r.posterPath?'<img class="recommend-poster" src="https://image.tmdb.org/t/p/w185'+escHtml(r.posterPath)+'" alt="">':'<div class="recommend-poster"></div>';
-    const meta=[r.year,(r.genres||[]).join(' · '),r.runtimeMinutes?(r.runtimeMinutes+' min'):'',r.tmdbRating?('TMDB '+r.tmdbRating):'',r.ratedScore!==''?('You rated '+Number(r.ratedScore).toFixed(1)):''].filter(Boolean).join(' · ');
-    return '<div class="recommend-card" id="rec-card-'+index+'">'+poster+'<div><div class="recommend-role">'+escHtml(r.role||'Recommendation')+'</div><div class="recommend-movie">'+escHtml(r.title||'')+'</div><div class="recommend-meta">'+escHtml(meta)+'</div><div class="recommend-reason">'+escHtml(r.explanation||'')+'</div></div><div class="recommend-actions"><button class="recommend-action primary" onclick="saveRecommendationToWishlist('+index+')">'+(r.wishlisted?'On Wishlist':'Add to Wishlist')+'</button><button class="recommend-action" onclick="replaceFilmRecommendation('+index+')">Replace</button><button class="recommend-action" onclick="dismissFilmRecommendation('+index+')">Not Interested</button></div></div>';
-  }).join('');
-}
-
-async function saveRecommendationToWishlist(index){
-  const r=recommendationResults[index];if(!r||r.wishlisted)return;
-  const status=document.getElementById('rec-status');
-  try{
-    const details=await apiCall('getMovieDetails',{token:getSessionToken(),id:r.tmdbId});
-    await apiCall('addFutureFilm',{token:getSessionToken(),payload:details});
-    await apiCall('recordRecommendationFeedback',{token:getSessionToken(),payload:{recommendationId:recommendationSessionId,recommendedTmdbId:r.tmdbId,action:'added_to_wishlist'}});
-    r.wishlisted=true;status.textContent=r.title+' was added to your wishlist.';renderFilmRecommendations();await loadWishlist();
-  }catch(e){status.textContent=e.message||'Could not add this movie.';}
-}
-
-async function replaceFilmRecommendation(index){
-  const current=recommendationResults[index];if(!current)return;
-  const status=document.getElementById('rec-status');status.textContent='Loading the next best backup...';
-  try{
-    const data=await apiCall('replaceFilmRecommendation',{token:getSessionToken(),payload:{recommendationId:recommendationSessionId,currentTmdbId:current.tmdbId}});
-    if(data.exhausted){
-      status.textContent='You reviewed all 10 movies. Generating a fresh batch...';
-      await generateFilmRecommendations({continueBatch:true});
-      return;
-    }
-    recommendationResults[index]=data.recommendation;
-    if(data.recommendation&&data.recommendation.tmdbId&&!recommendationSeenIds.includes(String(data.recommendation.tmdbId)))recommendationSeenIds.push(String(data.recommendation.tmdbId));
-    status.textContent='Recommendation replaced'+(data.remainingBackups!==undefined?' · '+data.remainingBackups+' backups remaining':'')+'.';renderFilmRecommendations();
-  }catch(e){status.textContent=e.message||'Could not replace this recommendation.';}
-}
-
-async function dismissFilmRecommendation(index){
-  const current=recommendationResults[index];if(!current)return;
-  try{await apiCall('recordRecommendationFeedback',{token:getSessionToken(),payload:{recommendationId:recommendationSessionId,recommendedTmdbId:current.tmdbId,action:'not_interested'}});}catch(e){}
-  replaceFilmRecommendation(index);
-}
-
-
-// ── TV + RESTAURANT RECOMMENDATIONS ──────────────────────────
-const genericRecommendationState={
-  tv:{mode:'source',sources:[],sessionId:'',results:[],seen:[]},
-  restaurant:{mode:'source',sources:[],sessionId:'',results:[],seen:[]}
-};
-function toggleGenericRecommendationPanel(kind,force){
-  const panel=document.getElementById(kind+'-recommend-panel');
-  const open=typeof force==='boolean'?force:!panel.classList.contains('open');panel.classList.toggle('open',open);
-  if(open&&!genericRecommendationState[kind].sources.length)loadGenericRecommendationSources(kind);
-}
-function setGenericRecommendationMode(kind,mode){const st=genericRecommendationState[kind];st.mode=mode==='taste'?'taste':'source';document.getElementById(kind+'-rec-mode-source').classList.toggle('active',st.mode==='source');document.getElementById(kind+'-rec-mode-taste').classList.toggle('active',st.mode==='taste');document.getElementById(kind+'-rec-source-wrap').style.display=st.mode==='source'?'block':'none';}
-async function loadGenericRecommendationSources(kind){const st=genericRecommendationState[kind],select=document.getElementById(kind+'-rec-source'),status=document.getElementById(kind+'-rec-status');try{const action=kind==='tv'?'getTvRecommendationSources':'getRestaurantRecommendationSources',data=await apiCall(action,{token:getSessionToken()});st.sources=data.rows||[];select.innerHTML='<option value="">Choose one of your rated '+(kind==='tv'?'shows':'restaurants')+'...</option>'+st.sources.map(function(r){const id=kind==='tv'?r.tmdbTvId:r.placeId,title=kind==='tv'?r.title:r.name,detail=kind==='tv'?r.year:r.city;return '<option value="'+escHtml(String(id||''))+'">'+escHtml(title+(detail?' ('+detail+')':'')+' — '+Number(r.score10||0).toFixed(1)+'/10')+'</option>';}).join('');}catch(e){status.textContent=e.message||'Could not load recommendation sources.';}}
-async function generateGenericRecommendations(kind,options){options=options||{};const st=genericRecommendationState[kind],btn=document.getElementById(kind+'-rec-generate'),status=document.getElementById(kind+'-rec-status'),results=document.getElementById(kind+'-rec-results'),source=document.getElementById(kind+'-rec-source').value;if(st.mode==='source'&&!source){status.textContent='Choose a source '+(kind==='tv'?'show':'restaurant')+' first.';return;}btn.disabled=true;status.textContent='Building recommendations...';results.innerHTML='';document.getElementById(kind+'-rec-diagnostics').style.display='none';try{const action=kind==='tv'?'generateTvRecommendations':'generateRestaurantRecommendations',payload={sourceMode:st.mode==='taste'?'taste':'source',pool:document.getElementById(kind+'-rec-pool').value,style:document.getElementById(kind+'-rec-style').value,excludeIds:options.continueBatch?st.seen:[]};if(kind==='tv')payload.sourceTmdbId=source;else payload.sourcePlaceId=source;const data=await apiCall(action,{token:getSessionToken(),payload});st.sessionId=data.recommendationId||'';st.results=data.recommendations||[];if(!options.continueBatch)st.seen=[];st.results.forEach(function(r){const id=kind==='tv'?r.tmdbTvId:r.placeId;if(id&&!st.seen.includes(String(id)))st.seen.push(String(id));});status.textContent='AI recommendations · '+(data.profileSummary?.ratingCount||0)+' ratings reviewed';const d=data.diagnostics||{},diag=document.getElementById(kind+'-rec-diagnostics');diag.style.display='block';diag.innerHTML='<strong>Recommendation engine:</strong> '+escHtml(d.engine||'Gemini')+'<br><strong>Recommendation batch:</strong> '+escHtml(String(d.validatedCount||0))+' validated · 5 shown · '+escHtml(String(d.backupCount||0))+' backups'+(d.city?'<br><strong>Location:</strong> '+escHtml(d.city):'')+(d.model?'<br><strong>AI model:</strong> '+escHtml(d.model):'');renderGenericRecommendations(kind);}catch(e){status.textContent=e.message||'Could not generate recommendations.';}btn.disabled=false;}
-function renderGenericRecommendations(kind){const st=genericRecommendationState[kind],wrap=document.getElementById(kind+'-rec-results');wrap.innerHTML=st.results.map(function(r,index){let media='';if(kind==='tv')media=r.posterPath?'<img class="recommend-poster" src="https://image.tmdb.org/t/p/w185'+escHtml(r.posterPath)+'" alt="">':'<div class="recommend-poster"></div>';else media='<div class="recommend-poster" style="display:flex;align-items:center;justify-content:center;font-size:30px">🍽️</div>';const title=kind==='tv'?r.title:r.name,meta=kind==='tv'?[r.year,(r.genres||[]).join(' · '),r.tmdbRating?'TMDB '+r.tmdbRating:'',r.ratedScore!==''?'You rated '+Number(r.ratedScore).toFixed(1):'']:[r.city,r.address,r.price,r.googleRating?'Google '+r.googleRating:'',r.ratedScore!==''?'You rated '+Number(r.ratedScore).toFixed(1):''];return '<div class="recommend-card">'+media+'<div><div class="recommend-role">'+escHtml(r.role||'Recommendation')+'</div><div class="recommend-movie">'+escHtml(title||'')+'</div><div class="recommend-meta">'+escHtml(meta.filter(Boolean).join(' · '))+'</div><div class="recommend-reason">'+escHtml(r.explanation||'')+'</div></div><div class="recommend-actions"><button class="recommend-action primary" onclick="saveGenericRecommendation('+JSON.stringify(kind)+','+index+')">'+(r.wishlisted?'On Wishlist':'Add to Wishlist')+'</button><button class="recommend-action" onclick="replaceGenericRecommendation('+JSON.stringify(kind)+','+index+')">Replace</button><button class="recommend-action" onclick="notInterestedGenericRecommendation('+JSON.stringify(kind)+','+index+')">Not Interested</button></div></div>';}).join('');}
-async function saveGenericRecommendation(kind,index){const st=genericRecommendationState[kind],r=st.results[index],status=document.getElementById(kind+'-rec-status');if(!r||r.wishlisted)return;try{if(kind==='tv'){await apiCall('addFutureTv',{token:getSessionToken(),payload:{tmdbTvId:r.tmdbTvId,seriesTitle:r.title,seriesYear:r.year,posterPath:r.posterPath,genres:r.genres||[]}});}else{await apiCall('addFutureRestaurant',{token:getSessionToken(),payload:{placeId:r.placeId,name:r.name,address:r.address,city:r.city,cuisine:r.cuisine||'',price:r.price||'',googleRating:r.googleRating||''}});}const feedbackAction=kind==='tv'?'recordTvRecommendationFeedback':'recordRestaurantRecommendationFeedback';const recommendedId=kind==='tv'?r.tmdbTvId:r.placeId;await apiCall(feedbackAction,{token:getSessionToken(),payload:{recommendationId:st.sessionId,recommendedId:recommendedId,action:'added_to_wishlist'}});r.wishlisted=true;status.textContent=(kind==='tv'?r.title:r.name)+' was added to your wishlist.';renderGenericRecommendations(kind);await loadWishlist();}catch(e){status.textContent=e.message||'Could not add this recommendation.';}}
-async function replaceGenericRecommendation(kind,index){const st=genericRecommendationState[kind],r=st.results[index],status=document.getElementById(kind+'-rec-status');if(!r)return;try{const action=kind==='tv'?'replaceTvRecommendation':'replaceRestaurantRecommendation',id=kind==='tv'?r.tmdbTvId:r.placeId,data=await apiCall(action,{token:getSessionToken(),payload:{recommendationId:st.sessionId,currentId:id,action:'replaced'}});if(data.exhausted){status.textContent='You reviewed all 10. Generating a fresh batch...';await generateGenericRecommendations(kind,{continueBatch:true});return;}st.results[index]=data.recommendation;const nextId=kind==='tv'?data.recommendation.tmdbTvId:data.recommendation.placeId;if(nextId&&!st.seen.includes(String(nextId)))st.seen.push(String(nextId));status.textContent='Recommendation replaced · '+data.remainingBackups+' backups remaining.';renderGenericRecommendations(kind);}catch(e){status.textContent=e.message||'Could not replace this recommendation.';}}
-
-
-async function notInterestedGenericRecommendation(kind,index){
-  const st=genericRecommendationState[kind],r=st.results[index],status=document.getElementById(kind+'-rec-status');if(!r)return;
-  try{
-    const action=kind==='tv'?'replaceTvRecommendation':'replaceRestaurantRecommendation',id=kind==='tv'?r.tmdbTvId:r.placeId;
-    const data=await apiCall(action,{token:getSessionToken(),payload:{recommendationId:st.sessionId,currentId:id,action:'not_interested'}});
-    if(data.exhausted){status.textContent='You reviewed all 10. Generating a fresh batch...';await generateGenericRecommendations(kind,{continueBatch:true});return;}
-    st.results[index]=data.recommendation;const nextId=kind==='tv'?data.recommendation.tmdbTvId:data.recommendation.placeId;if(nextId&&!st.seen.includes(String(nextId)))st.seen.push(String(nextId));
-    status.textContent='Marked not interested · '+data.remainingBackups+' backups remaining.';renderGenericRecommendations(kind);
-  }catch(e){status.textContent=e.message||'Could not update this recommendation.';}
-}
-
-
-// ── RECENT ACTIVITY ──────────────────────────────────────────
-function activitySentiment(score){
-  score=Number(score||0);
-  if(score>=9)return {emoji:'😍',word:'loved'};
-  if(score>=7.5)return {emoji:'🙂',word:'liked'};
-  if(score>=6)return {emoji:'😐',word:'felt meh about'};
-  if(score>=4)return {emoji:'😕',word:'disliked'};
-  return {emoji:'😭',word:'hated'};
-}
-function formatActivityDate(value){
-  const raw=String(value||'').trim();
-  if(!raw)return '';
-  const iso=raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if(iso){
-    const months=['January','February','March','April','May','June','July','August','September','October','November','December'];
-    const month=months[Number(iso[2])-1];
-    if(month)return month+' '+Number(iso[3])+', '+iso[1];
-  }
-  const parsed=new Date(raw);
-  if(Number.isNaN(parsed.getTime()))return raw;
-  return parsed.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
-}
-async function loadRecentActivity(){
-  const wrap=document.getElementById('recent-activity-list');if(!wrap)return;
-  wrap.innerHTML='<div class="stats-loading">Loading recent ratings...</div>';
-  const timeout=new Promise((_,reject)=>window.setTimeout(()=>reject(new Error('Activity timed out')),10000));
-  try{
-    const data=await Promise.race([apiCall('getRecentActivity',{}),timeout]);
-    const rows=data.rows||[];
-    if(!rows.length){wrap.innerHTML='<div class="stats-empty">No recent activity is available yet.</div>';return;}
-    wrap.innerHTML=rows.map(function(r){
-      const s=activitySentiment(r.score10);
-      const categoryInfo=r.category==='restaurant'
-        ? {label:'Le Guide',emoji:'🍽️'}
-        : (r.category==='tv'?{label:'TV',emoji:'📺'}:{label:'Film',emoji:'🎬'});
-      return '<div class="activity-item"><div class="activity-emoji">'+s.emoji+'</div><div class="activity-main"><div class="activity-line"><strong>'+escHtml(r.user||'Someone')+'</strong> '+s.word+' <span class="activity-title-name">'+escHtml(r.title||'')+'</span></div><div class="activity-meta">'+categoryInfo.emoji+' '+escHtml(categoryInfo.label)+' · '+escHtml(formatActivityDate(r.displayDate||r.date||r.timestamp||''))+'</div></div><div class="activity-score">'+Number(r.score10||0).toFixed(1)+'<span>/10</span></div></div>';
-    }).join('');
-  }catch(e){wrap.innerHTML='<div class="stats-empty">Recent activity took too long to load. <button type="button" class="activity-retry" id="activity-retry">Retry</button></div>';document.getElementById('activity-retry')?.addEventListener('click',loadRecentActivity);}
-}
-
 // ── SEARCH ───────────────────────────────────────────────────
 let searchTimer=null;
-function toggleAdvancedSearch(kind){
-  const panel=document.getElementById(kind==='tv'?'tv-advanced-panel':'movie-advanced-panel');
-  panel?.classList.toggle('open');
-}
-function runAdvancedMovieSearch(){
-  const query=document.getElementById('search-input').value.trim();
-  if(!query) return document.getElementById('search-input').focus();
-  doSearch(query,true);
-}
-function runAdvancedTvSearch(){
-  const query=document.getElementById('tv-search-input').value.trim();
-  if(!query) return document.getElementById('tv-search-input').focus();
-  searchTv(query,true);
-}
 
 document.getElementById("search-input").addEventListener("input",function(){
   const q=this.value.trim();
@@ -3159,18 +2425,16 @@ document.getElementById("search-input").addEventListener("blur",()=>{
   setTimeout(closeDropdown,160);
 });
 
-async function doSearch(q,advanced=false){
+async function doSearch(q){
   if(!CONFIG.GAS_URL){
     document.getElementById("setup-notice").style.display="block";
     document.getElementById("spinner").classList.remove("visible");
     return;
   }
-  document.getElementById("spinner").classList.add("visible");
   try{
-    const year=advanced ? document.getElementById('movie-advanced-year').value.trim() : '';
-    const data = await apiCall("searchMovies", {token:getSessionToken(),query:q,advanced:advanced,year:year,pages:3});
+    const data = await apiCall("searchMovies", {token: getSessionToken(), query: q});
     document.getElementById("setup-notice").style.display="none";
-    renderDropdown((data.results || data || []),advanced);
+    renderDropdown((data.results || data || []).slice(0,7));
   }catch(e){
     console.error(e);
     const notice = document.getElementById("setup-notice");
@@ -3181,18 +2445,18 @@ async function doSearch(q,advanced=false){
   document.getElementById("spinner").classList.remove("visible");
 }
 
-function renderDropdown(results,advanced=false){
+function renderDropdown(results){
   const dd=document.getElementById("dropdown");
-  dd.classList.toggle('advanced-results',advanced);
-  if(!results.length){
-    dd.innerHTML='<div class="stats-empty">No matches found. Try removing the year or using an alternate title.</div>';
-    dd.classList.add("open");
-    return;
-  }
+  if(!results.length){dd.classList.remove("open");return;}
   dd.innerHTML=results.map(r=>`
-    <button class="drop-item" onclick="pickMovie(${Number(r.id)})">
-      ${r.poster_path?`<img class="drop-poster" src="https://image.tmdb.org/t/p/w92${r.poster_path}" alt="">`:`<div class="drop-poster"></div>`}
-      <div><div class="drop-title">${escHtml(r.title)}</div><div class="drop-year">${escHtml(r.year || (r.release_date||'').slice(0,4))}${r.original_title&&r.original_title!==r.title?' · '+escHtml(r.original_title):''}</div></div>
+    <button class="drop-item" onclick="pickMovie(${r.id})">
+      ${r.poster_path
+        ?`<img class="drop-poster" src="https://image.tmdb.org/t/p/w92${r.poster_path}" alt="">`
+        :`<div class="drop-poster"></div>`}
+      <div>
+        <div class="drop-title">${escHtml(r.title)}</div>
+        <div class="drop-year">${(r.release_date||"").slice(0,4)}</div>
+      </div>
     </button>`).join("");
   dd.classList.add("open");
 }
@@ -3401,7 +2665,7 @@ function confirmRound(){
 function generateCard(){
   const raw=quickMode && chosenScore10 != null
     ? chosenScore10 * 10
-    : weightedTotal(CATS,scores);
+    : CATS.reduce((s,c)=>s+(scores[c.id]||0)*c.w,0);
   const g  =grade(chosenScore10);
   const overallNote=document.getElementById("overall-note").value||"";
   const today=new Date().toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"});
@@ -3542,7 +2806,7 @@ async function loadRankReveal(){
     if(!ratings||!ratings.length) return;
 
     // Personal rank stats
-    const scores10=ratings.map(r=>storedNumber(r["Score /10"])).filter(value=>value!==null).sort((a,b)=>b-a);
+    const scores10=ratings.map(r=>parseFloat(r["Score /10"]||0)).filter(s=>s>0).sort((a,b)=>b-a);
     const myScore =chosenScore10;
     const rank    =scores10.filter(s=>s>myScore).length+1;
     const total   =scores10.length;
@@ -3594,104 +2858,6 @@ async function loadRankReveal(){
 let _statsData = { ratings: null, summary: null };
 let _statsTab = 'my';
 let _scoreMode = localStorage.getItem('cf_score_mode') || '10'; // '10' or 'raw'
-const _statsGenres = {
-  film: localStorage.getItem('cf_film_genre') || '',
-  tv: localStorage.getItem('cf_tv_genre') || ''
-};
-let _restaurantCuisine=localStorage.getItem('cf_restaurant_cuisine') || '';
-function normalizeCuisine(value){ return String(value||'').trim(); }
-function rowCuisine(row){ return normalizeCuisine(row?.Cuisine ?? row?.cuisine ?? ''); }
-function rowMatchesCuisine(row,cuisine){ return !cuisine || rowCuisine(row).toLowerCase()===String(cuisine).toLowerCase(); }
-function collectCuisines(rows){
-  const names=new Map();
-  (rows||[]).forEach(function(row){ const name=rowCuisine(row); if(name && !names.has(name.toLowerCase())) names.set(name.toLowerCase(),name); });
-  return [...names.values()].sort(function(a,b){ return a.localeCompare(b); });
-}
-function filteredRestaurantSummary(summary){ return {rows:(summary?.rows||[]).filter(function(row){ return rowMatchesCuisine(row,_restaurantCuisine); })}; }
-function populateRestaurantCuisineFilter(ratings,summaryRows){
-  const select=document.getElementById('restaurant-cuisine-filter');
-  const summary=document.getElementById('restaurant-cuisine-summary');
-  if(!select) return;
-  const cuisines=collectCuisines([...(ratings||[]),...(summaryRows||[])]);
-  const canonical=cuisines.find(function(name){ return name.toLowerCase()===String(_restaurantCuisine).toLowerCase(); });
-  if(_restaurantCuisine && !canonical){ _restaurantCuisine=''; localStorage.removeItem('cf_restaurant_cuisine'); }
-  else if(canonical) _restaurantCuisine=canonical;
-  select.innerHTML='<option value="">All Food Types</option>'+cuisines.map(function(name){ return '<option value="'+escHtml(name)+'">'+escHtml(name)+'</option>'; }).join('');
-  select.value=_restaurantCuisine;
-  if(summary) summary.textContent=_restaurantCuisine ? 'Showing '+_restaurantCuisine : 'Showing all food types';
-}
-function setRestaurantCuisine(value){
-  _restaurantCuisine=String(value||'');
-  if(_restaurantCuisine) localStorage.setItem('cf_restaurant_cuisine',_restaurantCuisine); else localStorage.removeItem('cf_restaurant_cuisine');
-  lgRenderCurrentTab();
-}
-
-function splitGenres(value){
-  if(Array.isArray(value)) return value.map(function(item){ return String(item||'').trim(); }).filter(Boolean);
-  return String(value||'').split(/\s*[·,;|]\s*/).map(function(item){ return item.trim(); }).filter(Boolean);
-}
-function rowGenres(row){
-  return splitGenres(row?.Genres ?? row?.Genre ?? row?.genres ?? '');
-}
-function rowMatchesGenre(row,genre){
-  if(!genre) return true;
-  const target=String(genre).toLowerCase();
-  return rowGenres(row).some(function(item){ return item.toLowerCase()===target; });
-}
-function collectGenres(rows){
-  const names=new Map();
-  (rows||[]).forEach(function(row){
-    rowGenres(row).forEach(function(name){
-      const key=name.toLowerCase();
-      if(!names.has(key)) names.set(key,name);
-    });
-  });
-  return [...names.values()].sort(function(a,b){ return a.localeCompare(b); });
-}
-function filteredSummaryByGenre(summary,genre){
-  return {rows:(summary?.rows||[]).filter(function(row){ return rowMatchesGenre(row,genre); })};
-}
-function populateGenreFilter(kind,ratings,summaryRows){
-  const select=document.getElementById(kind+'-genre-filter');
-  const summary=document.getElementById(kind+'-genre-summary');
-  if(!select) return;
-  const genres=collectGenres([...(ratings||[]),...(summaryRows||[])]);
-  if(_statsGenres[kind]){
-    const canonical=genres.find(function(name){ return name.toLowerCase()===_statsGenres[kind].toLowerCase(); });
-    if(canonical) _statsGenres[kind]=canonical;
-    else{
-      _statsGenres[kind]='';
-      localStorage.removeItem('cf_'+kind+'_genre');
-    }
-  }
-  select.innerHTML='<option value="">All Genres</option>'+genres.map(function(name){ return '<option value="'+escHtml(name)+'" '+(name===_statsGenres[kind]?'selected':'')+'>'+escHtml(name)+'</option>'; }).join('');
-  select.value=_statsGenres[kind] || '';
-  if(summary) summary.textContent=_statsGenres[kind] ? 'Showing '+_statsGenres[kind] : 'Showing all genres';
-}
-function setStatsGenre(kind,value){
-  if(kind!=='film' && kind!=='tv') return;
-  _statsGenres[kind]=String(value||'');
-  if(_statsGenres[kind]) localStorage.setItem('cf_'+kind+'_genre',_statsGenres[kind]);
-  else localStorage.removeItem('cf_'+kind+'_genre');
-  const summary=document.getElementById(kind+'-genre-summary');
-  if(summary) summary.textContent=_statsGenres[kind] ? 'Showing '+_statsGenres[kind] : 'Showing all genres';
-  if(kind==='tv') renderTvStats();
-  else renderCurrentTab();
-}
-function getFilteredFilmRatings(){
-  return (_statsData.ratings||[]).filter(function(row){ return rowMatchesGenre(row,_statsGenres.film); });
-}
-function getFilteredFilmSummary(){
-  return filteredSummaryByGenre(_statsData.summary,_statsGenres.film);
-}
-function populateFilmGenreFilter(){
-  populateGenreFilter('film',_statsData.ratings||[],_statsData.summary?.rows||[]);
-}
-function populateTvGenreFilter(){
-  const ratings=(tvStatsData.ratings||[]).filter(function(row){ return row['Type']===tvStatsType; });
-  const rows=(tvStatsData.summary?.rows||[]).filter(function(row){ return row['Type']===tvStatsType; });
-  populateGenreFilter('tv',ratings,rows);
-}
 
 function switchStatsTab(tab){
   _statsTab = tab;
@@ -3701,28 +2867,27 @@ function switchStatsTab(tab){
   renderCurrentTab();
 }
 
-function syncScoreModeButtons(){
-  document.querySelectorAll('.score-mode-btn[data-mode]').forEach(button=>{
-    button.classList.toggle('active',button.dataset.mode===_scoreMode);
-  });
-}
 function setScoreMode(mode){
-  _scoreMode = mode==='raw' ? 'raw' : '10';
-  localStorage.setItem('cf_score_mode', _scoreMode);
-  syncScoreModeButtons();
-  const active=document.querySelector('.screen.active')?.id;
-  if(active==='screen-tv-stats') renderTvStats();
-  else if(active==='screen-lg-stats') lgRenderCurrentTab();
-  else renderCurrentTab();
+  _scoreMode = mode;
+  localStorage.setItem('cf_score_mode', mode);
+  document.querySelectorAll('.score-mode-btn').forEach(b=>{
+    b.classList.toggle('active', b.dataset.mode===mode);
+  });
+  renderMyStats(_statsData.ratings, _statsData.summary);
 }
 
-function getScore(r){ return ratingDisplayScore(r); }
-function fmtScore(s){ return Number(s).toFixed(1); }
+function getScore(r){
+  if(_scoreMode==='raw') return parseFloat(r["Raw /100"]||0);
+  return parseFloat(r["Score /10"]||0);
+}
+function fmtScore(s){
+  if(_scoreMode==='raw') return s.toFixed(1);
+  return s.toFixed(1);
+}
 function scoreLabel(){ return _scoreMode==='raw' ? '/100' : '/10'; }
 
 async function goStats(){
   showScreen("stats");
-  syncScoreModeButtons();
   const content=document.getElementById("stats-content");
   if(!CONFIG.GAS_URL||!currentUser||!getSessionToken()){
     content.innerHTML=`<div class="stats-empty">Connect Google Sheets and log in to see your stats.<br><br><button class="btn-pri" onclick="promptAdminPin()">Go to Settings →</button></div>`;
@@ -3739,7 +2904,6 @@ async function goStats(){
       return;
     }
     _statsData = {ratings, summary};
-    populateFilmGenreFilter();
     renderCurrentTab();
   }catch(e){
     content.innerHTML=`<div class="stats-empty">Could not load ratings. Check your GAS URL in Settings.</div>`;
@@ -3747,13 +2911,11 @@ async function goStats(){
 }
 
 function renderCurrentTab(){
-  const ratings=getFilteredFilmRatings();
-  const summary=getFilteredFilmSummary();
-  if(_statsTab==='my')    renderMyStats(ratings, summary);
-  if(_statsTab==='group') renderGroupStats(summary);
-  if(_statsTab==='h2h')   renderH2H(summary);
+  if(_statsTab==='my')    renderMyStats(_statsData.ratings, _statsData.summary);
+  if(_statsTab==='group') renderGroupStats(_statsData.summary);
+  if(_statsTab==='h2h')   renderH2H(_statsData.summary);
   if(_statsTab==='individual') renderIndividualRatings({
-    id:'film', containerId:'stats-content', summary:summary, itemLabel:'Films',
+    id:'film', containerId:'stats-content', summary:_statsData.summary, itemLabel:'Films',
     title:function(row){ return String(row.Title || ''); },
     meta:function(row){ return String(row.Year || ''); }
   });
@@ -3776,7 +2938,7 @@ function openRatingDetail({eyebrow,title,meta,score,grade: ratingGrade,lines,sec
   document.getElementById('rating-detail-title').textContent=title;
   document.getElementById('rating-detail-meta').textContent=meta.filter(Boolean).join(' · ');
   document.getElementById('rating-detail-scores').innerHTML=`
-    <div class="rating-detail-score-box"><div class="rating-detail-score">${Number(score).toFixed(1)}</div><div class="rating-detail-label">${_scoreMode==='raw'?'out of 100':'out of 10'}</div></div>
+    <div class="rating-detail-score-box"><div class="rating-detail-score">${Number(score).toFixed(1)}</div><div class="rating-detail-label">out of 10</div></div>
     <div class="rating-detail-score-box"><div class="rating-detail-grade">${escHtml(ratingGrade)}</div><div class="rating-detail-label">Grade</div></div>`;
   document.querySelectorAll('#rating-detail-modal .rating-detail-secondary').forEach(el=>el.remove());
   document.getElementById('rating-detail-scores').insertAdjacentHTML('afterend', secondaryBoxes.length ? `
@@ -3791,8 +2953,7 @@ function openRatingDetail({eyebrow,title,meta,score,grade: ratingGrade,lines,sec
 function showMyRatedFilm(title){
   const rating=(_statsData.ratings||[]).find(r=>String(r['Title']||'').toLowerCase()===String(title||'').toLowerCase());
   if(!rating) return;
-  const score10=parseFloat(rating['Score /10']||0);
-  const score=ratingDisplayScore(rating);
+  const score=parseFloat(rating['Score /10']||0);
   const lines=[
     ['Plot & Concept','Plot'],['Entertainment Value','Entertainment'],['Acting & Characters','Acting'],
     ['Visuals & Production','Visuals'],['Pacing','Pacing'],['Emotional Impact','Emotional']
@@ -3806,7 +2967,7 @@ function showMyRatedFilm(title){
   openRatingDetail({
     eyebrow:'Your rating', title:String(rating['Title']||''),
     meta:[rating['Year'],rating['Date']&&`Rated ${rating['Date']}`],
-    score, grade:grade(score10), lines,
+    score, grade:grade(score), lines,
     secondaryBoxes:[
       {label:'IMDb',value:String(rating['IMDb']||'—')},
       {label:'RT Audience',value:String(rating['RT Audience']||'—')},
@@ -3820,36 +2981,31 @@ function searchMyRatedFilm(query){
   if(!holder) return;
   const term=String(query||'').trim().toLowerCase();
   if(!term){ holder.innerHTML=''; return; }
-  const matches=getFilteredFilmRatings().filter(function(r){ return String(r['Title']||'').toLowerCase().includes(term); }).slice(0,8);
-  holder.innerHTML=matches.length ? matches.map(function(r){ return `
+  const matches=(_statsData.ratings||[]).filter(r=>String(r['Title']||'').toLowerCase().includes(term)).slice(0,8);
+  holder.innerHTML=matches.length ? matches.map(r=>`
     <button class="stats-search-result" data-title="${escHtml(String(r['Title']||''))}" onclick="showMyRatedFilm(this.dataset.title)">
       <span class="stats-search-result-title">${escHtml(String(r['Title']||''))}${r['Year']?' ('+escHtml(String(r['Year']))+')':''}</span>
-      <span class="stats-search-result-score">${ratingDisplayScore(r).toFixed(1)}</span>
-    </button>`; }).join('') : '<div class="stats-empty">You have not rated a matching film in this genre.</div>';
+      <span class="stats-search-result-score">${parseFloat(r['Score /10']||0).toFixed(1)}</span>
+    </button>`).join('') : '<div class="stats-empty">You have not rated a matching film.</div>';
 }
 
 function showGroupFilm(title){
-  const row=(getFilteredFilmSummary().rows||[]).find(r=>String(r.Title||'').toLowerCase()===String(title||'').toLowerCase());
+  const row=(_statsData.summary?.rows||[]).find(r=>String(r.Title||'').toLowerCase()===String(title||'').toLowerCase());
   if(!row) return;
-  const scores=summaryDisplayScores(row);
+  const scores=(row.scores||[]).map(Number).filter(Number.isFinite);
   const avg=scores.length?scores.reduce((a,b)=>a+b,0)/scores.length:0;
-  const mine=summaryUserDisplayScore(row,currentUser?.name);
-  const mine10=row.userScores?.[currentUser?.name];
-  const average10=averageScores(row.scores||[])||0;
+  const mine=row.userScores?.[currentUser?.name];
   const lines=[];
   if(mine!=null) lines.push({label:'Your rating',value:Number(mine).toFixed(1)});
   lines.push({label:'Group average',value:avg.toFixed(1)});
   if(row.imdb) lines.push({label:'IMDb',value:String(row.imdb)});
   if(row.rt) lines.push({label:'RT Audience',value:String(row.rt)});
-  Object.keys(row.userScores||{}).sort().forEach(name=>{
-    if(name!==currentUser?.name){
-      const value=summaryUserDisplayScore(row,name);
-      if(value!=null) lines.push({label:name,value:Number(value).toFixed(1)});
-    }
+  Object.entries(row.userScores||{}).sort(([a],[b])=>a.localeCompare(b)).forEach(([name,value])=>{
+    if(name!==currentUser?.name) lines.push({label:name,value:Number(value).toFixed(1)});
   });
   openRatingDetail({
     eyebrow:'Group rating', title:String(row.Title||''), meta:[row.Year, `${scores.length} rating${scores.length===1?'':'s'}`],
-    score:mine!=null?Number(mine):avg, grade:grade(mine10!=null?Number(mine10):average10), lines
+    score:mine!=null?Number(mine):avg, grade:grade(mine!=null?Number(mine):avg), lines
   });
 }
 
@@ -3858,31 +3014,33 @@ function searchGroupFilm(query){
   if(!holder) return;
   const term=String(query||'').trim().toLowerCase();
   if(!term){ holder.innerHTML=''; return; }
-  const matches=(getFilteredFilmSummary().rows||[]).filter(function(r){ return String(r.Title||'').toLowerCase().includes(term); }).slice(0,8);
-  holder.innerHTML=matches.length ? matches.map(function(r){
-    const scores=summaryDisplayScores(r);
-    const avg=scores.length?scores.reduce(function(a,b){ return a+b; },0)/scores.length:0;
+  const matches=(_statsData.summary?.rows||[]).filter(r=>String(r.Title||'').toLowerCase().includes(term)).slice(0,8);
+  holder.innerHTML=matches.length ? matches.map(r=>{
+    const scores=(r.scores||[]).map(Number).filter(Number.isFinite);
+    const avg=scores.length?scores.reduce((a,b)=>a+b,0)/scores.length:0;
     return `<button class="stats-search-result" data-title="${escHtml(String(r.Title||''))}" onclick="showGroupFilm(this.dataset.title)">
       <span class="stats-search-result-title">${escHtml(String(r.Title||''))}${r.Year?' ('+escHtml(String(r.Year))+')':''}</span>
       <span class="stats-search-result-score">${avg.toFixed(1)}</span>
     </button>`;
-  }).join('') : '<div class="stats-empty">No matching film in this genre has been rated by the group.</div>';
+  }).join('') : '<div class="stats-empty">No matching film has been rated by the group.</div>';
 }
 
 // ── MY STATS TAB ──────────────────────────────────────────────────
 function renderMyStats(ratings, summary){
   const container = document.getElementById('stats-content');
   const useRaw = _scoreMode==='raw';
-  if(!ratings.length){
-    const genre=_statsGenres.film ? ' in '+escHtml(_statsGenres.film) : '';
-    container.innerHTML=`<div class="stats-empty">You have no film ratings${genre}.</div><div class="stats-danger-zone"><button class="delete-rating-btn" onclick="openDeleteRating('film')">Delete a Rating</button></div>`;
-    return;
-  }
 
-  const scoreVals = ratings.map(r=>useRaw ? rawScoreForRating(r) : storedNumber(r["Score /10"])).filter(value=>value!==null);
+  const scoreVals = ratings.map(r=>useRaw ? parseFloat(r["Raw /100"]||0) : parseFloat(r["Score /10"]||0)).filter(s=>s>0);
   const avg = (scoreVals.reduce((a,b)=>a+b,0)/scoreVals.length)||0;
 
-  const distributionValues=ratings.map(rawScoreForRating).filter(value=>value!==null);
+  const GRADES=["S","A+","A","A-","B+","B","B-","C+","C","C-","D+","D","D-","F"];
+  const gradeCounts={};
+  GRADES.forEach(g=>gradeCounts[g]=0);
+  ratings.forEach(r=>{
+    const score10=parseFloat(r["Score /10"]||0);
+    if(score10>0) gradeCounts[grade(score10)]=(gradeCounts[grade(score10)]||0)+1;
+  });
+  const maxGrade=Math.max(...Object.values(gradeCounts),1);
 
   const catFields={
     "Plot & Concept":"Plot","Entertainment Value":"Entertainment",
@@ -3905,6 +3063,12 @@ function renderMyStats(ratings, summary){
   const scoreL = scoreLabel();
 
   container.innerHTML=`
+    <!-- Score mode toggle -->
+    <div class="score-mode-toggle">
+      <button class="score-mode-btn ${_scoreMode==='10'?'active':''}" data-mode="10" onclick="setScoreMode('10')">/10 Score</button>
+      <button class="score-mode-btn ${_scoreMode==='raw'?'active':''}" data-mode="raw" onclick="setScoreMode('raw')">Raw /100</button>
+    </div>
+
     <!-- Overview -->
     <div class="stats-section">
       <div class="stats-section-title">Overview — ${escHtml(currentUser.name)}</div>
@@ -3916,10 +3080,17 @@ function renderMyStats(ratings, summary){
       </div>
     </div>
 
-    <!-- Score Distribution -->
+    <!-- Grade Distribution -->
     <div class="stats-section">
-      <div class="stats-section-title">Score Distribution</div>
-      ${renderDistributionChart(distributionValues)}
+      <div class="stats-section-title">Grade Distribution</div>
+      <div class="grade-bars">
+        ${GRADES.map(g=>`
+          <div class="grade-bar-row">
+            <div class="grade-bar-label">${g}</div>
+            <div class="grade-bar-track"><div class="grade-bar-fill" style="width:${Math.round((gradeCounts[g]/maxGrade)*100)}%"></div></div>
+            <div class="grade-bar-count">${gradeCounts[g]}</div>
+          </div>`).join("")}
+      </div>
     </div>
 
     <!-- Top 5 + View All -->
@@ -3979,8 +3150,7 @@ function renderMyStats(ratings, summary){
       <div class="stats-section-title">Find a Rated Film</div>
       <input class="stats-search" id="my-film-search" type="search" placeholder="Search your rated films" oninput="searchMyRatedFilm(this.value)"/>
       <div class="stats-search-results" id="my-film-search-results"></div>
-    </div>
-    <div class="stats-danger-zone"><button class="delete-rating-btn" onclick="openDeleteRating('film')">Delete a Rating</button></div>`;
+    </div>`;
 }
 
 // ── GROUP TAB ─────────────────────────────────────────────────────
@@ -3991,7 +3161,7 @@ function renderGroupStats(summary){
     return;
   }
 
-  const rated = summary.rows.filter(r=>summaryDisplayScores(r).length>=2);
+  const rated = summary.rows.filter(r=>r.scores&&r.scores.length>=2);
   if(!rated.length){
     container.innerHTML=`<div class="stats-empty">No films rated by multiple people yet.</div>`;
     return;
@@ -3999,9 +3169,8 @@ function renderGroupStats(summary){
 
   // Sort by group average
   const sorted = [...rated].sort((a,b)=>{
-    const aScores=summaryDisplayScores(a), bScores=summaryDisplayScores(b);
-    const aAvg=aScores.reduce((x,y)=>x+y,0)/aScores.length;
-    const bAvg=bScores.reduce((x,y)=>x+y,0)/bScores.length;
+    const aAvg=a.scores.reduce((x,y)=>x+y,0)/a.scores.length;
+    const bAvg=b.scores.reduce((x,y)=>x+y,0)/b.scores.length;
     return bAvg-aAvg;
   });
 
@@ -4010,8 +3179,7 @@ function renderGroupStats(summary){
   summary.rows.forEach(r=>{
     if(r.userScores) Object.entries(r.userScores).forEach(([u,s])=>{
       if(!userTotals[u]) userTotals[u]={sum:0,count:0};
-      const display=summaryUserDisplayScore(r,u);
-      userTotals[u].sum+=display==null?0:display;
+      userTotals[u].sum+=parseFloat(s)||0;
       userTotals[u].count++;
     });
   });
@@ -4025,18 +3193,17 @@ function renderGroupStats(summary){
     return scores.reduce((s,x)=>s+Math.pow(x-mean,2),0)/scores.length;
   }
 
-  const withVar = rated.map(r=>({...r, var:variance(summaryDisplayScores(r))}));
+  const withVar = rated.map(r=>({...r, var:variance(r.scores)}));
   const mostControversial = [...withVar].sort((a,b)=>b.var-a.var).slice(0,5);
   const mostConsensus = [...withVar].filter(r=>r.scores.length>=2).sort((a,b)=>a.var-b.var).slice(0,5);
 
   // Get all users from summary headers
   const allUsers = [...new Set(summary.rows.flatMap(r=>Object.keys(r.userScores||{})))];
-  const distributionValues=groupDistributionValues(summary);
 
   container.innerHTML=`
     <!-- Group member averages -->
     <div class="stats-section">
-      <div class="stats-section-title">Average Rating by Person — ${scoreLabel()}</div>
+      <div class="stats-section-title">Average Rating by Person</div>
       <div class="stats-grid">
         ${userAvgs.map(u=>`
           <div class="stat-card">
@@ -4044,11 +3211,6 @@ function renderGroupStats(summary){
             <div class="stat-card-lbl">${escHtml(u.name)}</div>
           </div>`).join("")}
       </div>
-    </div>
-
-    <div class="stats-section">
-      <div class="stats-section-title">Group Rating Distribution — ${distributionValues.length} Individual Ratings</div>
-      ${renderDistributionChart(distributionValues)}
     </div>
 
     <div class="stats-section">
@@ -4072,14 +3234,14 @@ function renderGroupStats(summary){
           </thead>
           <tbody>
             ${sorted.map((r,i)=>{
-              const avg=averageScores(summaryDisplayScores(r)).toFixed(1);
+              const avg=(r.scores.reduce((x,y)=>x+y,0)/r.scores.length).toFixed(1);
               return `<tr class="${i>=5?'group-ranking-extra stats-extra-row':''}">
                 <td style="color:#3d6a3d;font-family:'Bebas Neue',sans-serif;font-size:16px">#${i+1}</td>
                 <td class="film-title-cell">${escHtml(String(r.Title||""))}<br><span style="font-size:11px;color:#3d6a3d;font-weight:normal">${r.Year||""}</span></td>
                 <td class="tc" style="color:#ffffff;font-size:20px">${avg}</td>
                 ${allUsers.map(u=>{
-                  const value=summaryUserDisplayScore(r,u);
-                  return value!=null ? `<td class="tc">${Number(value).toFixed(1)}</td>`
+                  const s=r.userScores&&r.userScores[u];
+                  return s ? `<td class="tc">${parseFloat(s).toFixed(1)}</td>`
                            : `<td class="tc empty">—</td>`;
                 }).join("")}
               </tr>`;
@@ -4095,9 +3257,8 @@ function renderGroupStats(summary){
       <div class="stats-section-title">🔥 Most Controversial</div>
       <div class="film-list">
         ${mostControversial.map(r=>{
-          const avg=averageScores(summaryDisplayScores(r)).toFixed(1);
-          const displayScores=summaryDisplayScores(r);
-          const spread=(Math.max(...displayScores)-Math.min(...displayScores)).toFixed(1);
+          const avg=(r.scores.reduce((x,y)=>x+y,0)/r.scores.length).toFixed(1);
+          const spread=(Math.max(...r.scores)-Math.min(...r.scores)).toFixed(1);
           return `<div class="film-row">
             <div class="film-row-title">${escHtml(String(r.Title||""))}</div>
             <div class="film-row-year">Avg ${avg}</div>
@@ -4112,9 +3273,8 @@ function renderGroupStats(summary){
       <div class="stats-section-title">🤝 Most Agreement</div>
       <div class="film-list">
         ${mostConsensus.map(r=>{
-          const avg=averageScores(summaryDisplayScores(r)).toFixed(1);
-          const displayScores=summaryDisplayScores(r);
-          const spread=(Math.max(...displayScores)-Math.min(...displayScores)).toFixed(1);
+          const avg=(r.scores.reduce((x,y)=>x+y,0)/r.scores.length).toFixed(1);
+          const spread=(Math.max(...r.scores)-Math.min(...r.scores)).toFixed(1);
           return `<div class="film-row">
             <div class="film-row-title">${escHtml(String(r.Title||""))}</div>
             <div class="film-row-year">Avg ${avg}</div>
@@ -4158,29 +3318,148 @@ function renderH2H(summary){
 }
 
 function updateH2H(){
-  const u1=document.getElementById('h2h-user1')?.value;
-  const u2=document.getElementById('h2h-user2')?.value;
-  const results=document.getElementById('h2h-results');
-  if(!results||!u1||!u2||u1===u2){ if(results) results.innerHTML='<div class="stats-empty">Please select two different users.</div>'; return; }
-  const summary=getFilteredFilmSummary();
+  const u1 = document.getElementById('h2h-user1')?.value;
+  const u2 = document.getElementById('h2h-user2')?.value;
+  const results = document.getElementById('h2h-results');
+  if(!results||!u1||!u2||u1===u2){
+    if(results) results.innerHTML=`<div class="stats-empty">Please select two different users.</div>`;
+    return;
+  }
+
+  const summary = _statsData.summary;
   if(!summary) return;
-  const both=summary.rows.filter(row=>summaryUserDisplayScore(row,u1)!=null&&summaryUserDisplayScore(row,u2)!=null);
-  if(!both.length){ results.innerHTML=`<div class="stats-empty">No films rated by both ${escHtml(u1)} and ${escHtml(u2)} yet.</div>`; return; }
-  const score1=row=>summaryUserDisplayScore(row,u1);
-  const score2=row=>summaryUserDisplayScore(row,u2);
-  const s1=both.map(score1),s2=both.map(score2);
-  const avg1=averageScores(s1).toFixed(2),avg2=averageScores(s2).toFixed(2);
-  const u1Higher=both.filter(row=>score1(row)>score2(row)).length;
-  const u2Higher=both.filter(row=>score2(row)>score1(row)).length;
-  const tied=both.length-u1Higher-u2Higher;
-  const byDiff=both.slice().sort((a,b)=>Math.abs(score2(b)-score1(b))-Math.abs(score2(a)-score1(a)));
-  const byAgreement=byDiff.slice().reverse();
+
+  // Films both have rated
+  const both = summary.rows.filter(r=>
+    r.userScores && r.userScores[u1]!=null && r.userScores[u2]!=null
+  );
+
+  if(!both.length){
+    results.innerHTML=`<div class="stats-empty">No films rated by both ${escHtml(u1)} and ${escHtml(u2)} yet.</div>`;
+    return;
+  }
+
+  const s1 = both.map(r=>parseFloat(r.userScores[u1]));
+  const s2 = both.map(r=>parseFloat(r.userScores[u2]));
+  const avg1 = (s1.reduce((a,b)=>a+b,0)/s1.length).toFixed(2);
+  const avg2 = (s2.reduce((a,b)=>a+b,0)/s2.length).toFixed(2);
+  const u1Higher = both.filter(r=>parseFloat(r.userScores[u1])>parseFloat(r.userScores[u2])).length;
+  const u2Higher = both.filter(r=>parseFloat(r.userScores[u2])>parseFloat(r.userScores[u1])).length;
+  const tied     = both.length - u1Higher - u2Higher;
+
+  // Sort by biggest disagreement
+  const byDiff = [...both].sort((a,b)=>{
+    return Math.abs(parseFloat(b.userScores[u2])-parseFloat(b.userScores[u1]))
+         - Math.abs(parseFloat(a.userScores[u2])-parseFloat(a.userScores[u1]));
+  });
+
+  // Sort by both agreeing (low diff, both rated similarly)
+  const byAgreement = [...both].sort((a,b)=>{
+    return Math.abs(parseFloat(a.userScores[u2])-parseFloat(a.userScores[u1]))
+         - Math.abs(parseFloat(b.userScores[u2])-parseFloat(b.userScores[u1]));
+  });
+
   results.innerHTML=`
-    <div class="h2h-stat-row"><div class="h2h-stat"><div class="h2h-stat-num">${avg1}</div><div class="h2h-stat-lbl">${escHtml(u1)} avg ${scoreLabel()}</div></div><div class="h2h-stat"><div class="h2h-stat-num">${both.length}</div><div class="h2h-stat-lbl">Films both rated</div></div><div class="h2h-stat"><div class="h2h-stat-num">${avg2}</div><div class="h2h-stat-lbl">${escHtml(u2)} avg ${scoreLabel()}</div></div></div>
-    <div class="h2h-stat-row"><div class="h2h-stat"><div class="h2h-stat-num">${u1Higher}</div><div class="h2h-stat-lbl">${escHtml(u1)} rated higher</div></div><div class="h2h-stat"><div class="h2h-stat-num">${tied}</div><div class="h2h-stat-lbl">Tied</div></div><div class="h2h-stat"><div class="h2h-stat-num">${u2Higher}</div><div class="h2h-stat-lbl">${escHtml(u2)} rated higher</div></div></div>
-    <div class="stats-section"><div class="stats-section-title">🔥 Biggest Disagreements</div><div class="film-list">${byDiff.map((row,index)=>{const one=score1(row),two=score2(row),diff=Math.abs(one-two);return `<div class="film-row ${index>=5?'h2h-diff-extra':''}"${index>=5?' style="display:none"':''}><div class="film-row-title">${escHtml(String(row.Title||''))}</div><div class="film-row-year">${escHtml(u1)}: ${one.toFixed(1)} · ${escHtml(u2)}: ${two.toFixed(1)}</div><div class="film-row-score">Δ${diff.toFixed(1)}</div></div>`;}).join('')}</div>${byDiff.length>5?'<button class="view-all-btn" data-label="View All '+byDiff.length+' Films ↓" onclick="toggleH2HList(\'h2h-diff-extra\',this)">View All '+byDiff.length+' Films ↓</button>':''}</div>
-    <div class="stats-section"><div class="stats-section-title">🤝 Most Agreement</div><div class="film-list">${byAgreement.map((row,index)=>{const one=score1(row),two=score2(row);return `<div class="film-row ${index>=5?'h2h-agreement-extra':''}"${index>=5?' style="display:none"':''}><div class="film-row-title">${escHtml(String(row.Title||''))}</div><div class="film-row-year">${escHtml(u1)}: ${one.toFixed(1)} · ${escHtml(u2)}: ${two.toFixed(1)}</div><div class="film-row-score">${one.toFixed(1)}</div></div>`;}).join('')}</div>${byAgreement.length>5?'<button class="view-all-btn" data-label="View All '+byAgreement.length+' Films ↓" onclick="toggleH2HList(\'h2h-agreement-extra\',this)">View All '+byAgreement.length+' Films ↓</button>':''}</div>
-    <div class="stats-section"><div class="stats-section-title">All ${both.length} Films Both Rated</div><div style="overflow-x:auto"><table class="group-table"><thead><tr><th>Film</th><th class="tc">${escHtml(u1)}</th><th class="tc">${escHtml(u2)}</th><th class="tc">Diff</th></tr></thead><tbody>${both.slice().sort((a,b)=>((score1(b)+score2(b))/2)-((score1(a)+score2(a))/2)).map((row,index)=>{const one=score1(row),two=score2(row),diff=one-two;return `<tr class="${index>=5?'h2h-both-extra stats-extra-row':''}"><td class="film-title-cell">${escHtml(String(row.Title||''))}</td><td class="tc">${one.toFixed(1)}</td><td class="tc">${two.toFixed(1)}</td><td class="tc">${diff>0?'+':''}${diff.toFixed(1)}</td></tr>`;}).join('')}</tbody></table></div>${both.length>5?'<button class="view-all-btn" data-label="View All '+both.length+' Films ↓" onclick="toggleStatsRows(\'h2h-both-extra\',this)">View All '+both.length+' Films ↓</button>':''}</div>`;
+    <!-- Summary stats -->
+    <div class="h2h-stat-row">
+      <div class="h2h-stat">
+        <div class="h2h-stat-num">${avg1}</div>
+        <div class="h2h-stat-lbl">${escHtml(u1)} avg</div>
+      </div>
+      <div class="h2h-stat">
+        <div class="h2h-stat-num">${both.length}</div>
+        <div class="h2h-stat-lbl">Films both rated</div>
+      </div>
+      <div class="h2h-stat">
+        <div class="h2h-stat-num">${avg2}</div>
+        <div class="h2h-stat-lbl">${escHtml(u2)} avg</div>
+      </div>
+    </div>
+    <div class="h2h-stat-row">
+      <div class="h2h-stat">
+        <div class="h2h-stat-num">${u1Higher}</div>
+        <div class="h2h-stat-lbl">${escHtml(u1)} rated higher</div>
+      </div>
+      <div class="h2h-stat">
+        <div class="h2h-stat-num">${tied}</div>
+        <div class="h2h-stat-lbl">Tied</div>
+      </div>
+      <div class="h2h-stat">
+        <div class="h2h-stat-num">${u2Higher}</div>
+        <div class="h2h-stat-lbl">${escHtml(u2)} rated higher</div>
+      </div>
+    </div>
+
+    <!-- Biggest disagreements -->
+    <div class="stats-section">
+      <div class="stats-section-title">🔥 Biggest Disagreements</div>
+      <div class="film-list">
+        ${byDiff.map((r,i)=>{
+          const sc1=parseFloat(r.userScores[u1]).toFixed(1);
+          const sc2=parseFloat(r.userScores[u2]).toFixed(1);
+          const diff=Math.abs(parseFloat(r.userScores[u1])-parseFloat(r.userScores[u2])).toFixed(1);
+          return `<div class="film-row ${i>=5?'h2h-diff-extra':''}"${i>=5?' style="display:none"':''}>
+            <div class="film-row-title">${escHtml(String(r.Title||""))}</div>
+            <div class="film-row-year" style="color:#5a8a5a;font-size:12px">${escHtml(u1)}: ${sc1} · ${escHtml(u2)}: ${sc2}</div>
+            <div class="film-row-score" style="color:#d08040;font-size:14px">Δ${diff}</div>
+          </div>`;
+        }).join("")}
+      </div>
+      ${byDiff.length>5?'<button class="view-all-btn" data-label="View All '+byDiff.length+' Films ↓" onclick="toggleH2HList(\'h2h-diff-extra\',this)">View All '+byDiff.length+' Films ↓</button>':''}
+    </div>
+
+    <!-- Most agreement -->
+    <div class="stats-section">
+      <div class="stats-section-title">🤝 Most Agreement</div>
+      <div class="film-list">
+        ${byAgreement.map((r,i)=>{
+          const sc1=parseFloat(r.userScores[u1]).toFixed(1);
+          const sc2=parseFloat(r.userScores[u2]).toFixed(1);
+          return `<div class="film-row ${i>=5?'h2h-agreement-extra':''}"${i>=5?' style="display:none"':''}>
+            <div class="film-row-title">${escHtml(String(r.Title||""))}</div>
+            <div class="film-row-year" style="color:#5a8a5a;font-size:12px">${escHtml(u1)}: ${sc1} · ${escHtml(u2)}: ${sc2}</div>
+            <div class="film-row-score" style="color:#4a9a4a;font-size:14px">${sc1}</div>
+          </div>`;
+        }).join("")}
+      </div>
+      ${byAgreement.length>5?'<button class="view-all-btn" data-label="View All '+byAgreement.length+' Films ↓" onclick="toggleH2HList(\'h2h-agreement-extra\',this)">View All '+byAgreement.length+' Films ↓</button>':''}
+    </div>
+
+    <!-- Full comparison table -->
+    <div class="stats-section">
+      <div class="stats-section-title">All ${both.length} Films Both Rated</div>
+      <div style="overflow-x:auto">
+        <table class="group-table">
+          <thead>
+            <tr>
+              <th>Film</th>
+              <th class="tc">${escHtml(u1)}</th>
+              <th class="tc">${escHtml(u2)}</th>
+              <th class="tc">Diff</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${[...both].sort((a,b)=>{
+              const aAvg=(parseFloat(a.userScores[u1])+parseFloat(a.userScores[u2]))/2;
+              const bAvg=(parseFloat(b.userScores[u1])+parseFloat(b.userScores[u2]))/2;
+              return bAvg-aAvg;
+            }).map((r,i)=>{
+              const sc1=parseFloat(r.userScores[u1]).toFixed(1);
+              const sc2=parseFloat(r.userScores[u2]).toFixed(1);
+              const diff=(parseFloat(r.userScores[u1])-parseFloat(r.userScores[u2])).toFixed(1);
+              const diffColor=parseFloat(diff)>0?'#4a9a4a':parseFloat(diff)<0?'#d08040':'#3d6a3d';
+              return `<tr class="${i>=5?'h2h-both-extra stats-extra-row':''}">
+                <td class="film-title-cell">${escHtml(String(r.Title||""))}</td>
+                <td class="tc">${sc1}</td>
+                <td class="tc">${sc2}</td>
+                <td class="tc" style="color:${diffColor};font-size:14px">${parseFloat(diff)>0?'+':''}${diff}</td>
+              </tr>`;
+            }).join("")}
+          </tbody>
+        </table>
+      </div>
+      ${both.length>5?'<button class="view-all-btn" data-label="View All '+both.length+' Films ↓" onclick="toggleStatsRows(\'h2h-both-extra\',this)">View All '+both.length+' Films ↓</button>':''}
+    </div>`;
 }
 
 function toggleH2HList(className, btn){
@@ -4237,8 +3516,8 @@ function updateIndividualRatings(id){
   const user = document.getElementById('individual-user-'+id)?.value || context.selectedUser;
   const query = (document.getElementById('individual-search-'+id)?.value || '').trim().toLowerCase();
   context.selectedUser = user;
-  const all = (context.summary?.rows || []).filter(function(row){ return summaryUserDisplayScore(row,user) != null; })
-    .map(function(row){ return {row:row, score:summaryUserDisplayScore(row,user)}; })
+  const all = (context.summary?.rows || []).filter(function(row){ return row.userScores && row.userScores[user] != null; })
+    .map(function(row){ return {row:row, score:Number(row.userScores[user])}; })
     .sort(function(a,b){ return b.score-a.score; });
   const matches = query ? all.filter(function(entry){
     return (context.title(entry.row)+' '+context.meta(entry.row)).toLowerCase().includes(query);
@@ -4256,36 +3535,26 @@ function updateIndividualRatings(id){
 
 function renderSummaryGroupStats(options){
   const container = document.getElementById(options.containerId);
-  const allRows=(options.summary?.rows || []);
-  const rows = allRows.filter(function(row){ return summaryDisplayScores(row).length >= 2; });
+  const rows = (options.summary?.rows || []).filter(function(row){ return (row.scores || []).length >= 2; });
   if(!rows.length){
     container.innerHTML='<div class="stats-empty">No '+options.itemLabel.toLowerCase()+' have been rated by multiple people yet.</div>';
     return;
   }
   const users = summaryUsers(options.summary);
-  const distributionValues=groupDistributionValues(options.summary);
-  const ranked = rows.slice().sort(function(a,b){ return averageScores(summaryDisplayScores(b))-averageScores(summaryDisplayScores(a)); });
+  const ranked = rows.slice().sort(function(a,b){ return averageScores(b.scores)-averageScores(a.scores); });
   const userAverages = users.map(function(user){
-    const values=allRows.map(function(row){ return summaryUserDisplayScore(row,user); }).filter(function(value){ return value!=null; });
+    const values=(options.summary.rows || []).filter(function(row){ return row.userScores && row.userScores[user] != null; }).map(function(row){ return Number(row.userScores[user]); });
     return {user:user, average:averageScores(values)};
   }).filter(function(entry){ return entry.average !== null; }).sort(function(a,b){ return b.average-a.average; });
-  const variance=function(values){ const mean=averageScores(values); return values.reduce(function(sum,value){ return sum+Math.pow(value-mean,2); },0)/values.length; };
-  const withVariance=rows.map(function(row){ return {row:row,variance:variance(summaryDisplayScores(row))}; });
-  const controversial=withVariance.slice().sort(function(a,b){ return b.variance-a.variance; }).slice(0,5);
-  const consensus=withVariance.slice().sort(function(a,b){ return a.variance-b.variance; }).slice(0,5);
-  const rankingRows=ranked.map(function(row,index){ return '<div class="film-row"><div class="film-row-rank">#'+(index+1)+'</div><div class="film-row-title">'+escHtml(options.title(row))+'</div><div class="film-row-year">'+escHtml(options.meta(row))+'</div><div class="film-row-score">'+averageScores(summaryDisplayScores(row)).toFixed(1)+'</div></div>'; }).join('');
-  const varianceRows=function(entries,agreement){ return entries.map(function(entry){ return '<div class="film-row"><div class="film-row-title">'+escHtml(options.title(entry.row))+'</div><div class="film-row-year">'+escHtml(options.meta(entry.row))+'</div><div class="film-row-score">'+(agreement?'σ ':'σ ')+Math.sqrt(entry.variance).toFixed(1)+'</div></div>'; }).join(''); };
   container.innerHTML=`
-    <div class="stats-section"><div class="stats-section-title">Average Rating by Person — ${scoreLabel()}</div><div class="stats-grid">
+    <div class="stats-section"><div class="stats-section-title">Average Rating by Person</div><div class="stats-grid">
       ${userAverages.map(function(entry){ return '<div class="stat-card"><div class="stat-card-num">'+entry.average.toFixed(1)+'</div><div class="stat-card-lbl">'+escHtml(entry.user)+'</div></div>'; }).join('')}
     </div></div>
-    <div class="stats-section"><div class="stats-section-title">Group Rating Distribution — ${distributionValues.length} Individual Ratings</div>${renderDistributionChart(distributionValues,{restaurant:!!options.restaurant})}</div>
-    <div class="stats-section"><div class="stats-section-title">Group Rankings — ${ranked.length} ${escHtml(options.itemLabel)}</div><div class="film-list">${ranked.slice(0,5).map(function(row,index){ return '<div class="film-row"><div class="film-row-rank">#'+(index+1)+'</div><div class="film-row-title">'+escHtml(options.title(row))+'</div><div class="film-row-year">'+escHtml(options.meta(row))+'</div><div class="film-row-score">'+averageScores(summaryDisplayScores(row)).toFixed(1)+'</div></div>'; }).join('')}</div>
-      ${ranked.length>5?'<button class="view-all-btn" data-label="View All '+ranked.length+' '+escHtml(options.itemLabel)+' ↓" onclick="toggleSummaryRanking(\''+options.id+'\',this)">View All '+ranked.length+' '+escHtml(options.itemLabel)+' ↓</button><div class="all-ratings-wrap" id="summary-ranking-'+options.id+'"><div class="film-list">'+rankingRows+'</div></div>':''}
-    </div>
-    <div class="stats-section"><div class="stats-section-title">Most Controversial</div><div class="film-list">${varianceRows(controversial,false)}</div></div>
-    <div class="stats-section"><div class="stats-section-title">Strongest Consensus</div><div class="film-list">${varianceRows(consensus,true)}</div></div>`;
+    <div class="stats-section"><div class="stats-section-title">Group Rankings — ${ranked.length} ${escHtml(options.itemLabel)}</div><div class="film-list">
+      ${ranked.slice(0,5).map(function(row,index){ return '<div class="film-row"><div class="film-row-rank">#'+(index+1)+'</div><div class="film-row-title">'+escHtml(options.title(row))+'</div><div class="film-row-year">'+escHtml(options.meta(row))+'</div><div class="film-row-score">'+averageScores(row.scores).toFixed(1)+'</div></div>'; }).join('')}
+    </div>${ranked.length>5?'<button class="view-all-btn" data-label="View All '+ranked.length+' '+escHtml(options.itemLabel)+' ↓" onclick="toggleSummaryRanking(\''+options.id+'\',this)">View All '+ranked.length+' '+escHtml(options.itemLabel)+' ↓</button><div class="all-ratings-wrap" id="summary-ranking-'+options.id+'"><div class="film-list">'+ranked.map(function(row,index){ return '<div class="film-row"><div class="film-row-rank">#'+(index+1)+'</div><div class="film-row-title">'+escHtml(options.title(row))+'</div><div class="film-row-year">'+escHtml(options.meta(row))+'</div><div class="film-row-score">'+averageScores(row.scores).toFixed(1)+'</div></div>'; }).join('')+'</div></div>':''}</div>`;
 }
+
 function averageScores(scores){
   const values=(scores || []).map(Number).filter(Number.isFinite);
   return values.length ? values.reduce(function(sum,value){ return sum+value; },0)/values.length : null;
@@ -4322,20 +3591,16 @@ function updateSummaryH2H(id){
     if(target) target.innerHTML='<div class="stats-empty">Select two different users.</div>';
     return;
   }
-  const both=(context.summary?.rows || []).filter(function(row){ return summaryUserDisplayScore(row,u1)!=null && summaryUserDisplayScore(row,u2)!=null; });
+  const both=(context.summary?.rows || []).filter(function(row){ return row.userScores && row.userScores[u1] != null && row.userScores[u2] != null; });
   if(!both.length){ target.innerHTML='<div class="stats-empty">No '+context.itemLabel.toLowerCase()+' rated by both users yet.</div>'; return; }
-  const score1=function(row){ return summaryUserDisplayScore(row,u1); };
-  const score2=function(row){ return summaryUserDisplayScore(row,u2); };
-  const average1=averageScores(both.map(score1));
-  const average2=averageScores(both.map(score2));
-  const byDifference=both.slice().sort(function(a,b){ return Math.abs(score1(b)-score2(b))-Math.abs(score1(a)-score2(a)); });
+  const average1=averageScores(both.map(function(row){ return row.userScores[u1]; }));
+  const average2=averageScores(both.map(function(row){ return row.userScores[u2]; }));
+  const byDifference=both.slice().sort(function(a,b){ return Math.abs(Number(b.userScores[u1])-Number(b.userScores[u2]))-Math.abs(Number(a.userScores[u1])-Number(a.userScores[u2])); });
   const byAgreement=byDifference.slice().reverse();
-  function rowsHtml(rows,showDifference){ return rows.slice(0,5).map(function(row){ const one=score1(row); const two=score2(row); const delta=Math.abs(one-two); return '<div class="film-row"><div class="film-row-title">'+escHtml(context.title(row))+'</div><div class="film-row-year">'+escHtml(u1)+': '+one.toFixed(1)+' · '+escHtml(u2)+': '+two.toFixed(1)+'</div><div class="film-row-score">'+(showDifference?'Δ'+delta.toFixed(1):one.toFixed(1))+'</div></div>'; }).join(''); }
-  const tableRows=both.slice().sort(function(a,b){ return ((score1(b)+score2(b))/2)-((score1(a)+score2(a))/2); }).map(function(row,index){ const one=score1(row),two=score2(row),diff=one-two; return '<tr class="'+(index>=5?'comparison-extra-'+id+' stats-extra-row':'')+'"><td class="film-title-cell">'+escHtml(context.title(row))+'</td><td class="tc">'+one.toFixed(1)+'</td><td class="tc">'+two.toFixed(1)+'</td><td class="tc">'+(diff>0?'+':'')+diff.toFixed(1)+'</td></tr>'; }).join('');
-  target.innerHTML=`<div class="h2h-stat-row"><div class="h2h-stat"><div class="h2h-stat-num">${average1.toFixed(1)}</div><div class="h2h-stat-lbl">${escHtml(u1)} avg ${scoreLabel()}</div></div><div class="h2h-stat"><div class="h2h-stat-num">${both.length}</div><div class="h2h-stat-lbl">${escHtml(context.itemLabel)} both rated</div></div><div class="h2h-stat"><div class="h2h-stat-num">${average2.toFixed(1)}</div><div class="h2h-stat-lbl">${escHtml(u2)} avg ${scoreLabel()}</div></div></div>
+  function rowsHtml(rows,showDifference){ return rows.slice(0,5).map(function(row){ const one=Number(row.userScores[u1]); const two=Number(row.userScores[u2]); const delta=Math.abs(one-two); return '<div class="film-row"><div class="film-row-title">'+escHtml(context.title(row))+'</div><div class="film-row-year">'+escHtml(u1)+': '+one.toFixed(1)+' · '+escHtml(u2)+': '+two.toFixed(1)+'</div><div class="film-row-score">'+(showDifference?'Δ'+delta.toFixed(1):one.toFixed(1))+'</div></div>'; }).join(''); }
+  target.innerHTML=`<div class="h2h-stat-row"><div class="h2h-stat"><div class="h2h-stat-num">${average1.toFixed(1)}</div><div class="h2h-stat-lbl">${escHtml(u1)} avg</div></div><div class="h2h-stat"><div class="h2h-stat-num">${both.length}</div><div class="h2h-stat-lbl">${escHtml(context.itemLabel)} both rated</div></div><div class="h2h-stat"><div class="h2h-stat-num">${average2.toFixed(1)}</div><div class="h2h-stat-lbl">${escHtml(u2)} avg</div></div></div>
   <div class="stats-section"><div class="stats-section-title">Biggest Disagreements</div><div class="film-list">${rowsHtml(byDifference,true)}</div></div>
-  <div class="stats-section"><div class="stats-section-title">Most Agreement</div><div class="film-list">${rowsHtml(byAgreement,false)}</div></div>
-  <div class="stats-section"><div class="stats-section-title">All ${both.length} ${escHtml(context.itemLabel)} Both Rated</div><div style="overflow-x:auto"><table class="group-table"><thead><tr><th>${escHtml(context.itemLabel.slice(0,-1)||'Item')}</th><th class="tc">${escHtml(u1)}</th><th class="tc">${escHtml(u2)}</th><th class="tc">Diff</th></tr></thead><tbody>${tableRows}</tbody></table></div>${both.length>5?'<button class="view-all-btn" data-label="View All '+both.length+' '+escHtml(context.itemLabel)+' ↓" onclick="toggleStatsRows(\'comparison-extra-'+id+'\',this)">View All '+both.length+' '+escHtml(context.itemLabel)+' ↓</button>':''}</div>`;
+  <div class="stats-section"><div class="stats-section-title">Most Agreement</div><div class="film-list">${rowsHtml(byAgreement,false)}</div></div>`;
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -4359,19 +3624,17 @@ document.getElementById('tv-search-input').addEventListener('blur', function(){
   setTimeout(function(){ document.getElementById('tv-dropdown').classList.remove('open'); }, 160);
 });
 
-async function searchTv(query,advanced=false){
+async function searchTv(query){
   try{
-    const year=advanced ? document.getElementById('tv-advanced-year').value.trim() : '';
-    const data = await apiCall('searchTv', {token:getSessionToken(),query:query,advanced:advanced,year:year,pages:3});
-    const results = data.results || [];
+    const data = await apiCall('searchTv', {token:getSessionToken(), query:query});
+    const results = (data.results || []).slice(0,7);
     const dropdown = document.getElementById('tv-dropdown');
-    dropdown.classList.toggle('advanced-results',advanced);
-    dropdown.innerHTML = results.length ? results.map(function(show){
+    dropdown.innerHTML = results.map(function(show){
       return '<button class="drop-item" onclick="pickTvSeries(' + Number(show.id) + ')">' +
         (show.poster_path ? '<img class="drop-poster" src="https://image.tmdb.org/t/p/w92' + escHtml(show.poster_path) + '" alt="">' : '<div class="drop-poster"></div>') +
-        '<div><div class="drop-title">' + escHtml(show.name) + '</div><div class="drop-year">' + escHtml(show.year || '') + (show.original_name&&show.original_name!==show.name?' · '+escHtml(show.original_name):'') + '</div></div></button>';
-    }).join('') : '<div class="stats-empty">No matches found. Try removing the year or using an alternate title.</div>';
-    dropdown.classList.add('open');
+        '<div><div class="drop-title">' + escHtml(show.name) + '</div><div class="drop-year">' + escHtml(show.year || '') + '</div></div></button>';
+    }).join('');
+    dropdown.classList.toggle('open', !!results.length);
   }catch(e){}
   document.getElementById('tv-spinner').classList.remove('visible');
 }
@@ -4474,7 +3737,6 @@ async function pushTvToSheets(raw100, ratingGrade, overallNote, today){
 
 async function goTvStats(){
   showScreen('tv-stats');
-  syncScoreModeButtons();
   const content=document.getElementById('tv-stats-content');
   if(!CONFIG.GAS_URL || !currentUser || !getSessionToken()){
     content.innerHTML='<div class="stats-empty">Connect Google Sheets and log in to see your TV stats.</div>';
@@ -4484,7 +3746,6 @@ async function goTvStats(){
   try{
     const data=await Promise.all([apiCall('getTvRatings',{token:getSessionToken()}),apiCall('getTvSummary',{token:getSessionToken()})]);
     tvStatsData={ratings:data[0]||[],summary:data[1]||{rows:[]}};
-    populateTvGenreFilter();
     renderTvStats();
   }catch(e){ content.innerHTML='<div class="stats-empty">Could not load TV ratings.</div>'; }
 }
@@ -4493,7 +3754,6 @@ function setTvStatsType(type){
   tvStatsType=type;
   document.getElementById('tv-type-season').classList.toggle('active',type==='season');
   document.getElementById('tv-type-overall').classList.toggle('active',type==='overall');
-  populateTvGenreFilter();
   renderTvStats();
 }
 
@@ -4507,42 +3767,37 @@ function switchTvStatsTab(tab){
 
 function renderTvStats(){
   const content=document.getElementById('tv-stats-content');
-  const ratings=(tvStatsData.ratings||[]).filter(function(r){ return r['Type']===tvStatsType && rowMatchesGenre(r,_statsGenres.tv); });
-  const summary={rows:(tvStatsData.summary?.rows || []).filter(function(row){ return row['Type']===tvStatsType && rowMatchesGenre(row,_statsGenres.tv); })};
+  const ratings=(tvStatsData.ratings||[]).filter(function(r){ return r['Type']===tvStatsType; });
+  const summary={rows:(tvStatsData.summary?.rows || []).filter(function(row){ return row['Type']===tvStatsType; })};
   const label=tvStatsType==='season'?'Seasons':'Overall Shows';
   const title=function(row){ return String(row['Series'] || '') + (tvStatsType==='season' ? ' — '+String(row['Season Name'] || 'Season '+row['Season']) : ''); };
   const meta=function(row){ return String(row['Year'] || ''); };
   if(tvStatsTab==='group') return renderSummaryGroupStats({id:'tv-'+tvStatsType,containerId:'tv-stats-content',summary:summary,itemLabel:label,title:title,meta:meta});
   if(tvStatsTab==='h2h') return renderSummaryH2H({id:'tv-'+tvStatsType,containerId:'tv-stats-content',summary:summary,itemLabel:label,title:title,meta:meta});
   if(tvStatsTab==='individual') return renderIndividualRatings({id:'tv-'+tvStatsType,containerId:'tv-stats-content',summary:summary,itemLabel:label,title:title,meta:meta});
-  if(!ratings.length){ content.innerHTML='<div class="stats-empty">No ' + label.toLowerCase() + ' rated yet.</div><div class="stats-danger-zone"><button class="delete-rating-btn" onclick="openDeleteRating(\'tv\')">Delete a Rating</button></div>'; return; }
-  const sorted=ratings.slice().sort(function(a,b){ return ratingDisplayScore(b)-ratingDisplayScore(a); });
-  const avg=averageScores(ratings.map(ratingDisplayScore));
-  const distributionValues=ratings.map(rawScoreForRating).filter(function(value){ return value!==null; });
+  if(!ratings.length){ content.innerHTML='<div class="stats-empty">No ' + label.toLowerCase() + ' rated yet.</div>'; return; }
+  const sorted=ratings.slice().sort(function(a,b){ return Number(b['Score /10']||0)-Number(a['Score /10']||0); });
+  const avg=sorted.reduce(function(sum,r){ return sum+Number(r['Score /10']||0); },0)/sorted.length;
   const categories={'Story & Concept':'Plot','Entertainment Value':'Entertainment','Performances & Cast':'Acting','Production & Direction':'Visuals','Pacing':'Pacing','Impact':'Emotional'};
   const categoryAverages=Object.entries(categories).map(function(entry){
     const values=ratings.map(function(r){ return Number(r[entry[1]] || 0); }).filter(function(value){ return value>0; });
     return {label:entry[0], value:values.length ? averageScores(values) : null};
   });
   const allId='tv-all-ratings-'+tvStatsType;
-  const rowTitle=function(r){ return escHtml(r['Series'])+(r['Type']==='season'?' — '+escHtml(r['Season Name'] || 'Season '+r['Season']):''); };
-  const rowHtml=function(r,index){ return '<div class="film-row"><div class="film-row-rank">#'+(index+1)+'</div><div class="film-row-title">'+rowTitle(r)+'</div><div class="film-row-year">'+escHtml(r['Year'] || '')+'</div><div class="film-row-score">'+ratingDisplayScore(r).toFixed(1)+'</div></div>'; };
-  const recent=ratings.slice().reverse().slice(0,5);
+  const rowHtml=function(r,index){ return '<div class="film-row"><div class="film-row-rank">#'+(index+1)+'</div><div class="film-row-title">'+escHtml(r['Series'])+(r['Type']==='season'?' — '+escHtml(r['Season Name'] || 'Season '+r['Season']):'')+'</div><div class="film-row-year">'+escHtml(r['Year'] || '')+'</div><div class="film-row-score">'+Number(r['Score /10']).toFixed(1)+'</div></div>'; };
   content.innerHTML=`
     <div class="stats-section"><div class="stats-section-title">Overview — ${escHtml(currentUser.name)}</div><div class="stats-grid">
       <div class="stat-card"><div class="stat-card-num">${ratings.length}</div><div class="stat-card-lbl">${escHtml(label)} Rated</div></div>
-      <div class="stat-card"><div class="stat-card-num">${avg.toFixed(1)}</div><div class="stat-card-lbl">Average ${scoreLabel()}</div></div>
-      <div class="stat-card"><div class="stat-card-num">${ratingDisplayScore(sorted[0]).toFixed(1)}</div><div class="stat-card-lbl">Highest</div></div>
-      <div class="stat-card"><div class="stat-card-num">${ratingDisplayScore(sorted[sorted.length-1]).toFixed(1)}</div><div class="stat-card-lbl">Lowest</div></div>
+      <div class="stat-card"><div class="stat-card-num">${avg.toFixed(1)}</div><div class="stat-card-lbl">Average /10</div></div>
+      <div class="stat-card"><div class="stat-card-num">${Number(sorted[0]['Score /10']).toFixed(1)}</div><div class="stat-card-lbl">Highest</div></div>
+      <div class="stat-card"><div class="stat-card-num">${Number(sorted[sorted.length-1]['Score /10']).toFixed(1)}</div><div class="stat-card-lbl">Lowest</div></div>
     </div></div>
-    <div class="stats-section"><div class="stats-section-title">Score Distribution</div>${renderDistributionChart(distributionValues)}</div>
     <div class="stats-section"><div class="stats-section-title">Your Top 5 ${escHtml(label)}</div><div class="film-list">${sorted.slice(0,5).map(rowHtml).join('')}</div>
       ${sorted.length>5?'<button class="view-all-btn" data-label="View All '+sorted.length+' '+escHtml(label)+' ↓" onclick="toggleNamedRatings(\''+allId+'\',this)">View All '+sorted.length+' '+escHtml(label)+' ↓</button><div class="all-ratings-wrap" id="'+allId+'"><div class="film-list">'+sorted.map(rowHtml).join('')+'</div></div>':''}
     </div>
-    <div class="stats-section"><div class="stats-section-title">Recently Rated</div><div class="film-list">${recent.map(function(r){ return '<div class="film-row"><div class="film-row-title">'+rowTitle(r)+'</div><div class="film-row-year">'+escHtml(r['Date']||r['Year']||'')+'</div><div class="film-row-score">'+ratingDisplayScore(r).toFixed(1)+'</div></div>'; }).join('')}</div></div>
-    <div class="stats-section"><div class="stats-section-title">Category Averages</div><div class="cat-bars">${categoryAverages.map(function(entry){ return '<div class="cat-bar-row"><div class="cat-bar-label">'+escHtml(entry.label)+'</div><div class="cat-bar-track"><div class="cat-bar-fill" style="width:'+(entry.value===null?0:entry.value)+'%"></div></div><div class="cat-bar-val">'+(entry.value===null?'—':entry.value.toFixed(1))+'</div></div>'; }).join('')}</div></div>
-    <div class="stats-danger-zone"><button class="delete-rating-btn" onclick="openDeleteRating('tv')">Delete a Rating</button></div>`;
+    <div class="stats-section"><div class="stats-section-title">Category Averages</div><div class="cat-bars">${categoryAverages.map(function(entry){ return '<div class="cat-bar-row"><div class="cat-bar-label">'+escHtml(entry.label)+'</div><div class="cat-bar-track"><div class="cat-bar-fill" style="width:'+(entry.value===null?0:entry.value)+'%"></div></div><div class="cat-bar-val">'+(entry.value===null?'—':entry.value.toFixed(1))+'</div></div>'; }).join('')}</div></div>`;
 }
+
 function toggleNamedRatings(id,button){
   const wrap=document.getElementById(id);
   const open=wrap.classList.toggle('open');
@@ -4800,9 +4055,7 @@ function lgUpdateTotal(){
       el.textContent=gradeFromRaw(v); el.classList.add('lg-grade-filled');
     } else { el.textContent='—'; el.classList.remove('lg-grade-filled'); }
   });
-  const currentValues={};
-  RESTAURANT_CATS.forEach(category=>{ currentValues[category.id]=Number(document.getElementById('lg-inp-'+category.id)?.value||0); });
-  const t = weightedTotal(RESTAURANT_CATS,currentValues);
+  const t = RESTAURANT_CATS.reduce((s,c)=>s+Number(document.getElementById('lg-inp-'+c.id)?.value||0)*c.w,0);
   document.getElementById('lg-total-num').textContent = t.toFixed(1);
   document.getElementById('lg-total-grade').textContent = gradeFromRaw(t);
 }
@@ -4813,7 +4066,7 @@ function lgGoRound(){
     lgScores[c.id] = Number(document.getElementById('lg-inp-'+c.id)?.value||0);
     lgNotes[c.id]  = document.getElementById('lg-note-'+c.id)?.value||'';
   });
-  const raw = weightedTotal(RESTAURANT_CATS,lgScores);
+  const raw = RESTAURANT_CATS.reduce((s,c)=>s+(lgScores[c.id]||0)*c.w,0);
   lgChosenScore10 = scoreToTenth(raw);
   const g   = grade(lgChosenScore10);
   document.getElementById('lg-round-name').textContent = lgCurrentPlace.name.toUpperCase();
@@ -4868,7 +4121,7 @@ function lgGoEditScores(){
 function lgGenerateCard(){
   const raw = lgQuickMode && lgChosenScore10 != null
     ? lgChosenScore10 * 10
-    : weightedTotal(RESTAURANT_CATS,lgScores);
+    : RESTAURANT_CATS.reduce((s,c)=>s+(lgScores[c.id]||0)*c.w,0);
   const g   = grade(lgChosenScore10);
   const overallNote = document.getElementById('lg-overall-note')?.value||'';
   const today = new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
@@ -4968,7 +4221,7 @@ async function lgLoadRankReveal(){
   try{
     const ratings = await lgGetRatings();
     if(!ratings||!ratings.length) return;
-    const scores10 = ratings.map(r=>storedNumber(r['Score /10'])).filter(value=>value!==null).sort((a,b)=>b-a);
+    const scores10 = ratings.map(r=>parseFloat(r['Score /10']||0)).filter(s=>s>0).sort((a,b)=>b-a);
     const myScore  = lgChosenScore10;
     const rank     = scores10.filter(s=>s>myScore).length+1;
     const total    = scores10.length;
@@ -5032,7 +4285,6 @@ async function lgGetRatings(){
 // ── LE GUIDE STATS ────────────────────────────────────────────
 async function lgGoStats(){
   showScreen('lg-stats');
-  syncScoreModeButtons();
   const content = document.getElementById('lg-stats-content');
   if(!CONFIG.GAS_URL||!currentUser||!getSessionToken()){
     content.innerHTML=`<div class="stats-empty" style="color:#6a3a3a">Log in to see your restaurant stats.</div>`;
@@ -5045,7 +4297,6 @@ async function lgGoStats(){
       lgCall({action:'getRestaurantSummary'})
     ]);
     _lgStatsData = {ratings: ratingsData||[], summary: summaryData||null};
-    populateRestaurantCuisineFilter(_lgStatsData.ratings,_lgStatsData.summary?.rows||[]);
     lgRenderCurrentTab();
   }catch(e){
     content.innerHTML=`<div class="stats-empty" style="color:#6a3a3a">Could not load data.</div>`;
@@ -5061,21 +4312,15 @@ function lgSwitchTab(tab){
 }
 
 function lgRenderCurrentTab(){
-  populateRestaurantCuisineFilter(_lgStatsData.ratings||[],_lgStatsData.summary?.rows||[]);
-  const filteredSummary=filteredRestaurantSummary(_lgStatsData.summary);
   if(_lgStatsTab==='my')    lgRenderMyStats();
-  if(_lgStatsTab==='group') renderSummaryGroupStats({
-    id:'restaurant', containerId:'lg-stats-content', summary:filteredSummary, itemLabel:'Restaurants', restaurant:true,
-    title:function(row){ return String(row.Name || ''); },
-    meta:function(row){ return String(row.Address || ''); }
-  });
+  if(_lgStatsTab==='group') lgRenderGroupStats();
   if(_lgStatsTab==='h2h')   renderSummaryH2H({
-    id:'restaurant', containerId:'lg-stats-content', summary:filteredSummary, itemLabel:'Restaurants',
+    id:'restaurant', containerId:'lg-stats-content', summary:_lgStatsData.summary, itemLabel:'Restaurants',
     title:function(row){ return String(row.Name || ''); },
     meta:function(row){ return String(row.Address || ''); }
   });
   if(_lgStatsTab==='individual') renderIndividualRatings({
-    id:'restaurant', containerId:'lg-stats-content', summary:filteredSummary, itemLabel:'Restaurants',
+    id:'restaurant', containerId:'lg-stats-content', summary:_lgStatsData.summary, itemLabel:'Restaurants',
     title:function(row){ return String(row.Name || ''); },
     meta:function(row){ return String(row.Address || ''); }
   });
@@ -5083,51 +4328,102 @@ function lgRenderCurrentTab(){
 
 function lgRenderMyStats(){
   const container = document.getElementById('lg-stats-content');
-  const ratings   = (_lgStatsData.ratings||[]).filter(function(row){ return rowMatchesCuisine(row,_restaurantCuisine); });
+  const ratings   = _lgStatsData.ratings||[];
   if(!ratings.length){
-    container.innerHTML=`<div class="stats-empty" style="color:#6a3a3a">No restaurant ratings yet.</div><div class="stats-danger-zone"><button class="delete-rating-btn" onclick="openDeleteRating('restaurant')">Delete a Rating</button></div>`;
+    container.innerHTML=`<div class="stats-empty" style="color:#6a3a3a">No restaurant ratings yet.</div>`;
     return;
   }
-  const avg = averageScores(ratings.map(ratingDisplayScore));
-  const sorted = [...ratings].sort((a,b)=>ratingDisplayScore(b)-ratingDisplayScore(a));
-  const top5=sorted.slice(0,5), recent5=[...ratings].slice(-5).reverse();
-  const distributionValues=ratings.map(rawScoreForRating).filter(value=>value!==null);
+  const scores10 = ratings.map(r=>parseFloat(r['Score /10']||0)).filter(s=>s>0);
+  const avg = (scores10.reduce((a,b)=>a+b,0)/scores10.length)||0;
+  const sorted = [...ratings].sort((a,b)=>parseFloat(b['Score /10']||0)-parseFloat(a['Score /10']||0));
+  const top5   = sorted.slice(0,5);
+  const recent5= [...ratings].slice(-5).reverse();
+
+  const GRADES=["S","A+","A","A-","B+","B","B-","C+","C","C-","D+","D","D-","F"];
+  const gradeCounts={}; GRADES.forEach(g=>gradeCounts[g]=0);
+  ratings.forEach(r=>{ const score10=parseFloat(r['Score /10']||0); if(score10>0) gradeCounts[grade(score10)]=(gradeCounts[grade(score10)]||0)+1; });
+  const maxGrade=Math.max(...Object.values(gradeCounts),1);
+
   const catFields={'Food & Taste':'Food','Value':'Value','Service':'Service','Atmosphere':'Atmosphere','Craving Factor':'Craving'};
   const catAvgs={};
   Object.entries(catFields).forEach(([label,col])=>{
     const vals=ratings.map(r=>parseFloat(r[col]||0)).filter(v=>v>0);
     catAvgs[label]=vals.length?(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1):'—';
   });
-  const cuisineGroups={};
-  (_lgStatsData.ratings||[]).forEach(function(r){
-    const cuisine=rowCuisine(r)||'Uncategorized';
-    if(!cuisineGroups[cuisine]) cuisineGroups[cuisine]=[];
-    const score=ratingDisplayScore(r);
-    if(Number.isFinite(score)) cuisineGroups[cuisine].push(score);
-  });
-  const cuisineRankings=Object.keys(cuisineGroups).map(function(cuisine){
-    const values=cuisineGroups[cuisine];
-    return {cuisine:cuisine,count:values.length,average:averageScores(values)};
-  }).sort(function(a,b){ return b.average-a.average || b.count-a.count || a.cuisine.localeCompare(b.cuisine); });
-  const restaurantRow=(r,index,ranked=true)=>`<div class="lg-film-row"><div class="lg-film-row-rank">${ranked?'#'+(index+1):''}</div><div style="flex:1"><div class="lg-film-row-title">${escHtml(String(r['Name']||''))}</div><div class="lg-film-row-sub">${escHtml(String(r['Cuisine']||''))}${r['Address']?' · '+escHtml(String(r['Address']||'').split(',')[0]):''}</div></div><div class="lg-film-row-score">${ratingDisplayScore(r).toFixed(1)}</div></div>`;
+
   container.innerHTML=`
-    <div class="stats-section"><div class="stats-section-title" style="border-color:#3a1a1a;color:#8a4a4a">Overview — ${escHtml(currentUser.name)}</div><div class="stats-grid">
-      <div class="lg-stat-card"><div class="lg-stat-card-num">${ratings.length}</div><div class="lg-stat-card-lbl">Restaurants Rated</div></div>
-      <div class="lg-stat-card"><div class="lg-stat-card-num">${avg.toFixed(1)}</div><div class="lg-stat-card-lbl">Average ${scoreLabel()}</div></div>
-      <div class="lg-stat-card"><div class="lg-stat-card-num">${ratingDisplayScore(sorted[0]).toFixed(1)}</div><div class="lg-stat-card-lbl">Highest</div></div>
-      <div class="lg-stat-card"><div class="lg-stat-card-num">${ratingDisplayScore(sorted[sorted.length-1]).toFixed(1)}</div><div class="lg-stat-card-lbl">Lowest</div></div>
-    </div></div>
-    <div class="stats-section"><div class="stats-section-title" style="border-color:#3a1a1a;color:#8a4a4a">Score Distribution</div>${renderDistributionChart(distributionValues,{restaurant:true})}</div>
-    <div class="stats-section"><div class="stats-section-title" style="border-color:#3a1a1a;color:#8a4a4a">Top 5 Restaurants</div>${top5.map((r,i)=>restaurantRow(r,i)).join('')}
-      <button class="view-all-btn" style="border-color:#3a1a1a;color:#8a4a4a" onclick="lgToggleAll(this)">View All ${ratings.length} Ratings ↓</button><div class="all-ratings-wrap" id="lg-all-wrap">${sorted.map((r,i)=>restaurantRow(r,i)).join('')}</div>
+    <div class="stats-section">
+      <div class="stats-section-title" style="border-color:#3a1a1a;color:#8a4a4a">Overview — ${escHtml(currentUser.name)}</div>
+      <div class="stats-grid">
+        <div class="lg-stat-card"><div class="lg-stat-card-num">${ratings.length}</div><div class="lg-stat-card-lbl">Restaurants Rated</div></div>
+        <div class="lg-stat-card"><div class="lg-stat-card-num">${avg.toFixed(1)}</div><div class="lg-stat-card-lbl">Average /10</div></div>
+        <div class="lg-stat-card"><div class="lg-stat-card-num">${sorted[0]?parseFloat(sorted[0]['Score /10']).toFixed(1):'—'}</div><div class="lg-stat-card-lbl">Highest</div></div>
+        <div class="lg-stat-card"><div class="lg-stat-card-num">${sorted[sorted.length-1]?parseFloat(sorted[sorted.length-1]['Score /10']).toFixed(1):'—'}</div><div class="lg-stat-card-lbl">Lowest</div></div>
+      </div>
     </div>
-    <div class="stats-section"><div class="stats-section-title" style="border-color:#3a1a1a;color:#8a4a4a">Recently Visited</div>${recent5.map((r,i)=>restaurantRow(r,i,false)).join('')}</div>
-    <div class="stats-section"><div class="stats-section-title" style="border-color:#3a1a1a;color:#8a4a4a">Food Type Averages</div>
-      ${cuisineRankings.length?cuisineRankings.map(function(item,index){ return `<div class="lg-film-row"><div class="lg-film-row-rank">#${index+1}</div><div style="flex:1"><div class="lg-film-row-title">${escHtml(item.cuisine)}</div><div class="lg-film-row-sub">${item.count} ${item.count===1?'rating':'ratings'}</div></div><div class="lg-film-row-score">${item.average.toFixed(1)}</div></div>`; }).join(''):'<div class="stats-empty">No food-type data yet.</div>'}
+
+    <div class="stats-section">
+      <div class="stats-section-title" style="border-color:#3a1a1a;color:#8a4a4a">Grade Distribution</div>
+      <div class="grade-bars">
+        ${GRADES.map(g=>`
+          <div class="grade-bar-row">
+            <div class="lg-grade-bar-label">${g}</div>
+            <div class="grade-bar-track" style="background:#1a0608"><div class="lg-grade-bar-fill" style="width:${Math.round((gradeCounts[g]/maxGrade)*100)}%"></div></div>
+            <div class="grade-bar-count" style="color:#6a3a3a">${gradeCounts[g]}</div>
+          </div>`).join('')}
+      </div>
     </div>
-    <div class="stats-section"><div class="stats-section-title" style="border-color:#3a1a1a;color:#8a4a4a">Category Averages</div><div class="cat-bars">${Object.entries(catAvgs).map(([label,val])=>`<div class="cat-bar-row"><div class="cat-bar-label" style="color:#8a6a6a">${label}</div><div class="grade-bar-track" style="background:#1a0608"><div class="lg-grade-bar-fill" style="width:${val==='—'?0:val}%"></div></div><div class="cat-bar-val" style="color:#C41E3A">${val}</div></div>`).join('')}</div></div>
-    <div class="stats-danger-zone"><button class="delete-rating-btn" onclick="openDeleteRating('restaurant')">Delete a Rating</button></div>`;
+
+    <div class="stats-section">
+      <div class="stats-section-title" style="border-color:#3a1a1a;color:#8a4a4a">Top 5 Restaurants</div>
+      ${top5.map((r,i)=>`
+        <div class="lg-film-row">
+          <div class="lg-film-row-rank">#${i+1}</div>
+          <div style="flex:1">
+            <div class="lg-film-row-title">${escHtml(String(r['Name']||''))}</div>
+            <div class="lg-film-row-sub">${escHtml(String(r['Cuisine']||''))}${r['Address']?' · '+escHtml(String(r['Address']||'').split(',')[0]):''}</div>
+          </div>
+          <div class="lg-film-row-score">${parseFloat(r['Score /10']||0).toFixed(1)}</div>
+        </div>`).join('')}
+      <button class="view-all-btn" style="border-color:#3a1a1a;color:#8a4a4a" onclick="lgToggleAll(this)">View All ${ratings.length} Ratings ↓</button>
+      <div class="all-ratings-wrap" id="lg-all-wrap">
+        ${sorted.map((r,i)=>`
+          <div class="lg-film-row">
+            <div class="lg-film-row-rank">#${i+1}</div>
+            <div style="flex:1">
+              <div class="lg-film-row-title">${escHtml(String(r['Name']||''))}</div>
+              <div class="lg-film-row-sub">${escHtml(String(r['Cuisine']||''))}</div>
+            </div>
+            <div class="lg-film-row-score">${parseFloat(r['Score /10']||0).toFixed(1)}</div>
+          </div>`).join('')}
+      </div>
+    </div>
+
+    <div class="stats-section">
+      <div class="stats-section-title" style="border-color:#3a1a1a;color:#8a4a4a">Recently Visited</div>
+      ${recent5.map(r=>`
+        <div class="lg-film-row">
+          <div style="flex:1">
+            <div class="lg-film-row-title">${escHtml(String(r['Name']||''))}</div>
+            <div class="lg-film-row-sub">${r['Date']||''}</div>
+          </div>
+          <div class="lg-film-row-score">${parseFloat(r['Score /10']||0).toFixed(1)}</div>
+        </div>`).join('')}
+    </div>
+
+    <div class="stats-section">
+      <div class="stats-section-title" style="border-color:#3a1a1a;color:#8a4a4a">Category Averages</div>
+      <div class="cat-bars">
+        ${Object.entries(catAvgs).map(([label,val])=>`
+          <div class="cat-bar-row">
+            <div class="cat-bar-label" style="color:#8a6a6a">${label}</div>
+            <div class="grade-bar-track" style="background:#1a0608"><div class="lg-grade-bar-fill" style="width:${val==='—'?0:val}%"></div></div>
+            <div class="cat-bar-val" style="color:#C41E3A">${val}</div>
+          </div>`).join('')}
+      </div>
+    </div>`;
 }
+
 function lgRenderGroupStats(){
   const container = document.getElementById('lg-stats-content');
   const summary   = _lgStatsData.summary;
@@ -5142,7 +4438,7 @@ function lgRenderGroupStats(){
     <div class="stats-section">
       <div class="stats-section-title" style="border-color:#3a1a1a;color:#8a4a4a">Group Restaurant Rankings</div>
       ${rated.length ? rated.map((r,i)=>{
-        const avg=averageScores(summaryDisplayScores(r)).toFixed(1);
+        const avg=(r.scores.reduce((x,y)=>x+y,0)/r.scores.length).toFixed(1);
         return `<div class="lg-film-row">
           <div class="lg-film-row-rank">#${i+1}</div>
           <div style="flex:1"><div class="lg-film-row-title">${escHtml(String(r.Name||''))}</div></div>
@@ -5156,104 +4452,6 @@ function lgToggleAll(btn){
   const wrap = document.getElementById('lg-all-wrap');
   const open = wrap.classList.toggle('open');
   btn.textContent = open ? 'Hide ↑' : `View All Ratings ↓`;
-}
-
-// ── SECURE RATING DELETION ───────────────────────────────────
-let _deleteState={category:null,pin:'',ratings:[],selected:null};
-function deleteCategoryLabel(category){ return category==='film'?'Film':category==='tv'?'TV':'Restaurant'; }
-function deleteRatingTitle(category,rating){
-  if(category==='film') return String(rating['Title']||'Untitled film');
-  if(category==='tv') return String(rating['Series']||'Untitled series')+(rating['Type']==='season'?' — '+String(rating['Season Name']||'Season '+rating['Season']):' — Overall Series');
-  return String(rating['Name']||'Unnamed restaurant');
-}
-function deleteRatingMeta(category,rating){
-  if(category==='film') return [rating['Year'],rating['Date']].filter(Boolean).join(' · ');
-  if(category==='tv') return [rating['Year'],rating['Date']].filter(Boolean).join(' · ');
-  return [rating['Cuisine'],rating['Address'],rating['Date']].filter(Boolean).join(' · ');
-}
-function deleteRatingsForCategory(category){
-  if(category==='film') return _statsData.ratings||[];
-  if(category==='tv') return tvStatsData.ratings||[];
-  return _lgStatsData.ratings||[];
-}
-function openDeleteRating(category){
-  _deleteState={category:category,pin:'',ratings:deleteRatingsForCategory(category),selected:null};
-  const modal=document.getElementById('rating-delete-modal');
-  modal.classList.add('open');
-  renderDeletePinStep();
-}
-function closeDeleteRating(event){
-  if(event && event.target!==document.getElementById('rating-delete-modal')) return;
-  document.getElementById('rating-delete-modal').classList.remove('open');
-  _deleteState={category:null,pin:'',ratings:[],selected:null};
-}
-function renderDeletePinStep(){
-  document.getElementById('rating-delete-content').innerHTML=`
-    <div class="rating-delete-eyebrow">Protected action</div><div class="rating-delete-title">Delete a Rating</div>
-    <div class="rating-delete-copy">Re-enter your four-digit PIN. Nothing will be deleted until you select a rating and confirm it on a separate screen.</div>
-    <input class="rating-delete-pin" id="delete-rating-pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" aria-label="Your PIN" onkeydown="if(event.key==='Enter')verifyDeletePin()"/>
-    <div class="rating-delete-error" id="delete-rating-error"></div>
-    <div class="rating-delete-actions"><button class="btn-sec" onclick="closeDeleteRating()">Cancel</button><button class="rating-delete-confirm" onclick="verifyDeletePin()">Verify PIN</button></div>`;
-  setTimeout(()=>document.getElementById('delete-rating-pin')?.focus(),0);
-}
-async function verifyDeletePin(){
-  const input=document.getElementById('delete-rating-pin');
-  const pin=String(input?.value||'').replace(/\D/g,'');
-  const error=document.getElementById('delete-rating-error');
-  if(pin.length!==4){ error.textContent='Enter your four-digit PIN.'; return; }
-  error.textContent='Checking PIN…';
-  try{
-    const result=await apiCall('verifyUserPin',{token:getSessionToken(),pin:pin});
-    if(!result?.ok) throw new Error(result?.error||'Incorrect PIN');
-    _deleteState.pin=pin;
-    renderDeleteChoiceStep('');
-  }catch(e){ error.textContent=e.message||'Incorrect PIN'; input?.select(); }
-}
-function renderDeleteChoiceStep(query){
-  const term=String(query||'').trim().toLowerCase();
-  const matches=_deleteState.ratings.filter(rating=>(deleteRatingTitle(_deleteState.category,rating)+' '+deleteRatingMeta(_deleteState.category,rating)).toLowerCase().includes(term));
-  document.getElementById('rating-delete-content').innerHTML=`
-    <div class="rating-delete-eyebrow">PIN verified</div><div class="rating-delete-title">Choose One Rating</div>
-    <div class="rating-delete-copy">Select the exact rating you want to remove. This list only contains ratings owned by ${escHtml(currentUser?.name||'you')}.</div>
-    <input class="rating-delete-search" id="delete-rating-search" type="search" placeholder="Search your ${deleteCategoryLabel(_deleteState.category).toLowerCase()} ratings" value="${escHtml(query||'')}" oninput="renderDeleteChoiceStep(this.value)"/>
-    <div class="rating-delete-list">${matches.length?matches.map((rating,index)=>`<button class="rating-delete-choice" onclick="selectRatingToDelete(${_deleteState.ratings.indexOf(rating)})"><span><span class="rating-delete-choice-title">${escHtml(deleteRatingTitle(_deleteState.category,rating))}</span><span class="rating-delete-choice-meta">${escHtml(deleteRatingMeta(_deleteState.category,rating))}</span></span><span class="rating-delete-choice-score">${Number(rating['Score /10']||0).toFixed(1)}</span></button>`).join(''):'<div class="stats-empty">No matching ratings.</div>'}</div>
-    <div class="rating-delete-actions"><button class="btn-sec" onclick="renderDeletePinStep()">Back</button><button class="btn-sec" onclick="closeDeleteRating()">Cancel</button></div>`;
-  const search=document.getElementById('delete-rating-search');
-  if(search){ const length=search.value.length; search.focus(); search.setSelectionRange(length,length); }
-}
-function selectRatingToDelete(index){
-  _deleteState.selected=_deleteState.ratings[index];
-  const rating=_deleteState.selected;
-  document.getElementById('rating-delete-content').innerHTML=`
-    <div class="rating-delete-eyebrow">Final confirmation</div><div class="rating-delete-title">Permanently Delete?</div>
-    <div class="rating-delete-copy"><strong>${escHtml(deleteRatingTitle(_deleteState.category,rating))}</strong><br>${escHtml(deleteRatingMeta(_deleteState.category,rating))}<br><br>This removes your database row and rebuilds the group summary. It cannot be undone from the website.</div>
-    <div class="rating-delete-error" id="delete-rating-error"></div>
-    <div class="rating-delete-actions"><button class="btn-sec" onclick="renderDeleteChoiceStep('')">Choose a Different Rating</button><button class="rating-delete-confirm" onclick="confirmDeleteRating()">Permanently Delete</button></div>`;
-}
-async function confirmDeleteRating(){
-  const rating=_deleteState.selected;
-  if(!rating) return;
-  const error=document.getElementById('delete-rating-error');
-  error.textContent='Deleting…';
-  const payload={pin:_deleteState.pin};
-  let action='';
-  if(_deleteState.category==='film'){
-    action='deleteRating'; Object.assign(payload,{tmdbId:rating['TMDB ID'],title:rating['Title'],year:rating['Year']});
-  }else if(_deleteState.category==='tv'){
-    action='deleteTvRating'; Object.assign(payload,{tmdbTvId:rating['TMDB TV ID'],seriesTitle:rating['Series'],entryType:rating['Type'],seasonNumber:rating['Season']});
-  }else{
-    action='deleteRestaurantRating'; Object.assign(payload,{placeId:rating['Place ID'],name:rating['Name'],address:rating['Address']});
-  }
-  try{
-    const result=await apiCall(action,{token:getSessionToken(),payload:payload});
-    if(!result?.ok) throw new Error(result?.error||'Delete failed');
-    _ratingsCache=null; tvRatingsCache=[]; _lgRatingsCache=null;
-    const deletedCategory=_deleteState.category;
-    closeDeleteRating();
-    if(deletedCategory==='tv') await goTvStats();
-    else if(deletedCategory==='restaurant') await lgGoStats();
-    else await goStats();
-  }catch(e){ error.textContent=e.message||'Delete failed'; }
 }
 
 // ── SHARED API CALL ───────────────────────────────────────────
@@ -5347,7 +4545,7 @@ document.addEventListener("DOMContentLoaded",async ()=>{
   applyStoredConfig();
   await syncUsersFromSheets();
   await restoreSession();
-  goHome();
+  showScreen("home");
 });
 
 // Pre-populate settings config fields when entering settings
