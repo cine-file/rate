@@ -194,8 +194,10 @@ function validateAdminSession_(token) {
   return cache.get('admin_' + token) === 'true';
 }
 
-function withDocumentLock_(work) {
-  var lock = LockService.getDocumentLock();
+function withScriptLock_(work) {
+  // Standalone web-app projects do not have a bound document lock. A script lock
+  // still serializes all concurrent writes to this dashboard's shared sheet.
+  var lock = LockService.getScriptLock();
   lock.waitLock(30000);
   try {
     return work();
@@ -1067,7 +1069,7 @@ function filmPayloadToSheetRow_(d, username, existing) {
 
 // ── SAVE FILM RATING ──────────────────────────────────────────
 function doSaveRating_(d, username) {
-  return withDocumentLock_(function() {
+  return withScriptLock_(function() {
     var tab = getOrCreateSheet_(FILMS_SHEET_NAME, FILMS_HEADER);
     var rowObj = filmPayloadToSheetRow_(d, username, {});
     var existingRows = findExistingRows_(tab, FILMS_HEADER, rowObj, function(r) {
@@ -1417,7 +1419,7 @@ function doGetTvDetails_(d) {
 }
 
 function doSaveTvRating_(d, username) {
-  return withDocumentLock_(function() {
+  return withScriptLock_(function() {
     var tab = getOrCreateSheet_(TV_SHEET_NAME, TV_HEADER);
     var rowObj = tvPayloadToSheetRow_(d, username, {});
     var rows = findExistingRows_(tab, TV_HEADER, rowObj, function(r) {
@@ -1732,7 +1734,7 @@ function restaurantPayloadToSheetRow_(d, username, existing) {
 
 // ── SAVE RESTAURANT RATING ────────────────────────────────────
 function doSaveRestaurantRating_(d, username) {
-  return withDocumentLock_(function() {
+  return withScriptLock_(function() {
     var tab = getOrCreateSheet_(RESTAURANTS_SHEET_NAME, RESTAURANTS_HEADER);
     var rowObj = restaurantPayloadToSheetRow_(d, username, {});
     var existingRows = findExistingRows_(tab, RESTAURANTS_HEADER, rowObj, function(r) {
@@ -1855,7 +1857,7 @@ function deleteMatchingRows_(tab, header, matcher) {
 }
 
 function doDeleteRating_(d, username) {
-  return withDocumentLock_(function() {
+  return withScriptLock_(function() {
     requireDeletePin_(d, username);
     var target = { user: username, tmdbId: d.tmdbId, title: d.title, year: d.year };
     var key = categoryKey_(target.user, target.tmdbId, target.title, target.year);
@@ -1873,7 +1875,7 @@ function doDeleteRating_(d, username) {
 }
 
 function doDeleteTvRating_(d, username) {
-  return withDocumentLock_(function() {
+  return withScriptLock_(function() {
     requireDeletePin_(d, username);
     var target = tvPayloadToSheetRow_(d, username, {});
     var targetKey = String(username || '').toLowerCase() + '|' + tvGroupKey_(target);
@@ -1890,7 +1892,7 @@ function doDeleteTvRating_(d, username) {
 }
 
 function doDeleteRestaurantRating_(d, username) {
-  return withDocumentLock_(function() {
+  return withScriptLock_(function() {
     requireDeletePin_(d, username);
     var target = { user: username, placeId: d.placeId, name: d.name, address: d.address };
     var key = categoryKey_(target.user, target.placeId, target.name, target.address);
