@@ -18,12 +18,13 @@ function showScreen(id){
       );
     });
   } else {
-    ['lg-home','lg-rate','lg-stats','lg-wishlist','lg-back'].forEach(n=>{
+    ['lg-home','lg-rate','lg-stats','lg-wishlist','lg-settings'].forEach(n=>{
       const b=document.getElementById('nav-'+n);
       if(b) b.classList.toggle('active',
         (n==='lg-rate'&&(id==='lg-search'||id==='lg-score'||id==='lg-round'||id==='lg-quick'))||
         (n==='lg-stats'&&id==='lg-stats')||
-        (n==='lg-wishlist'&&id==='wishlist')
+        (n==='lg-wishlist'&&id==='wishlist')||
+        (n==='lg-settings'&&id==='settings')
       );
     });
   }
