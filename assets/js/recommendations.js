@@ -164,13 +164,54 @@ const genericRecommendationState={
 function toggleGenericRecommendationPanel(kind,force){
   const panel=document.getElementById(kind+'-recommend-panel');
   const open=typeof force==='boolean'?force:!panel.classList.contains('open');panel.classList.toggle('open',open);
+  if(open&&kind==='restaurant') prepareRestaurantLocation();
   if(open&&!genericRecommendationState[kind].sources.length)loadGenericRecommendationSources(kind);
 }
 function setGenericRecommendationMode(kind,mode){const st=genericRecommendationState[kind];st.mode=mode==='taste'?'taste':'source';document.getElementById(kind+'-rec-mode-source').classList.toggle('active',st.mode==='source');document.getElementById(kind+'-rec-mode-taste').classList.toggle('active',st.mode==='taste');document.getElementById(kind+'-rec-source-wrap').style.display=st.mode==='source'?'block':'none';}
 async function loadGenericRecommendationSources(kind){const st=genericRecommendationState[kind],select=document.getElementById(kind+'-rec-source'),status=document.getElementById(kind+'-rec-status');try{const action=kind==='tv'?'getTvRecommendationSources':'getRestaurantRecommendationSources',data=await apiCall(action,{token:getSessionToken()});st.sources=data.rows||[];select.innerHTML='<option value="">Choose one of your rated '+(kind==='tv'?'shows':'restaurants')+'...</option>'+st.sources.map(function(r){const id=kind==='tv'?r.tmdbTvId:r.placeId,title=kind==='tv'?r.title:r.name,detail=kind==='tv'?r.year:r.city;return '<option value="'+escHtml(String(id||''))+'">'+escHtml(title+(detail?' ('+detail+')':'')+' — '+Number(r.score10||0).toFixed(1)+'/10')+'</option>';}).join('');}catch(e){status.textContent=e.message||'Could not load recommendation sources.';}}
-async function generateGenericRecommendations(kind,options){options=options||{};const st=genericRecommendationState[kind],btn=document.getElementById(kind+'-rec-generate'),status=document.getElementById(kind+'-rec-status'),results=document.getElementById(kind+'-rec-results'),source=document.getElementById(kind+'-rec-source').value;if(st.mode==='source'&&!source){status.textContent='Choose a source '+(kind==='tv'?'show':'restaurant')+' first.';return;}btn.disabled=true;status.textContent='Building recommendations...';results.innerHTML='';document.getElementById(kind+'-rec-diagnostics').style.display='none';try{const action=kind==='tv'?'generateTvRecommendations':'generateRestaurantRecommendations',payload={sourceMode:st.mode==='taste'?'taste':'source',pool:document.getElementById(kind+'-rec-pool').value,style:document.getElementById(kind+'-rec-style').value,excludeIds:options.continueBatch?st.seen:[]};if(kind==='tv')payload.sourceTmdbId=source;else payload.sourcePlaceId=source;const data=await apiCall(action,{token:getSessionToken(),payload});st.sessionId=data.recommendationId||'';st.results=data.recommendations||[];if(!options.continueBatch)st.seen=[];st.results.forEach(function(r){const id=kind==='tv'?r.tmdbTvId:r.placeId;if(id&&!st.seen.includes(String(id)))st.seen.push(String(id));});status.textContent='AI recommendations · '+(data.profileSummary?.ratingCount||0)+' ratings reviewed';const d=data.diagnostics||{},diag=document.getElementById(kind+'-rec-diagnostics');diag.style.display='block';diag.innerHTML='<strong>Recommendation engine:</strong> '+escHtml(d.engine||'Gemini')+'<br><strong>Recommendation batch:</strong> '+escHtml(String(d.validatedCount||0))+' validated · 5 shown · '+escHtml(String(d.backupCount||0))+' backups'+(d.city?'<br><strong>Location:</strong> '+escHtml(d.city):'')+(d.model?'<br><strong>AI model:</strong> '+escHtml(d.model):'');renderGenericRecommendations(kind);}catch(e){status.textContent=e.message||'Could not generate recommendations.';}btn.disabled=false;}
+async function generateGenericRecommendations(kind,options){
+  options=options||{};
+  const st=genericRecommendationState[kind],btn=document.getElementById(kind+'-rec-generate'),status=document.getElementById(kind+'-rec-status'),results=document.getElementById(kind+'-rec-results'),source=document.getElementById(kind+'-rec-source').value;
+  if(st.mode==='source'&&!source){status.textContent='Choose a source '+(kind==='tv'?'show':'restaurant')+' first.';return;}
+  btn.disabled=true;status.textContent='Building recommendations...';results.innerHTML='';document.getElementById(kind+'-rec-diagnostics').style.display='none';
+  try{
+    const action=kind==='tv'?'generateTvRecommendations':'generateRestaurantRecommendations';
+    const payload={sourceMode:st.mode==='taste'?'taste':'source',pool:document.getElementById(kind+'-rec-pool').value,style:document.getElementById(kind+'-rec-style').value,excludeIds:options.continueBatch?st.seen:[]};
+    if(kind==='tv') payload.sourceTmdbId=source;
+    else Object.assign(payload,{sourcePlaceId:source},restaurantRecommendationLocationPayload());
+    const data=await apiCall(action,{token:getSessionToken(),payload});
+    st.sessionId=data.recommendationId||'';st.results=data.recommendations||[];
+    if(!options.continueBatch)st.seen=[];
+    st.results.forEach(function(r){const id=kind==='tv'?r.tmdbTvId:r.placeId;if(id&&!st.seen.includes(String(id)))st.seen.push(String(id));});
+    status.textContent='AI recommendations · '+(data.profileSummary?.ratingCount||0)+' ratings reviewed';
+    const d=data.diagnostics||{},diag=document.getElementById(kind+'-rec-diagnostics');
+    diag.style.display='block';
+    diag.innerHTML='<strong>Recommendation engine:</strong> '+escHtml(d.engine||'Gemini')+'<br><strong>Recommendation batch:</strong> '+escHtml(String(d.validatedCount||0))+' validated · 5 shown · '+escHtml(String(d.backupCount||0))+' backups'+(d.city?'<br><strong>Location:</strong> '+escHtml(d.city):'')+(d.model?'<br><strong>AI model:</strong> '+escHtml(d.model):'');
+    renderGenericRecommendations(kind);
+  }catch(e){status.textContent=e.message||'Could not generate recommendations.';}
+  btn.disabled=false;
+}
 function renderGenericRecommendations(kind){const st=genericRecommendationState[kind],wrap=document.getElementById(kind+'-rec-results');wrap.innerHTML=st.results.map(function(r,index){let media='';if(kind==='tv')media=r.posterPath?'<img class="recommend-poster" src="https://image.tmdb.org/t/p/w185'+escHtml(r.posterPath)+'" alt="">':'<div class="recommend-poster"></div>';else media='<div class="recommend-poster" style="display:flex;align-items:center;justify-content:center;font-size:30px">🍽️</div>';const title=kind==='tv'?r.title:r.name,meta=kind==='tv'?[r.year,(r.genres||[]).join(' · '),r.tmdbRating?'TMDB '+r.tmdbRating:'',r.ratedScore!==''?'You rated '+Number(r.ratedScore).toFixed(1):'']:[r.city,r.address,r.price,r.googleRating?'Google '+r.googleRating:'',r.ratedScore!==''?'You rated '+Number(r.ratedScore).toFixed(1):''];return '<div class="recommend-card">'+media+'<div><div class="recommend-role">'+escHtml(r.role||'Recommendation')+'</div><div class="recommend-movie">'+escHtml(title||'')+'</div><div class="recommend-meta">'+escHtml(meta.filter(Boolean).join(' · '))+'</div><div class="recommend-reason">'+escHtml(r.explanation||'')+'</div></div><div class="recommend-actions"><button class="recommend-action primary" onclick="saveGenericRecommendation('+JSON.stringify(kind)+','+index+')">'+(r.wishlisted?'On Wishlist':'Add to Wishlist')+'</button><button class="recommend-action" onclick="replaceGenericRecommendation('+JSON.stringify(kind)+','+index+')">Replace</button><button class="recommend-action" onclick="notInterestedGenericRecommendation('+JSON.stringify(kind)+','+index+')">Not Interested</button></div></div>';}).join('');}
-async function saveGenericRecommendation(kind,index){const st=genericRecommendationState[kind],r=st.results[index],status=document.getElementById(kind+'-rec-status');if(!r||r.wishlisted)return;try{if(kind==='tv'){await apiCall('addFutureTv',{token:getSessionToken(),payload:{tmdbTvId:r.tmdbTvId,seriesTitle:r.title,seriesYear:r.year,posterPath:r.posterPath,genres:r.genres||[]}});}else{await apiCall('addFutureRestaurant',{token:getSessionToken(),payload:{placeId:r.placeId,name:r.name,address:r.address,city:r.city,cuisine:r.cuisine||'',price:r.price||'',googleRating:r.googleRating||''}});}const feedbackAction=kind==='tv'?'recordTvRecommendationFeedback':'recordRestaurantRecommendationFeedback';const recommendedId=kind==='tv'?r.tmdbTvId:r.placeId;await apiCall(feedbackAction,{token:getSessionToken(),payload:{recommendationId:st.sessionId,recommendedId:recommendedId,action:'added_to_wishlist'}});r.wishlisted=true;status.textContent=(kind==='tv'?r.title:r.name)+' was added to your wishlist.';renderGenericRecommendations(kind);await loadWishlist();}catch(e){status.textContent=e.message||'Could not add this recommendation.';}}
+async function saveGenericRecommendation(kind,index){
+  const st=genericRecommendationState[kind],r=st.results[index],status=document.getElementById(kind+'-rec-status');
+  if(!r||r.wishlisted)return;
+  try{
+    const addAction=kind==='tv'?'addFutureTv':'addFutureRestaurant';
+    const addPayload=kind==='tv'
+      ? {tmdbTvId:r.tmdbTvId,seriesTitle:r.title,seriesYear:r.year,posterPath:r.posterPath,genres:r.genres||[]}
+      : {placeId:r.placeId,name:r.name,address:r.address,city:r.city,cuisine:r.cuisine||'',price:r.price||'',googleRating:r.googleRating||''};
+    const feedbackAction=kind==='tv'?'recordTvRecommendationFeedback':'recordRestaurantRecommendationFeedback';
+    const recommendedId=kind==='tv'?r.tmdbTvId:r.placeId;
+    await Promise.all([
+      apiCall(addAction,{token:getSessionToken(),payload:addPayload}),
+      apiCall(feedbackAction,{token:getSessionToken(),payload:{recommendationId:st.sessionId,recommendedId:recommendedId,action:'added_to_wishlist'}})
+    ]);
+    r.wishlisted=true;wishlistCache.delete(wishlistUserCacheKey());
+    status.textContent=(kind==='tv'?r.title:r.name)+' was added to your wishlist.';
+    renderGenericRecommendations(kind);
+    await loadWishlist(true);
+  }catch(e){status.textContent=e.message||'Could not add this recommendation.';}
+}
 async function replaceGenericRecommendation(kind,index){const st=genericRecommendationState[kind],r=st.results[index],status=document.getElementById(kind+'-rec-status');if(!r)return;try{const action=kind==='tv'?'replaceTvRecommendation':'replaceRestaurantRecommendation',id=kind==='tv'?r.tmdbTvId:r.placeId,data=await apiCall(action,{token:getSessionToken(),payload:{recommendationId:st.sessionId,currentId:id,action:'replaced'}});if(data.exhausted){status.textContent='You reviewed all 10. Generating a fresh batch...';await generateGenericRecommendations(kind,{continueBatch:true});return;}st.results[index]=data.recommendation;const nextId=kind==='tv'?data.recommendation.tmdbTvId:data.recommendation.placeId;if(nextId&&!st.seen.includes(String(nextId)))st.seen.push(String(nextId));status.textContent='Recommendation replaced · '+data.remainingBackups+' backups remaining.';renderGenericRecommendations(kind);}catch(e){status.textContent=e.message||'Could not replace this recommendation.';}}
 
 
@@ -184,5 +225,4 @@ async function notInterestedGenericRecommendation(kind,index){
     status.textContent='Marked not interested · '+data.remainingBackups+' backups remaining.';renderGenericRecommendations(kind);
   }catch(e){status.textContent=e.message||'Could not update this recommendation.';}
 }
-
 
