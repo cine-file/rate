@@ -32,7 +32,7 @@
     <button class="nav-btn" id="nav-lg-rate"  onclick="showScreen('lg-search')">Rate</button>
     <button class="nav-btn" id="nav-lg-stats" onclick="lgGoStats()">Stats</button>
     <button class="nav-btn" id="nav-lg-wishlist" onclick="goWishlist('restaurant')">Wishlist</button>
-    <button class="nav-btn" id="nav-lg-back"  onclick="goHome()">← Cine-file</button>
+    <button class="nav-btn" id="nav-lg-settings" onclick="promptAdminPin()">Settings</button>
   </div>
   <div class="nav-user">
     <select class="theme-select" id="theme-select" onchange="setTheme(this.value)" aria-label="View theme">
@@ -372,6 +372,18 @@
     <h1 class="lg-title">Le Guide</h1>
     <div class="lg-subtitle">★ ★ ★</div>
     <p class="lg-sub">Search for the restaurant you visited</p>
+    <div class="restaurant-location-filter" id="restaurant-rate-location">
+      <div class="restaurant-location-head">
+        <label>Search area</label>
+        <button type="button" class="restaurant-location-button" onclick="requestRestaurantLocation()">Use my location</button>
+      </div>
+      <div class="restaurant-location-grid">
+        <input id="restaurant-rate-city" data-restaurant-location-field="city" type="text" placeholder="City" autocomplete="address-level2"/>
+        <input id="restaurant-rate-region" data-restaurant-location-field="region" type="text" placeholder="State / region" autocomplete="address-level1"/>
+        <input id="restaurant-rate-country" data-restaurant-location-field="country" type="text" placeholder="Country" autocomplete="country-name"/>
+      </div>
+      <div class="restaurant-location-status" data-restaurant-location-status></div>
+    </div>
     <div class="search-wrap" style="text-align:left">
       <div class="lg-search-field">
         <span class="search-icon" style="color:#8a4a4a">🍽️</span>
@@ -403,11 +415,11 @@
     </div>
     <div class="grade-legend" style="border-color:#3a1a1a;background:#1a0608">
       <div class="grade-legend-title" style="color:#8a4a4a">What the grades mean</div>
-      <div class="gl-row"><span class="gl-grade" style="color:#C41E3A">A</span><span class="gl-desc">Exceptional — destination worthy</span></div>
-      <div class="gl-row"><span class="gl-grade" style="color:#C41E3A">B</span><span class="gl-desc">Very good — would return</span></div>
-      <div class="gl-row"><span class="gl-grade" style="color:#C41E3A">C</span><span class="gl-desc">Decent — some issues</span></div>
-      <div class="gl-row"><span class="gl-grade" style="color:#C41E3A">D</span><span class="gl-desc">Below expectations</span></div>
-      <div class="gl-row"><span class="gl-grade" style="color:#C41E3A">F</span><span class="gl-desc">Do not recommend</span></div>
+      <div class="gl-row"><span class="gl-grade" style="color:var(--lg-red)">A</span><span class="gl-desc">Exceptional — destination worthy</span></div>
+      <div class="gl-row"><span class="gl-grade" style="color:var(--lg-red)">B</span><span class="gl-desc">Very good — would return</span></div>
+      <div class="gl-row"><span class="gl-grade" style="color:var(--lg-red)">C</span><span class="gl-desc">Decent — some issues</span></div>
+      <div class="gl-row"><span class="gl-grade" style="color:var(--lg-red)">D</span><span class="gl-desc">Below expectations</span></div>
+      <div class="gl-row"><span class="gl-grade" style="color:var(--lg-red)">F</span><span class="gl-desc">Do not recommend</span></div>
     </div>
     <div class="table-scroll">
       <table class="scorer lg-scorer">
@@ -443,12 +455,12 @@
   <div class="round-box lg-round-box">
     <div class="round-eyebrow" style="color:#8a4a4a">Step 2 of 2 — Final Score</div>
     <div class="round-title" style="color:#F5ECD7">Choose Your Rating</div>
-    <div class="round-movie" id="lg-round-name" style="color:#C41E3A"></div>
+    <div class="round-movie" id="lg-round-name" style="color:var(--lg-red)"></div>
     <div class="round-raw">
       <div class="round-raw-lbl" style="color:#8a4a4a">Raw Weighted Score</div>
       <div>
-        <span class="round-raw-num" id="lg-round-raw-num" style="color:#F5ECD7"></span>
-        <span class="round-raw-grade" id="lg-round-raw-grade" style="color:#C41E3A"></span>
+        <span class="round-raw-num" id="lg-round-raw-num" style="color:var(--lg-cream)"></span>
+        <span class="round-raw-grade" id="lg-round-raw-grade" style="color:var(--lg-red)"></span>
       </div>
       <div class="round-raw-sub" style="color:#6a3a3a">out of 100 · Your final /10 score is calculated automatically</div>
     </div>
@@ -586,16 +598,16 @@
 ══════════════════════════════════════ -->
 <div id="lg-already-rated-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:999;align-items:center;justify-content:center;">
   <div style="background:#1a0608;border:1px solid #8a2a2a;border-radius:3px;padding:40px 32px;max-width:400px;width:90%;text-align:center;">
-    <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:0.28em;text-transform:uppercase;color:#C41E3A;margin-bottom:12px;">Already Reviewed</div>
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:#F5ECD7;margin-bottom:6px;" id="lg-ar-name"></div>
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:0.28em;text-transform:uppercase;color:var(--lg-red);margin-bottom:12px;">Already Reviewed</div>
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--lg-cream);margin-bottom:6px;" id="lg-ar-name"></div>
     <div style="font-size:13px;color:#8a4a4a;margin-bottom:24px;font-style:italic;" id="lg-ar-date"></div>
     <div style="display:flex;gap:16px;justify-content:center;margin-bottom:20px;">
       <div style="background:#0d0304;border:2px solid #4a1a1a;border-radius:3px;padding:14px 20px;text-align:center;min-width:90px;">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:40px;color:#F5ECD7;line-height:1;" id="lg-ar-score"></div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:40px;color:var(--lg-cream);line-height:1;" id="lg-ar-score"></div>
         <div style="font-family:'Barlow Condensed',sans-serif;font-size:8px;letter-spacing:0.2em;text-transform:uppercase;color:#8a4a4a;margin-top:4px;">Your Score</div>
       </div>
       <div style="background:#0d0304;border:2px solid #4a1a1a;border-radius:3px;padding:14px 20px;text-align:center;min-width:90px;">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:40px;color:#C41E3A;line-height:1;" id="lg-ar-grade"></div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:40px;color:var(--lg-red);line-height:1;" id="lg-ar-grade"></div>
         <div style="font-family:'Barlow Condensed',sans-serif;font-size:8px;letter-spacing:0.2em;text-transform:uppercase;color:#8a4a4a;margin-top:4px;">Grade</div>
       </div>
     </div>
@@ -669,6 +681,19 @@
     <h1 class="s-title" id="wishlist-title">Film Wishlist</h1>
     <p class="s-sub" id="wishlist-sub">Search for films you want to watch.</p>
 
+    <div class="restaurant-location-filter" id="restaurant-wishlist-location" style="display:none">
+      <div class="restaurant-location-head">
+        <label>Search area</label>
+        <button type="button" class="restaurant-location-button" onclick="requestRestaurantLocation()">Use my location</button>
+      </div>
+      <div class="restaurant-location-grid">
+        <input id="restaurant-wishlist-city" data-restaurant-location-field="city" type="text" placeholder="City" autocomplete="address-level2"/>
+        <input id="restaurant-wishlist-region" data-restaurant-location-field="region" type="text" placeholder="State / region" autocomplete="address-level1"/>
+        <input id="restaurant-wishlist-country" data-restaurant-location-field="country" type="text" placeholder="Country" autocomplete="country-name"/>
+      </div>
+      <div class="restaurant-location-status" data-restaurant-location-status></div>
+    </div>
+
     <div class="wishlist-search-wrap">
       <div class="search-field">
         <span class="search-icon" id="wishlist-search-icon">🎬</span>
@@ -737,6 +762,18 @@
       <button class="recommend-launch" onclick="toggleGenericRecommendationPanel('restaurant')">Generate Restaurant Recommendations</button>
       <div class="recommend-panel" id="restaurant-recommend-panel">
         <div class="recommend-head"><div><div class="recommend-title">Restaurant Recommendation Room</div><div class="recommend-copy">Generate five real restaurants based on your Le Guide ratings, with five replacements ready.</div></div><button class="recommend-close" onclick="toggleGenericRecommendationPanel('restaurant',false)">×</button></div>
+        <div class="restaurant-location-filter restaurant-recommendation-location" id="restaurant-recommendation-location">
+          <div class="restaurant-location-head">
+            <label>Recommendation area</label>
+            <button type="button" class="restaurant-location-button" onclick="requestRestaurantLocation()">Use my location</button>
+          </div>
+          <div class="restaurant-location-grid">
+            <input id="restaurant-recommendation-city" data-restaurant-location-field="city" type="text" placeholder="City" autocomplete="address-level2"/>
+            <input id="restaurant-recommendation-region" data-restaurant-location-field="region" type="text" placeholder="State / region" autocomplete="address-level1"/>
+            <input id="restaurant-recommendation-country" data-restaurant-location-field="country" type="text" placeholder="Country" autocomplete="country-name"/>
+          </div>
+          <div class="restaurant-location-status" data-restaurant-location-status></div>
+        </div>
         <div class="recommend-mode-row"><button class="recommend-mode-btn active" id="restaurant-rec-mode-source" onclick="setGenericRecommendationMode('restaurant','source')">Based on a Restaurant</button><button class="recommend-mode-btn" id="restaurant-rec-mode-taste" onclick="setGenericRecommendationMode('restaurant','taste')">Based on My Taste</button></div>
         <div class="recommend-field" id="restaurant-rec-source-wrap" style="margin-bottom:12px"><label>Source Restaurant</label><select class="recommend-select" id="restaurant-rec-source"><option value="">Choose one of your rated restaurants...</option></select></div>
         <div class="recommend-grid"><div class="recommend-field"><label>Recommendation Pool</label><select class="recommend-select" id="restaurant-rec-pool"><option value="new">New to Me</option><option value="notWishlist">Not Rated or Wishlisted</option><option value="all">Include Rated Restaurants</option></select></div><div class="recommend-field"><label>Style</label><select class="recommend-select" id="restaurant-rec-style"><option value="balanced">Balanced</option><option value="hidden">Hidden Gems</option><option value="different">Something Different</option></select></div></div>
@@ -860,6 +897,7 @@
 ══════════════════════════════════════ -->
 <!-- Application scripts are ordered classic scripts so inline controls remain supported. -->
   <script defer src="assets/js/core.js"></script>
+  <script defer src="assets/js/restaurant-location.js"></script>
   <script defer src="assets/js/wishlist.js"></script>
   <script defer src="assets/js/recommendations.js"></script>
   <script defer src="assets/js/activity.js"></script>
