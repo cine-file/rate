@@ -83,7 +83,7 @@ Restaurant search areas are saved locally per signed-in user and are only sent w
 
 - User PINs are stored as salted SHA-256 hashes in `Users` (`name`, `pinHash`, `pinSalt`). Older plain-PIN rows are migrated after a successful login.
 - Login and admin-PIN attempts are throttled after repeated failures.
-- Rating saves/deletes use a document lock so concurrent actions cannot race a summary rebuild.
+- Rating saves/deletes use a script lock so concurrent actions cannot race a summary rebuild.
 - Admin-only deployment status checks and user management require an admin session.
 - Deleting a rating also removes it from Recent Activity.
 
