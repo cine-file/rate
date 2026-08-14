@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 //  CINE-FILE — Google Apps Script
-//  Version: 2026.07.25-tv-season-ratings.2
+//  Version: 2026.08.14-restaurant-location-performance.16
 //  Runtime: GitHub Pages frontend + Apps Script JSON backend
 //
 //  Version notes:
@@ -11,12 +11,22 @@
 //  - wishlist-theme-details.1: adds authenticated personal Future-Films and
 //    Future-Restaurants lists, removed automatically when their owner rates an item.
 //  - tv-season-ratings.1: adds TV season and optional overall-series ratings.
+//  - stats-search-delete.1: raw-score summaries, advanced search, secure rating deletion, and distribution-ready data.
+//  - stats-genre-bars.2: exposes film genres to the stats API for cross-user genre filtering.
+//  - recommendation-diagnostics.4: strengthens recommendation candidates, uses source category scores/notes in Gemini, exposes safe AI diagnostics, and defers backup hydration for faster generation.
+//  - gemini-3.6.5: migrates the optional AI jury to Gemini 3.6 Flash and removes deprecated sampling parameters.
+//  - ai-first-recommendations.6: Gemini proposes titles first; TMDB only validates and enriches 10 eligible movies per batch, with 5 visible and 5 backups.
+//  - cross-category-recommendations.8: adds matching Gemini-first recommendation rooms for TV and restaurants, validated by TMDB and Google Places.
+//  - cross-category-learning.9: persists TV and restaurant recommendation sessions and feedback, feeds prior actions back into future Gemini prompts, and removes off-theme search glows.
+//  - restaurant-location-performance.16: adds voluntary city/state/country restaurant filtering, location-aware restaurant recommendations, cached searches, and batched recommendation history writes.
 //
 //  Original by friend, restaurant functions added by Claude
 // ─────────────────────────────────────────────────────────────
 
-const BACKEND_VERSION = '2026.07.25-tv-season-ratings.2';
+const BACKEND_VERSION = '2026.08.14-restaurant-location-performance.16';
 const SESSION_TTL_SECONDS = 6 * 60 * 60;
+const LOGIN_RATE_WINDOW_SECONDS = 15 * 60;
+const LOGIN_RATE_MAX_ATTEMPTS = 8;
 
 const FILMS_SHEET_NAME = 'Database-Films';
 const RESTAURANTS_SHEET_NAME = 'Database-Restaurants';
@@ -27,6 +37,14 @@ const FUTURE_RESTAURANTS_SHEET_NAME = 'Future-Restaurants';
 const TV_SHEET_NAME = 'Database-TV';
 const TV_SUMMARY_SHEET_NAME = 'Summary-TV';
 const FUTURE_TV_SHEET_NAME = 'Future-TV';
+const FILM_RECOMMENDATIONS_SHEET_NAME = 'Recommendations-Films';
+const FILM_RECOMMENDATION_FEEDBACK_SHEET_NAME = 'Recommendation-Feedback';
+const TV_RECOMMENDATIONS_SHEET_NAME = 'Recommendations-TV';
+const TV_RECOMMENDATION_FEEDBACK_SHEET_NAME = 'Recommendation-Feedback-TV';
+const RESTAURANT_RECOMMENDATIONS_SHEET_NAME = 'Recommendations-Restaurants';
+const RESTAURANT_RECOMMENDATION_FEEDBACK_SHEET_NAME = 'Recommendation-Feedback-Restaurants';
+const RECENT_ACTIVITY_SHEET_NAME = 'Recent-Activity';
+const RECENT_ACTIVITY_SNAPSHOT_PROPERTY = 'RECENT_ACTIVITY_SNAPSHOT_V14';
 
 const FILM_SUMMARY_BASE_COLUMNS = ['Title','Year','Genre','Director','Movie length','RT Audience','IMDb'];
 const FILM_SUMMARY_AVERAGE_COLUMN = 'Average Rating';
@@ -81,6 +99,30 @@ const FUTURE_TV_HEADER = [
   'posterPath','createdAt','updatedAt'
 ];
 
+const FILM_RECOMMENDATIONS_HEADER = [
+  'recommendationId','user','sourceMode','sourceTmdbId','sourceTitle','pool','style',
+  'recommendedTmdbId','recommendedTitle','rank','role','explanation','score',
+  'posterPath','year','genres','runtimeMinutes','createdAt','status','groupMembers'
+];
+
+const FILM_RECOMMENDATION_FEEDBACK_HEADER = [
+  'recommendationId','user','recommendedTmdbId','action','createdAt'
+];
+
+const GENERIC_RECOMMENDATIONS_HEADER = [
+  'recommendationId','user','sourceMode','sourceId','sourceTitle','pool','style','category',
+  'recommendedId','recommendedTitle','rank','role','explanation','yearOrCity','metadata','createdAt','status'
+];
+
+const GENERIC_RECOMMENDATION_FEEDBACK_HEADER = [
+  'recommendationId','user','category','recommendedId','action','createdAt'
+];
+
+const RECENT_ACTIVITY_HEADER = [
+  'activityKey','user','category','title','score10','displayDate','sortDate','updatedAt'
+];
+
+
 function getScriptProps() {
   return PropertiesService.getScriptProperties();
 }
@@ -115,6 +157,10 @@ function getPlacesKey() {
   return requireProp_('GOOGLE_PLACES_KEY');
 }
 
+function getGeminiKey_() {
+  return getProp_('GEMINI_API_KEY');
+}
+
 // ── SESSION ───────────────────────────────────────────────────
 function generateToken_() {
   return Utilities.getUuid();
@@ -146,6 +192,51 @@ function validateAdminSession_(token) {
   if (!token) return false;
   var cache = CacheService.getScriptCache();
   return cache.get('admin_' + token) === 'true';
+}
+
+function withDocumentLock_(work) {
+  var lock = LockService.getDocumentLock();
+  lock.waitLock(30000);
+  try {
+    return work();
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function loginAttemptKey_(scope, value) {
+  var digest = Utilities.computeDigest(
+    Utilities.DigestAlgorithm.SHA_256,
+    String(scope || '') + '|' + String(value || '').trim().toLowerCase(),
+    Utilities.Charset.UTF_8
+  );
+  return 'login_attempt_' + digest.map(function(b){ return ('0' + (b & 0xFF).toString(16)).slice(-2); }).join('');
+}
+
+function assertLoginAllowed_(scope, value) {
+  var raw = CacheService.getScriptCache().get(loginAttemptKey_(scope, value));
+  if (!raw) return;
+  try {
+    var state = JSON.parse(raw);
+    if (Number(state.count || 0) >= LOGIN_RATE_MAX_ATTEMPTS) {
+      throw new Error('Too many attempts. Try again in a few minutes.');
+    }
+  } catch (e) {
+    if (e && e.message === 'Too many attempts. Try again in a few minutes.') throw e;
+  }
+}
+
+function recordFailedLogin_(scope, value) {
+  var cache = CacheService.getScriptCache();
+  var key = loginAttemptKey_(scope, value);
+  var state = { count: 0 };
+  try { state = JSON.parse(cache.get(key) || '{"count":0}'); } catch (e) {}
+  state.count = Number(state.count || 0) + 1;
+  cache.put(key, JSON.stringify(state), LOGIN_RATE_WINDOW_SECONDS);
+}
+
+function clearFailedLogin_(scope, value) {
+  CacheService.getScriptCache().remove(loginAttemptKey_(scope, value));
 }
 
 // ── PIN HASHING ───────────────────────────────────────────────
@@ -225,12 +316,6 @@ function fetchJson_(url) {
   return JSON.parse(body);
 }
 
-// Handle CORS preflight OPTIONS requests
-function doOptions(e) {
-  return ContentService.createTextOutput('')
-    .setMimeType(ContentService.MimeType.TEXT);
-}
-
 // ── ROUTING ───────────────────────────────────────────────────
 function doPost(e) {
   try {
@@ -242,8 +327,8 @@ function doPost(e) {
     if (action === 'login')      return doLogin_(d);
     if (action === 'loginAdmin') return doLoginAdmin_(d);
     if (action === 'getUsers')   return jsonOut_({ users: getUsersPublic_() });
-    if (action === 'getDeploymentStatus') return doGetDeploymentStatus_(d);
     if (action === 'getSession') return doGetSession_(d);
+    if (action === 'verifyUserPin') return doVerifyUserPin_(d);
 
     // Admin actions
     if (action === 'saveUsers') {
@@ -258,11 +343,17 @@ function doPost(e) {
       if (!validateAdminSession_(d.adminToken)) return jsonOut_({ error: 'Unauthorized' });
       return doDeleteUser_(d);
     }
+    if (action === 'getDeploymentStatus') {
+      if (!validateAdminSession_(d.adminToken)) return jsonOut_({ error: 'Unauthorized' });
+      return doGetDeploymentStatus_(d);
+    }
 
     // Session required
     var sess = validateSession_(token);
     if (!sess) return jsonOut_({ error: 'Invalid or expired session. Please log in again.' });
     var username = sess.username;
+
+    if (action === 'getRecentActivity') return doGetRecentActivity_();
 
     if (action === 'searchMovies')           return doSearchMovies_(d);
     if (action === 'getMovieDetails')        return doGetMovieDetails_(d);
@@ -272,6 +363,18 @@ function doPost(e) {
     if (action === 'getFutureFilms')         return doGetFutureFilms_(username);
     if (action === 'addFutureFilm')          return doAddFutureFilm_(d.payload || d, username);
     if (action === 'deleteFutureFilm')       return doDeleteFutureFilm_(d.payload || d, username);
+    if (action === 'getRecommendationSources') return doGetRecommendationSources_(username);
+    if (action === 'generateFilmRecommendations') return doGenerateFilmRecommendations_(d.payload || d, username);
+    if (action === 'replaceFilmRecommendation') return doReplaceFilmRecommendation_(d.payload || d, username);
+    if (action === 'recordRecommendationFeedback') return doRecordRecommendationFeedback_(d.payload || d, username);
+    if (action === 'getTvRecommendationSources') return doGetTvRecommendationSources_(username);
+    if (action === 'generateTvRecommendations') return doGenerateTvRecommendations_(d.payload || d, username);
+    if (action === 'replaceTvRecommendation') return doReplaceGenericRecommendation_(d.payload || d, username, 'tv');
+    if (action === 'getRestaurantRecommendationSources') return doGetRestaurantRecommendationSources_(username);
+    if (action === 'generateRestaurantRecommendations') return doGenerateRestaurantRecommendations_(d.payload || d, username);
+    if (action === 'replaceRestaurantRecommendation') return doReplaceGenericRecommendation_(d.payload || d, username, 'restaurant');
+    if (action === 'recordTvRecommendationFeedback') return doRecordGenericRecommendationFeedback_(d.payload || d, username, 'tv');
+    if (action === 'recordRestaurantRecommendationFeedback') return doRecordGenericRecommendationFeedback_(d.payload || d, username, 'restaurant');
     if (action === 'searchTv')                return doSearchTv_(d);
     if (action === 'getTvDetails')            return doGetTvDetails_(d);
     if (action === 'saveTvRating')            return doSaveTvRating_(d.payload || d, username);
@@ -287,6 +390,10 @@ function doPost(e) {
     if (action === 'getFutureRestaurants')   return doGetFutureRestaurants_(username);
     if (action === 'addFutureRestaurant')    return doAddFutureRestaurant_(d.payload || d, username);
     if (action === 'deleteFutureRestaurant') return doDeleteFutureRestaurant_(d.payload || d, username);
+    if (action === 'reverseGeocode')        return doReverseGeocode_(d);
+    if (action === 'deleteRating')             return doDeleteRating_(d.payload || d, username);
+    if (action === 'deleteTvRating')           return doDeleteTvRating_(d.payload || d, username);
+    if (action === 'deleteRestaurantRating')   return doDeleteRestaurantRating_(d.payload || d, username);
 
     return jsonOut_({ error: 'Unknown action: ' + action });
   } catch(err) {
@@ -306,27 +413,21 @@ function doGet(e) {
 function doLogin_(d) {
   var users = getUsers_();
   var username = String(d.username || d.name || '').trim();
+  assertLoginAllowed_('user', username);
   var user  = users.filter(function(u){ return String(u.name).trim().toLowerCase() === username.toLowerCase(); })[0];
-  if (!user) return jsonOut_({ success: false, error: 'User not found', version: BACKEND_VERSION, debug: { username: username, usersSeen: users.length } });
+  if (!user) {
+    recordFailedLogin_('user', username);
+    return jsonOut_({ success: false, error: 'Incorrect name or PIN' });
+  }
   var pin = String(d.pin || '').padStart(4, '0');
   var valid = user.legacyPin
     ? String(user.legacyPin).padStart(4, '0') === pin
     : verifyPin_(pin, user.pinHash, user.pinSalt);
   if (!valid) {
-    return jsonOut_({
-      success: false,
-      error: 'Incorrect PIN',
-      version: BACKEND_VERSION,
-      debug: {
-        username: username,
-        matchedUser: user.name,
-        mode: user.legacyPin ? 'plain-pin' : (user.pinHash && user.pinSalt ? 'pinHash-pinSalt' : 'incomplete-user-row'),
-        enteredPinLength: String(d.pin || '').length,
-        pinHashLength: String(user.pinHash || '').length,
-        hasPinSalt: !!user.pinSalt
-      }
-    });
+    recordFailedLogin_('user', username);
+    return jsonOut_({ success: false, error: 'Incorrect PIN' });
   }
+  clearFailedLogin_('user', username);
   if (user.legacyPin || !isCurrentPinHash_(pin, user.pinHash, user.pinSalt)) migrateUserPin_(username, pin);
   var token = createSession_(username);
   return jsonOut_({ success: true, token: token, username: username, user: { name: username } });
@@ -350,8 +451,13 @@ function migrateUserPin_(name, pin) {
 }
 
 function doLoginAdmin_(d) {
+  assertLoginAllowed_('admin', 'admin');
   var pin = String(d.pin || '').padStart(4, '0');
-  if (pin !== getAdminPin()) return jsonOut_({ success: false, error: 'Incorrect admin PIN' });
+  if (pin !== getAdminPin()) {
+    recordFailedLogin_('admin', 'admin');
+    return jsonOut_({ success: false, error: 'Incorrect admin PIN' });
+  }
+  clearFailedLogin_('admin', 'admin');
   var token = createAdminSession_();
   return jsonOut_({ success: true, adminToken: token });
 }
@@ -360,6 +466,24 @@ function doGetSession_(d) {
   var sess = validateSession_(d.token || '');
   if (!sess) return jsonOut_({ error: 'Invalid or expired session. Please log in again.' });
   return jsonOut_({ user: { name: sess.username } });
+}
+
+function verifyUserPinValue_(username, pin) {
+  var normalizedPin = String(pin || '').replace(/\D/g, '').padStart(4, '0').slice(-4);
+  var user = getUsers_().filter(function(u){
+    return String(u.name || '').trim().toLowerCase() === String(username || '').trim().toLowerCase();
+  })[0];
+  if (!user) return false;
+  return user.legacyPin
+    ? String(user.legacyPin).padStart(4, '0') === normalizedPin
+    : verifyPin_(normalizedPin, user.pinHash, user.pinSalt);
+}
+
+function doVerifyUserPin_(d) {
+  var sess = validateSession_(d.token || '');
+  if (!sess) return jsonOut_({ ok: false, error: 'Invalid or expired session. Please log in again.' });
+  if (!verifyUserPinValue_(sess.username, d.pin)) return jsonOut_({ ok: false, error: 'Incorrect PIN.' });
+  return jsonOut_({ ok: true });
 }
 
 function doGetDeploymentStatus_(d) {
@@ -423,23 +547,38 @@ function doSaveUsers_(d) {
 function rebuildSummariesSafe_() {
   try { rebuildFilmSummary_(); } catch(e) {}
   try { rebuildRestaurantSummary_(); } catch(e) {}
+  try { rebuildTvSummary_(); } catch(e) {}
 }
 
 // ── SEARCH MOVIES ─────────────────────────────────────────────
 function doSearchMovies_(d) {
-  var url = 'https://api.themoviedb.org/3/search/movie?api_key=' + getTmdbKey() +
-            '&query=' + encodeURIComponent(d.query || '') + '&include_adult=false';
-  var data = fetchJson_(url);
-  var results = (data.results || []).slice(0, 7).map(function(r) {
-    return {
-      id:          r.id,
-      title:       r.title,
-      year:        (r.release_date || '').slice(0, 4),
-      poster_path: r.poster_path || '',
-      overview:    r.overview    || ''
-    };
-  });
-  return jsonOut_({ results: results });
+  var query = String(d.query || '').trim();
+  var advanced = !!d.advanced;
+  var year = String(d.year || '').replace(/\D/g, '').slice(0, 4);
+  var pageCount = advanced ? Math.max(1, Math.min(3, parseInt(d.pages, 10) || 3)) : 1;
+  var seen = {};
+  var merged = [];
+  for (var page = 1; page <= pageCount; page++) {
+    var url = 'https://api.themoviedb.org/3/search/movie?api_key=' + getTmdbKey() +
+      '&query=' + encodeURIComponent(query) + '&include_adult=false&page=' + page +
+      (year ? '&primary_release_year=' + encodeURIComponent(year) : '');
+    var data = fetchJson_(url);
+    (data.results || []).forEach(function(r) {
+      if (!r.id || seen[r.id]) return;
+      seen[r.id] = true;
+      merged.push({
+        id: r.id,
+        title: r.title,
+        original_title: r.original_title || '',
+        year: (r.release_date || '').slice(0, 4),
+        release_date: r.release_date || '',
+        poster_path: r.poster_path || '',
+        overview: r.overview || ''
+      });
+    });
+    if (!advanced || page >= Number(data.total_pages || 1)) break;
+  }
+  return jsonOut_({ results: merged.slice(0, advanced ? 30 : 7) });
 }
 
 // ── GET MOVIE DETAILS ─────────────────────────────────────────
@@ -482,9 +621,13 @@ function doGetMovieDetails_(d) {
 function getOrCreateSheet_(name, header) {
   var ss = SpreadsheetApp.openById(getSheetId());
   var tab = ss.getSheetByName(name);
-  if (!tab) tab = ss.insertSheet(name);
+  var created = false;
+  if (!tab) {
+    tab = ss.insertSheet(name);
+    created = true;
+  }
   ensureHeader_(tab, header);
-  formatSheetAsTable_(tab);
+  if (created) formatSheetAsTable_(tab);
   return tab;
 }
 
@@ -508,8 +651,9 @@ function ensureHeader_(tab, header) {
   });
 }
 
-function formatSheetAsTable_(tab) {
+function formatSheetAsTable_(tab, options) {
   if (!tab || tab.getLastRow() < 1 || tab.getLastColumn() < 1) return;
+  options = options || {};
   tab.setFrozenRows(1);
   var range = tab.getRange(1, 1, Math.max(tab.getLastRow(), 1), tab.getLastColumn());
   try {
@@ -521,7 +665,7 @@ function formatSheetAsTable_(tab) {
     range.applyRowBanding(SpreadsheetApp.BandingTheme.LIGHT_GREY);
   } catch(e) {}
   try {
-    tab.autoResizeColumns(1, tab.getLastColumn());
+    if (options.resize !== false) tab.autoResizeColumns(1, tab.getLastColumn());
   } catch(e) {}
 }
 
@@ -558,11 +702,6 @@ function objectAtSheetRow_(tab, rowNumber) {
   var obj = {};
   header.forEach(function(k, j){ if (k) obj[k] = values[j]; });
   return obj;
-}
-
-function findExistingRow_(tab, header, rowObj, keyFn) {
-  var rows = findExistingRows_(tab, header, rowObj, keyFn);
-  return rows.length ? rows[0] : -1;
 }
 
 function findExistingRows_(tab, header, rowObj, keyFn) {
@@ -928,28 +1067,31 @@ function filmPayloadToSheetRow_(d, username, existing) {
 
 // ── SAVE FILM RATING ──────────────────────────────────────────
 function doSaveRating_(d, username) {
-  var tab = getOrCreateSheet_(FILMS_SHEET_NAME, FILMS_HEADER);
-  var rowObj = filmPayloadToSheetRow_(d, username, {});
-  var existingRows = findExistingRows_(tab, FILMS_HEADER, rowObj, function(r) {
-    return categoryKey_(r.user, r.tmdbId, r.title, r.year);
-  });
-  if (!existingRows.length) {
-    existingRows = findExistingRows_(tab, FILMS_HEADER, rowObj, function(r) {
-      return categoryKey_(r.user, '', r.title, r.year);
+  return withDocumentLock_(function() {
+    var tab = getOrCreateSheet_(FILMS_SHEET_NAME, FILMS_HEADER);
+    var rowObj = filmPayloadToSheetRow_(d, username, {});
+    var existingRows = findExistingRows_(tab, FILMS_HEADER, rowObj, function(r) {
+      return categoryKey_(r.user, r.tmdbId, r.title, r.year);
     });
-  }
-  var existingRow = existingRows.length ? existingRows[0] : -1;
-  if (existingRow > -1) {
-    var existingObj = objectAtSheetRow_(tab, existingRow);
-    rowObj = filmPayloadToSheetRow_(d, username, existingObj);
-    tab.getRange(existingRow, 1, 1, FILMS_HEADER.length).setValues([rowForHeader_(FILMS_HEADER, rowObj)]);
-    deleteExtraRows_(tab, existingRows);
-  } else {
-    tab.appendRow(rowForHeader_(FILMS_HEADER, rowObj));
-  }
-  removeFutureFilm_(rowObj, username);
-  rebuildFilmSummary_();
-  return jsonOut_({ ok: true });
+    if (!existingRows.length) {
+      existingRows = findExistingRows_(tab, FILMS_HEADER, rowObj, function(r) {
+        return categoryKey_(r.user, '', r.title, r.year);
+      });
+    }
+    var existingRow = existingRows.length ? existingRows[0] : -1;
+    if (existingRow > -1) {
+      var existingObj = objectAtSheetRow_(tab, existingRow);
+      rowObj = filmPayloadToSheetRow_(d, username, existingObj);
+      tab.getRange(existingRow, 1, 1, FILMS_HEADER.length).setValues([rowForHeader_(FILMS_HEADER, rowObj)]);
+      deleteExtraRows_(tab, existingRows);
+    } else {
+      tab.appendRow(rowForHeader_(FILMS_HEADER, rowObj));
+    }
+    removeFutureFilm_(rowObj, username);
+    upsertRecentActivity_({activityKey:recentActivityKey_('film',username,rowObj.tmdbId,rowObj.title+'|'+rowObj.year),user:username,category:'film',title:rowObj.title||'',score10:Number(rowObj.score10||0),displayDate:activityDisplayDate_(rowObj),sortDate:activityDateValue_(rowObj),updatedAt:rowObj.updatedAt||''});
+    rebuildFilmSummary_();
+    return jsonOut_({ ok: true });
+  });
 }
 
 // ── GET FILM RATINGS ──────────────────────────────────────────
@@ -974,18 +1116,26 @@ function doGetSummary_() {
       grouped[key] = {
         Title: r.title,
         Year: r.year,
+        Genre: r.genres || '',
         rt: r.rtAudience || '',
         imdb: r.imdb || '',
         scores: [],
-        userScores: {}
+        rawScores: [],
+        userScores: {},
+        userRawScores: {}
       };
     }
+    grouped[key].Genre = grouped[key].Genre || r.genres || '';
     grouped[key].rt = grouped[key].rt || r.rtAudience || '';
     grouped[key].imdb = grouped[key].imdb || r.imdb || '';
     var score = parseFloat(r.score10);
     if (!isNaN(score) && r.user) {
       grouped[key].scores.push(score);
       grouped[key].userScores[summaryDisplayName_(r.user)] = score;
+      var rawScore = parseFloat(r.raw100);
+      if (isNaN(rawScore)) rawScore = score * 10;
+      grouped[key].rawScores.push(rawScore);
+      grouped[key].userRawScores[summaryDisplayName_(r.user)] = rawScore;
     }
   });
   return jsonOut_({ rows: Object.keys(grouped).map(function(k){ return grouped[k]; }) });
@@ -1134,7 +1284,8 @@ function writeTable_(tab, header, rows) {
   tab.clearFormats();
   var values = [header].concat(rows || []);
   tab.getRange(1, 1, values.length, header.length).setValues(values);
-  formatSheetAsTable_(tab);
+  // Keep summary filters/banding current without repeatedly auto-sizing every column.
+  formatSheetAsTable_(tab, { resize:false });
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1145,6 +1296,22 @@ function tvGroupKey_(r) {
   var type = normalizeKeyPart_(r.entryType || r.Type || 'season');
   var season = type === 'overall' ? 'overall' : String(r.seasonNumber || r.Season || '');
   return (id ? 'tv|' + id : 'tvtitle|' + normalizeKeyPart_(r.seriesTitle || r.Series)) + '|' + type + '|' + season;
+}
+
+function tvSeriesKey_(r) {
+  var id = normalizeKeyPart_(r.tmdbTvId || r['TMDB TV ID']);
+  return id ? 'tv|' + id : 'tvtitle|' + normalizeKeyPart_(r.seriesTitle || r.Series);
+}
+
+function tvGroupStats_() {
+  var grouped = {};
+  sheetObjects_(getExistingSheet_(TV_SHEET_NAME), TV_HEADER).forEach(function(r) {
+    var key = tvSeriesKey_(r);
+    if (!grouped[key]) grouped[key] = { scores: [] };
+    var score = parseFloat(r.score10);
+    if (!isNaN(score)) grouped[key].scores.push(score);
+  });
+  return grouped;
 }
 
 function tvPayloadToSheetRow_(d, username, existing) {
@@ -1194,13 +1361,32 @@ function tvToApiRow_(r) {
 }
 
 function doSearchTv_(d) {
-  var url = 'https://api.themoviedb.org/3/search/tv?api_key=' + getTmdbKey() +
-    '&query=' + encodeURIComponent(d.query || '') + '&include_adult=false';
-  var data = fetchJson_(url);
-  var results = (data.results || []).slice(0, 7).map(function(r) {
-    return { id:r.id, name:r.name, year:(r.first_air_date || '').slice(0,4), poster_path:r.poster_path || '' };
-  });
-  return jsonOut_({ results: results });
+  var query = String(d.query || '').trim();
+  var advanced = !!d.advanced;
+  var year = String(d.year || '').replace(/\D/g, '').slice(0, 4);
+  var pageCount = advanced ? Math.max(1, Math.min(3, parseInt(d.pages, 10) || 3)) : 1;
+  var seen = {};
+  var merged = [];
+  for (var page = 1; page <= pageCount; page++) {
+    var url = 'https://api.themoviedb.org/3/search/tv?api_key=' + getTmdbKey() +
+      '&query=' + encodeURIComponent(query) + '&include_adult=false&page=' + page +
+      (year ? '&first_air_date_year=' + encodeURIComponent(year) : '');
+    var data = fetchJson_(url);
+    (data.results || []).forEach(function(r) {
+      if (!r.id || seen[r.id]) return;
+      seen[r.id] = true;
+      merged.push({
+        id: r.id,
+        name: r.name,
+        original_name: r.original_name || '',
+        year: (r.first_air_date || '').slice(0, 4),
+        poster_path: r.poster_path || '',
+        overview: r.overview || ''
+      });
+    });
+    if (!advanced || page >= Number(data.total_pages || 1)) break;
+  }
+  return jsonOut_({ results: merged.slice(0, advanced ? 30 : 7) });
 }
 
 function doGetTvDetails_(d) {
@@ -1231,22 +1417,26 @@ function doGetTvDetails_(d) {
 }
 
 function doSaveTvRating_(d, username) {
-  var tab = getOrCreateSheet_(TV_SHEET_NAME, TV_HEADER);
-  var rowObj = tvPayloadToSheetRow_(d, username, {});
-  var rows = findExistingRows_(tab, TV_HEADER, rowObj, function(r) {
-    return String(r.user || '').toLowerCase() + '|' + tvGroupKey_(r);
+  return withDocumentLock_(function() {
+    var tab = getOrCreateSheet_(TV_SHEET_NAME, TV_HEADER);
+    var rowObj = tvPayloadToSheetRow_(d, username, {});
+    var rows = findExistingRows_(tab, TV_HEADER, rowObj, function(r) {
+      return String(r.user || '').toLowerCase() + '|' + tvGroupKey_(r);
+    });
+    if (rows.length) {
+      var existing = objectAtSheetRow_(tab, rows[0]);
+      rowObj = tvPayloadToSheetRow_(d, username, existing);
+      tab.getRange(rows[0], 1, 1, TV_HEADER.length).setValues([rowForHeader_(TV_HEADER, rowObj)]);
+      deleteExtraRows_(tab, rows);
+    } else {
+      tab.appendRow(rowForHeader_(TV_HEADER, rowObj));
+    }
+    removeFutureTv_(rowObj, username);
+    var activityTitle=rowObj.seriesTitle||''; if(String(rowObj.entryType||'').toLowerCase()==='season'&&rowObj.seasonNumber) activityTitle+=' — Season '+rowObj.seasonNumber;
+    upsertRecentActivity_({activityKey:recentActivityKey_('tv',username,(rowObj.tmdbTvId||'')+'|'+(rowObj.entryType||'')+'|'+(rowObj.seasonNumber||''),activityTitle),user:username,category:'tv',title:activityTitle,score10:Number(rowObj.score10||0),displayDate:activityDisplayDate_(rowObj),sortDate:activityDateValue_(rowObj),updatedAt:rowObj.updatedAt||''});
+    rebuildTvSummary_();
+    return jsonOut_({ ok:true });
   });
-  if (rows.length) {
-    var existing = objectAtSheetRow_(tab, rows[0]);
-    rowObj = tvPayloadToSheetRow_(d, username, existing);
-    tab.getRange(rows[0], 1, 1, TV_HEADER.length).setValues([rowForHeader_(TV_HEADER, rowObj)]);
-    deleteExtraRows_(tab, rows);
-  } else {
-    tab.appendRow(rowForHeader_(TV_HEADER, rowObj));
-  }
-  removeFutureTv_(rowObj, username);
-  rebuildTvSummary_();
-  return jsonOut_({ ok:true });
 }
 
 function doGetTvRatings_(username) {
@@ -1267,12 +1457,16 @@ function doGetTvSummary_() {
       'Series':r.seriesTitle, 'Year':r.seriesYear, 'Type':r.entryType, 'Season':r.seasonNumber,
       'Season Name':r.seasonName, 'Episodes':r.episodeCount, 'Creator':r.creator,
       'Genre':r.genres, 'IMDb':r.imdb,
-      scores:[], userScores:{}
+      scores:[], rawScores:[], userScores:{}, userRawScores:{}
     };
     var score = parseFloat(r.score10);
     if (!isNaN(score) && r.user) {
       grouped[key].scores.push(score);
       grouped[key].userScores[summaryDisplayName_(r.user)] = score;
+      var rawScore = parseFloat(r.raw100);
+      if (isNaN(rawScore)) rawScore = score * 10;
+      grouped[key].rawScores.push(rawScore);
+      grouped[key].userRawScores[summaryDisplayName_(r.user)] = rawScore;
     }
   });
   return jsonOut_({ rows:Object.keys(grouped).map(function(key){ return grouped[key]; }) });
@@ -1313,6 +1507,25 @@ function futureTvPayloadToSheetRow_(d, username, existing) {
     genres:genres, imdb:d.imdb || existing.imdb || '', tmdbTvId:d.tmdbTvId || d.id || d['TMDB TV ID'] || existing.tmdbTvId || '',
     posterPath:d.posterPath || d.poster || d['Poster Path'] || existing.posterPath || '',
     createdAt:existing.createdAt || now, updatedAt:now
+  };
+}
+
+function futureTvToApiRow_(r, groupStats) {
+  var stats = groupStats[tvSeriesKey_(r)] || { scores: [] };
+  var scores = stats.scores || [];
+  var average = scores.length
+    ? Number((scores.reduce(function(a,b){ return a + b; }, 0) / scores.length).toFixed(1))
+    : '';
+  return {
+    'Series':r.seriesTitle,
+    'Year':r.seriesYear,
+    'Creator':r.creator,
+    'Genres':r.genres,
+    'IMDb':r.imdb,
+    'TMDB TV ID':r.tmdbTvId,
+    'Poster Path':r.posterPath,
+    'Group Average':average,
+    'Group Rating Count':scores.length
   };
 }
 
@@ -1358,9 +1571,8 @@ function doGetFutureTv_(username) {
   var rows = sheetObjects_(getExistingSheet_(FUTURE_TV_SHEET_NAME), FUTURE_TV_HEADER).filter(function(r) {
     return String(r.user || '').toLowerCase() === String(username || '').toLowerCase();
   });
-  return jsonOut_(rows.map(function(r) {
-    return {'Series':r.seriesTitle,'Year':r.seriesYear,'Creator':r.creator,'Genres':r.genres,'IMDb':r.imdb,'TMDB TV ID':r.tmdbTvId,'Poster Path':r.posterPath};
-  }));
+  var stats = tvGroupStats_();
+  return jsonOut_(rows.map(function(r) { return futureTvToApiRow_(r, stats); }));
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1368,17 +1580,40 @@ function doGetFutureTv_(username) {
 // ══════════════════════════════════════════════════════════════
 
 // ── SEARCH RESTAURANTS ────────────────────────────────────────
+function restaurantSearchCacheKey_(value) {
+  var digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, String(value || ''));
+  return 'restaurant_search_' + Utilities.base64EncodeWebSafe(digest).replace(/=+$/,'').slice(0, 40);
+}
+
+function restaurantSearchArea_(d) {
+  return {
+    city:String(d.city || '').trim().slice(0,80),
+    region:String(d.region || '').trim().slice(0,80),
+    country:String(d.country || '').trim().slice(0,80),
+    lat:Number(d.lat),
+    lng:Number(d.lng)
+  };
+}
+
+function restaurantSearchQuery_(query, area) {
+  return [String(query || '').trim(), 'restaurant', area.city, area.region, area.country]
+    .filter(function(part){ return !!part; }).join(' ');
+}
+
 function doSearchRestaurants_(d) {
-  var q   = d.query || '';
-  var lat = d.lat   || null;
-  var lng = d.lng   || null;
+  var q = String(d.query || '').trim();
+  if (!q) return jsonOut_({ results: [] });
+  var area = restaurantSearchArea_(d);
   var key = getPlacesKey();
+  var cache = CacheService.getScriptCache();
+  var cacheKey = restaurantSearchCacheKey_(JSON.stringify({q:q,area:area}));
+  var cached = cache.get(cacheKey);
+  if (cached) return jsonOut_(JSON.parse(cached));
 
   var url = 'https://maps.googleapis.com/maps/api/place/textsearch/json?' +
-            'query=' + encodeURIComponent(q + ' restaurant') +
-            '&type=restaurant' +
-            '&key=' + key;
-  if (lat && lng) url += '&location=' + lat + ',' + lng + '&radius=50000';
+            'query=' + encodeURIComponent(restaurantSearchQuery_(q, area)) +
+            '&type=restaurant&key=' + encodeURIComponent(key);
+  if (isFinite(area.lat) && isFinite(area.lng)) url += '&location=' + area.lat + ',' + area.lng + '&radius=50000';
 
   var data = fetchJson_(url);
   if (data.status && data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
@@ -1386,10 +1621,6 @@ function doSearchRestaurants_(d) {
   }
 
   var results = (data.results || []).slice(0, 8).map(function(r) {
-    var photo = '';
-    if (r.photos && r.photos.length > 0) {
-      photo = getPlacePhotoDataUrl_(r.photos[0].photo_reference, key);
-    }
     var parts   = (r.formatted_address || '').split(',');
     var city    = parts.length > 1 ? parts[parts.length - 2].trim() : '';
     var cuisine = (r.types || [])
@@ -1410,28 +1641,32 @@ function doSearchRestaurants_(d) {
       cuisine: cuisine,
       price:   price,
       rating:  r.rating ? String(r.rating) : '',
-      photo:   photo
+      photo:   ''
     };
   });
-
-  return jsonOut_({ results: results });
+  var response = { results: results };
+  cache.put(cacheKey, JSON.stringify(response), 120);
+  return jsonOut_(response);
 }
 
-function getPlacePhotoDataUrl_(photoReference, key) {
-  if (!photoReference) return '';
-  try {
-    var url = 'https://maps.googleapis.com/maps/api/place/photo?maxwidth=88' +
-              '&photo_reference=' + encodeURIComponent(photoReference) +
-              '&key=' + encodeURIComponent(key);
-    var res = UrlFetchApp.fetch(url, { muteHttpExceptions: true, followRedirects: true });
-    var code = res.getResponseCode();
-    if (code < 200 || code >= 300) return '';
-    var blob = res.getBlob();
-    var contentType = blob.getContentType() || 'image/jpeg';
-    return 'data:' + contentType + ';base64,' + Utilities.base64Encode(blob.getBytes());
-  } catch (e) {
-    return '';
+function doReverseGeocode_(d) {
+  var lat = Number(d.lat), lng = Number(d.lng);
+  if (!isFinite(lat) || !isFinite(lng)) throw new Error('A valid location is required.');
+  var url = 'https://maps.googleapis.com/maps/api/geocode/json?latlng=' + encodeURIComponent(lat + ',' + lng) + '&key=' + encodeURIComponent(getPlacesKey());
+  var data = fetchJson_(url);
+  if (data.status !== 'OK' || !data.results || !data.results.length) {
+    throw new Error('Google could not identify that location.');
   }
+  var components = data.results[0].address_components || [];
+  function component(types, preferShort) {
+    var found = components.filter(function(item){ return (item.types || []).some(function(type){ return types.indexOf(type) > -1; }); })[0];
+    return found ? (preferShort ? found.short_name : found.long_name) : '';
+  }
+  return jsonOut_({
+    city:component(['locality','postal_town','administrative_area_level_2'], false),
+    region:component(['administrative_area_level_1'], false),
+    country:component(['country'], false)
+  });
 }
 
 function restaurantToApiRow_(r) {
@@ -1497,28 +1732,31 @@ function restaurantPayloadToSheetRow_(d, username, existing) {
 
 // ── SAVE RESTAURANT RATING ────────────────────────────────────
 function doSaveRestaurantRating_(d, username) {
-  var tab = getOrCreateSheet_(RESTAURANTS_SHEET_NAME, RESTAURANTS_HEADER);
-  var rowObj = restaurantPayloadToSheetRow_(d, username, {});
-  var existingRows = findExistingRows_(tab, RESTAURANTS_HEADER, rowObj, function(r) {
-    return categoryKey_(r.user, r.placeId, r.name, r.address);
-  });
-  if (!existingRows.length) {
-    existingRows = findExistingRows_(tab, RESTAURANTS_HEADER, rowObj, function(r) {
-      return categoryKey_(r.user, '', r.name, r.address);
+  return withDocumentLock_(function() {
+    var tab = getOrCreateSheet_(RESTAURANTS_SHEET_NAME, RESTAURANTS_HEADER);
+    var rowObj = restaurantPayloadToSheetRow_(d, username, {});
+    var existingRows = findExistingRows_(tab, RESTAURANTS_HEADER, rowObj, function(r) {
+      return categoryKey_(r.user, r.placeId, r.name, r.address);
     });
-  }
-  var existingRow = existingRows.length ? existingRows[0] : -1;
-  if (existingRow > -1) {
-    var existingObj = objectAtSheetRow_(tab, existingRow);
-    rowObj = restaurantPayloadToSheetRow_(d, username, existingObj);
-    tab.getRange(existingRow, 1, 1, RESTAURANTS_HEADER.length).setValues([rowForHeader_(RESTAURANTS_HEADER, rowObj)]);
-    deleteExtraRows_(tab, existingRows);
-  } else {
-    tab.appendRow(rowForHeader_(RESTAURANTS_HEADER, rowObj));
-  }
-  removeFutureRestaurant_(rowObj, username);
-  rebuildRestaurantSummary_();
-  return jsonOut_({ ok: true });
+    if (!existingRows.length) {
+      existingRows = findExistingRows_(tab, RESTAURANTS_HEADER, rowObj, function(r) {
+        return categoryKey_(r.user, '', r.name, r.address);
+      });
+    }
+    var existingRow = existingRows.length ? existingRows[0] : -1;
+    if (existingRow > -1) {
+      var existingObj = objectAtSheetRow_(tab, existingRow);
+      rowObj = restaurantPayloadToSheetRow_(d, username, existingObj);
+      tab.getRange(existingRow, 1, 1, RESTAURANTS_HEADER.length).setValues([rowForHeader_(RESTAURANTS_HEADER, rowObj)]);
+      deleteExtraRows_(tab, existingRows);
+    } else {
+      tab.appendRow(rowForHeader_(RESTAURANTS_HEADER, rowObj));
+    }
+    removeFutureRestaurant_(rowObj, username);
+    upsertRecentActivity_({activityKey:recentActivityKey_('restaurant',username,rowObj.placeId,rowObj.name+'|'+rowObj.address),user:username,category:'restaurant',title:rowObj.name||'',score10:Number(rowObj.score10||0),displayDate:activityDisplayDate_(rowObj),sortDate:activityDateValue_(rowObj),updatedAt:rowObj.updatedAt||''});
+    rebuildRestaurantSummary_();
+    return jsonOut_({ ok: true });
+  });
 }
 
 // ── GET RESTAURANT RATINGS ────────────────────────────────────
@@ -1540,12 +1778,16 @@ function doGetRestaurantSummary_() {
   data.forEach(function(r) {
     var key = restaurantGroupKey_(r);
     if (!grouped[key]) {
-      grouped[key] = { Name: r.name, Address: r.address, scores: [], userScores: {} };
+      grouped[key] = { Name: r.name, Address: r.address, Cuisine: r.cuisine || '', Price: r.price || '', GoogleRating: r.googleRating || '', scores: [], rawScores: [], userScores: {}, userRawScores: {} };
     }
     var score = parseFloat(r.score10);
     if (!isNaN(score) && r.user) {
       grouped[key].scores.push(score);
       grouped[key].userScores[summaryDisplayName_(r.user)] = score;
+      var rawScore = parseFloat(r.raw100);
+      if (isNaN(rawScore)) rawScore = score * 10;
+      grouped[key].rawScores.push(rawScore);
+      grouped[key].userRawScores[summaryDisplayName_(r.user)] = rawScore;
     }
   });
   return jsonOut_({ rows: Object.keys(grouped).map(function(k){ return grouped[k]; }) });
@@ -1596,6 +1838,75 @@ function rebuildRestaurantSummary_() {
   return { sheet: RESTAURANTS_SUMMARY_SHEET_NAME, rows: rows.length, userColumns: userNames.map(summaryDisplayName_) };
 }
 
+
+// ── SECURE RATING DELETION ───────────────────────────────────
+function requireDeletePin_(d, username) {
+  var pin = String(d.pin || '').replace(/\D/g, '');
+  if (!/^\d{4}$/.test(pin) || !verifyUserPinValue_(username, pin)) throw new Error('Incorrect PIN.');
+}
+
+function deleteMatchingRows_(tab, header, matcher) {
+  if (!tab || tab.getLastRow() < 2) return 0;
+  var rows = sheetObjects_(tab, header);
+  var sheetRows = [];
+  rows.forEach(function(row, index) { if (matcher(row)) sheetRows.push(index + 2); });
+  sheetRows.sort(function(a, b){ return b - a; }).forEach(function(rowNumber){ tab.deleteRow(rowNumber); });
+  return sheetRows.length;
+}
+
+function doDeleteRating_(d, username) {
+  return withDocumentLock_(function() {
+    requireDeletePin_(d, username);
+    var target = { user: username, tmdbId: d.tmdbId, title: d.title, year: d.year };
+    var key = categoryKey_(target.user, target.tmdbId, target.title, target.year);
+    var fallback = categoryKey_(target.user, '', target.title, target.year);
+    var deleted = deleteMatchingRows_(getExistingSheet_(FILMS_SHEET_NAME), FILMS_HEADER, function(row) {
+      var rowKey = categoryKey_(row.user, row.tmdbId, row.title, row.year);
+      var rowFallback = categoryKey_(row.user, '', row.title, row.year);
+      return rowKey === key || rowFallback === fallback;
+    });
+    if (!deleted) return jsonOut_({ ok: false, error: 'Rating not found.' });
+    removeRecentActivity_(recentActivityKey_('film', username, target.tmdbId, String(target.title || '') + '|' + String(target.year || '')));
+    rebuildFilmSummary_();
+    return jsonOut_({ ok: true, deleted: deleted });
+  });
+}
+
+function doDeleteTvRating_(d, username) {
+  return withDocumentLock_(function() {
+    requireDeletePin_(d, username);
+    var target = tvPayloadToSheetRow_(d, username, {});
+    var targetKey = String(username || '').toLowerCase() + '|' + tvGroupKey_(target);
+    var deleted = deleteMatchingRows_(getExistingSheet_(TV_SHEET_NAME), TV_HEADER, function(row) {
+      return (String(row.user || '').toLowerCase() + '|' + tvGroupKey_(row)) === targetKey;
+    });
+    if (!deleted) return jsonOut_({ ok: false, error: 'Rating not found.' });
+    var activityTitle = target.seriesTitle || '';
+    if (String(target.entryType || '').toLowerCase() === 'season' && target.seasonNumber) activityTitle += ' — Season ' + target.seasonNumber;
+    removeRecentActivity_(recentActivityKey_('tv', username, (target.tmdbTvId || '') + '|' + (target.entryType || '') + '|' + (target.seasonNumber || ''), activityTitle));
+    rebuildTvSummary_();
+    return jsonOut_({ ok: true, deleted: deleted });
+  });
+}
+
+function doDeleteRestaurantRating_(d, username) {
+  return withDocumentLock_(function() {
+    requireDeletePin_(d, username);
+    var target = { user: username, placeId: d.placeId, name: d.name, address: d.address };
+    var key = categoryKey_(target.user, target.placeId, target.name, target.address);
+    var fallback = categoryKey_(target.user, '', target.name, target.address);
+    var deleted = deleteMatchingRows_(getExistingSheet_(RESTAURANTS_SHEET_NAME), RESTAURANTS_HEADER, function(row) {
+      var rowKey = categoryKey_(row.user, row.placeId, row.name, row.address);
+      var rowFallback = categoryKey_(row.user, '', row.name, row.address);
+      return rowKey === key || rowFallback === fallback;
+    });
+    if (!deleted) return jsonOut_({ ok: false, error: 'Rating not found.' });
+    removeRecentActivity_(recentActivityKey_('restaurant', username, target.placeId, String(target.name || '') + '|' + String(target.address || '')));
+    rebuildRestaurantSummary_();
+    return jsonOut_({ ok: true, deleted: deleted });
+  });
+}
+
 function setupActiveSheetTabs() {
   var filmDb = getOrCreateSheet_(FILMS_SHEET_NAME, FILMS_HEADER);
   var restaurantDb = getOrCreateSheet_(RESTAURANTS_SHEET_NAME, RESTAURANTS_HEADER);
@@ -1603,15 +1914,30 @@ function setupActiveSheetTabs() {
   var futureRestaurants = getOrCreateSheet_(FUTURE_RESTAURANTS_SHEET_NAME, FUTURE_RESTAURANTS_HEADER);
   var tvDb = getOrCreateSheet_(TV_SHEET_NAME, TV_HEADER);
   var futureTv = getOrCreateSheet_(FUTURE_TV_SHEET_NAME, FUTURE_TV_HEADER);
+  var filmRecommendations = getOrCreateSheet_(FILM_RECOMMENDATIONS_SHEET_NAME, FILM_RECOMMENDATIONS_HEADER);
+  var recommendationFeedback = getOrCreateSheet_(FILM_RECOMMENDATION_FEEDBACK_SHEET_NAME, FILM_RECOMMENDATION_FEEDBACK_HEADER);
+  var tvRecommendations = getOrCreateSheet_(TV_RECOMMENDATIONS_SHEET_NAME, GENERIC_RECOMMENDATIONS_HEADER);
+  var tvRecommendationFeedback = getOrCreateSheet_(TV_RECOMMENDATION_FEEDBACK_SHEET_NAME, GENERIC_RECOMMENDATION_FEEDBACK_HEADER);
+  var restaurantRecommendations = getOrCreateSheet_(RESTAURANT_RECOMMENDATIONS_SHEET_NAME, GENERIC_RECOMMENDATIONS_HEADER);
+  var restaurantRecommendationFeedback = getOrCreateSheet_(RESTAURANT_RECOMMENDATION_FEEDBACK_SHEET_NAME, GENERIC_RECOMMENDATION_FEEDBACK_HEADER);
+  var recentActivity = getOrCreateSheet_(RECENT_ACTIVITY_SHEET_NAME, RECENT_ACTIVITY_HEADER);
   formatSheetAsTable_(filmDb);
   formatSheetAsTable_(restaurantDb);
   formatSheetAsTable_(futureFilms);
   formatSheetAsTable_(futureRestaurants);
   formatSheetAsTable_(tvDb);
   formatSheetAsTable_(futureTv);
+  formatSheetAsTable_(filmRecommendations);
+  formatSheetAsTable_(recommendationFeedback);
+  formatSheetAsTable_(tvRecommendations);
+  formatSheetAsTable_(tvRecommendationFeedback);
+  formatSheetAsTable_(restaurantRecommendations);
+  formatSheetAsTable_(restaurantRecommendationFeedback);
+  formatSheetAsTable_(recentActivity);
   var filmSummary = rebuildFilmSummary_();
   var restaurantSummary = rebuildRestaurantSummary_();
   var tvSummary = rebuildTvSummary_();
+  var recentActivityCount = rebuildRecentActivity_();
   var result = {
     version: BACKEND_VERSION,
     databaseFilms: FILMS_SHEET_NAME,
@@ -1621,10 +1947,529 @@ function setupActiveSheetTabs() {
     futureFilms: FUTURE_FILMS_SHEET_NAME,
     futureRestaurants: FUTURE_RESTAURANTS_SHEET_NAME,
     databaseTv: TV_SHEET_NAME,
+    recentActivity: RECENT_ACTIVITY_SHEET_NAME,
+    recentActivityCount: recentActivityCount,
     summaryTv: tvSummary,
     futureTv: FUTURE_TV_SHEET_NAME,
+    filmRecommendations: FILM_RECOMMENDATIONS_SHEET_NAME,
+    recommendationFeedback: FILM_RECOMMENDATION_FEEDBACK_SHEET_NAME,
+    tvRecommendations: TV_RECOMMENDATIONS_SHEET_NAME,
+    tvRecommendationFeedback: TV_RECOMMENDATION_FEEDBACK_SHEET_NAME,
+    restaurantRecommendations: RESTAURANT_RECOMMENDATIONS_SHEET_NAME,
+    restaurantRecommendationFeedback: RESTAURANT_RECOMMENDATION_FEEDBACK_SHEET_NAME,
     usersTabKept: true
   };
   console.log(JSON.stringify(result, null, 2));
   return result;
 }
+
+// ══════════════════════════════════════════════════════════════
+//  FILM RECOMMENDATIONS — TMDB CANDIDATES + OPTIONAL AI JURY
+// ══════════════════════════════════════════════════════════════
+function doGetRecommendationSources_(username) {
+  var rows = sheetObjects_(getExistingSheet_(FILMS_SHEET_NAME), FILMS_HEADER)
+    .filter(function(r){ return String(r.user || '').toLowerCase() === String(username || '').toLowerCase(); })
+    .map(function(r){
+      return {
+        tmdbId: r.tmdbId || '', title: r.title || '', year: r.year || '', score10: Number(r.score10 || 0),
+        raw100: Number(r.raw100 || 0), grade: r.grade || '', genres: r.genres || '', posterPath: r.posterPath || '',
+        director: r.director || '', runtimeMinutes: r.runtimeMinutes || '', ratingType: filmRatingType_(r)
+      };
+    })
+    .sort(function(a,b){ return b.score10 - a.score10 || String(a.title).localeCompare(String(b.title)); });
+  return jsonOut_({ rows: rows });
+}
+
+function filmRatingType_(r) {
+  var categoryFields = ['plot','entertainment','acting','visuals','pacing','emotional'];
+  return categoryFields.some(function(k){ return r[k] !== '' && r[k] !== null && r[k] !== undefined; }) ? 'full' : 'quick';
+}
+
+function splitGenres_(value) {
+  if (Array.isArray(value)) return value.map(String).filter(Boolean);
+  return String(value || '').split(/\s*[·,|]\s*/).map(function(v){ return v.trim(); }).filter(Boolean);
+}
+
+
+function activityDateValue_(r) {
+  var raw=r.updatedAt||r.createdAt||r.date||'';
+  var d=raw instanceof Date?raw:new Date(raw);
+  return isNaN(d.getTime())?0:d.getTime();
+}
+function activityDisplayDate_(r) {
+  var raw=r.date||r.updatedAt||r.createdAt||'';
+  var d=raw instanceof Date?raw:new Date(raw);
+  if(isNaN(d.getTime())) return String(raw||'');
+  return Utilities.formatDate(d, Session.getScriptTimeZone()||'America/Chicago', 'MMM d, yyyy');
+}
+function recentActivityKey_(category, user, id, title) {
+  return [String(category||'').toLowerCase(),String(user||'').toLowerCase(),String(id||title||'').toLowerCase()].join('|');
+}
+function recentActivitySnapshotRows_() {
+  var tab=getExistingSheet_(RECENT_ACTIVITY_SHEET_NAME);
+  if(!tab || tab.getLastRow()<2) return [];
+  return sheetObjects_(tab,RECENT_ACTIVITY_HEADER).map(function(r){
+    return {user:r.user||'',category:r.category||'',title:r.title||'',score10:Number(r.score10||0),sortDate:Number(r.sortDate||0),displayDate:r.displayDate||''};
+  }).filter(function(r){ return r.user&&r.title&&!isNaN(r.score10); })
+    .sort(function(a,b){ return b.sortDate-a.sortDate; }).slice(0,15);
+}
+function writeRecentActivitySnapshot_() {
+  var rows=recentActivitySnapshotRows_();
+  PropertiesService.getScriptProperties().setProperty(RECENT_ACTIVITY_SNAPSHOT_PROPERTY,JSON.stringify(rows));
+  return rows.length;
+}
+function upsertRecentActivity_(row) {
+  var tab=getOrCreateSheet_(RECENT_ACTIVITY_SHEET_NAME,RECENT_ACTIVITY_HEADER);
+  var key=String(row.activityKey||'');
+  if(!key) return;
+  var rows=findExistingRows_(tab,RECENT_ACTIVITY_HEADER,row,function(r){ return String(r.activityKey||''); });
+  if(rows.length){
+    tab.getRange(rows[0],1,1,RECENT_ACTIVITY_HEADER.length).setValues([rowForHeader_(RECENT_ACTIVITY_HEADER,row)]);
+    deleteExtraRows_(tab,rows);
+  } else {
+    tab.appendRow(rowForHeader_(RECENT_ACTIVITY_HEADER,row));
+  }
+  writeRecentActivitySnapshot_();
+}
+function removeRecentActivity_(activityKey) {
+  var tab=getExistingSheet_(RECENT_ACTIVITY_SHEET_NAME);
+  if(!tab) return;
+  deleteMatchingRows_(tab,RECENT_ACTIVITY_HEADER,function(r){ return String(r.activityKey||'')===String(activityKey||''); });
+  writeRecentActivitySnapshot_();
+}
+function rebuildRecentActivity_() {
+  var tab=getOrCreateSheet_(RECENT_ACTIVITY_SHEET_NAME,RECENT_ACTIVITY_HEADER);
+  if(tab.getLastRow()>1) tab.getRange(2,1,tab.getLastRow()-1,tab.getLastColumn()).clearContent();
+  var rows=[];
+  sheetObjects_(getExistingSheet_(FILMS_SHEET_NAME),FILMS_HEADER).forEach(function(r){ rows.push({activityKey:recentActivityKey_('film',r.user,r.tmdbId,r.title+'|'+r.year),user:r.user||'',category:'film',title:r.title||'',score10:Number(r.score10||0),displayDate:activityDisplayDate_(r),sortDate:activityDateValue_(r),updatedAt:r.updatedAt||r.createdAt||''}); });
+  sheetObjects_(getExistingSheet_(TV_SHEET_NAME),TV_HEADER).forEach(function(r){ var title=r.seriesTitle||''; if(String(r.entryType||'').toLowerCase()==='season'&&r.seasonNumber) title+=' — Season '+r.seasonNumber; rows.push({activityKey:recentActivityKey_('tv',r.user,(r.tmdbTvId||'')+'|'+(r.entryType||'')+'|'+(r.seasonNumber||''),title),user:r.user||'',category:'tv',title:title,score10:Number(r.score10||0),displayDate:activityDisplayDate_(r),sortDate:activityDateValue_(r),updatedAt:r.updatedAt||r.createdAt||''}); });
+  sheetObjects_(getExistingSheet_(RESTAURANTS_SHEET_NAME),RESTAURANTS_HEADER).forEach(function(r){ rows.push({activityKey:recentActivityKey_('restaurant',r.user,r.placeId,r.name+'|'+r.address),user:r.user||'',category:'restaurant',title:r.name||'',score10:Number(r.score10||0),displayDate:activityDisplayDate_(r),sortDate:activityDateValue_(r),updatedAt:r.updatedAt||r.createdAt||''}); });
+  rows=rows.filter(function(r){ return r.user&&r.title&&!isNaN(r.score10); });
+  if(rows.length) tab.getRange(2,1,rows.length,RECENT_ACTIVITY_HEADER.length).setValues(rows.map(function(r){ return rowForHeader_(RECENT_ACTIVITY_HEADER,r); }));
+  formatSheetAsTable_(tab);
+  writeRecentActivitySnapshot_();
+  return rows.length;
+}
+function doGetRecentActivity_() {
+  var raw=PropertiesService.getScriptProperties().getProperty(RECENT_ACTIVITY_SNAPSHOT_PROPERTY);
+  var rows=[];
+  if(raw){ try{ rows=JSON.parse(raw)||[]; }catch(e){ rows=[]; } }
+  return jsonOut_({rows:rows,snapshot:true});
+}
+
+function normalizedScore100_(r) {
+  var raw = parseFloat(r.raw100);
+  if (!isNaN(raw) && raw >= 0) return raw;
+  var ten = parseFloat(r.score10);
+  return isNaN(ten) ? 0 : ten * 10;
+}
+
+function buildFilmTasteProfile_(username) {
+  var rows = sheetObjects_(getExistingSheet_(FILMS_SHEET_NAME), FILMS_HEADER)
+    .filter(function(r){ return String(r.user || '').toLowerCase() === String(username || '').toLowerCase(); });
+  var genre = {}, director = {}, decade = {}, runtime = { short:[], medium:[], long:[] };
+  var fullCount = 0, quickCount = 0;
+  rows.forEach(function(r){
+    var score = Number(r.score10 || 0);
+    splitGenres_(r.genres).forEach(function(g){
+      var k = String(g).toLowerCase(); if (!genre[k]) genre[k] = { name:g, scores:[] }; genre[k].scores.push(score);
+    });
+    if (r.director) { var d=String(r.director).toLowerCase(); if(!director[d]) director[d]={name:r.director,scores:[]}; director[d].scores.push(score); }
+    var y=parseInt(r.year,10); if(y){ var dec=Math.floor(y/10)*10; if(!decade[dec]) decade[dec]=[]; decade[dec].push(score); }
+    var mins=parseInt(r.runtimeMinutes,10); if(mins){ runtime[mins<100?'short':(mins<=140?'medium':'long')].push(score); }
+    if (filmRatingType_(r)==='full') fullCount++; else quickCount++;
+  });
+  function summarize(map){ return Object.keys(map).map(function(k){ var x=map[k], arr=x.scores||x; return {name:x.name||k, count:arr.length, average:Number((arr.reduce(function(a,b){return a+b;},0)/arr.length).toFixed(2))}; }).sort(function(a,b){return b.average-a.average || b.count-a.count;}); }
+  return {
+    ratingCount: rows.length, fullCount: fullCount, quickCount: quickCount,
+    topGenres: summarize(genre).slice(0,8), lowGenres: summarize(genre).slice().sort(function(a,b){return a.average-b.average || b.count-a.count;}).slice(0,5),
+    topDirectors: summarize(director).filter(function(x){return x.count>=1;}).slice(0,6),
+    topDecades: summarize(decade).slice(0,5), runtimePreferences: summarize(runtime).filter(function(x){return x.count;})
+  };
+}
+
+function sourceFilmRatingContext_(username, tmdbId) {
+  var rows = sheetObjects_(getExistingSheet_(FILMS_SHEET_NAME), FILMS_HEADER);
+  var userKey = String(username || '').toLowerCase();
+  var row = rows.filter(function(r){
+    return String(r.user || '').toLowerCase() === userKey && String(r.tmdbId || '') === String(tmdbId || '');
+  })[0];
+  if (!row) return null;
+  return {
+    score10:Number(row.score10 || 0), raw100:normalizedScore100_(row), ratingType:filmRatingType_(row),
+    plot:row.plot, entertainment:row.entertainment, acting:row.acting, visuals:row.visuals,
+    pacing:row.pacing, emotional:row.emotional,
+    plotNotes:row.plotNotes || '', entNotes:row.entNotes || '', actingNotes:row.actingNotes || '',
+    visualsNotes:row.visualsNotes || '', pacingNotes:row.pacingNotes || '', emotionalNotes:row.emotionalNotes || '',
+    overallNotes:row.overallNotes || '', director:row.director || '', genres:splitGenres_(row.genres), runtimeMinutes:row.runtimeMinutes || ''
+  };
+}
+
+function tmdbMovieDetailsForRecommendation_(id) {
+  var url = 'https://api.themoviedb.org/3/movie/' + encodeURIComponent(id) + '?api_key=' + getTmdbKey() + '&append_to_response=keywords,credits';
+  return fetchJson_(url);
+}
+
+function ratedAndWishlistIds_(username) {
+  var rated={}, wished={};
+  sheetObjects_(getExistingSheet_(FILMS_SHEET_NAME), FILMS_HEADER).forEach(function(r){
+    if(String(r.user||'').toLowerCase()===String(username).toLowerCase() && r.tmdbId) rated[String(r.tmdbId)]=r;
+  });
+  sheetObjects_(getExistingSheet_(FUTURE_FILMS_SHEET_NAME), FUTURE_FILMS_HEADER).forEach(function(r){
+    if(String(r.user||'').toLowerCase()===String(username).toLowerCase() && r.tmdbId) wished[String(r.tmdbId)]=r;
+  });
+  return {rated:rated,wished:wished};
+}
+
+function recommendationRole_(index, style) {
+  var normal=['Best Overall Match','Closest Match','Hidden Gem','Something Different','Wildcard'];
+  var hidden=['Hidden Gem','Underseen Match','Critic Pick','Deep Cut','Wildcard'];
+  var different=['Taste Expansion','Genre Stretch','Unexpected Match','Adjacent Pick','Wildcard'];
+  return ((style==='hidden'?hidden:(style==='different'?different:normal))[index] || 'Recommendation');
+}
+
+function compactFilmHistoryForAi_(username) {
+  return sheetObjects_(getExistingSheet_(FILMS_SHEET_NAME), FILMS_HEADER)
+    .filter(function(r){return String(r.user||'').toLowerCase()===String(username||'').toLowerCase();})
+    .sort(function(a,b){return Number(b.score10||0)-Number(a.score10||0);})
+    .slice(0,80)
+    .map(function(r){return {
+      title:r.title||'', year:r.year||'', score10:Number(r.score10||0), ratingType:filmRatingType_(r),
+      genres:splitGenres_(r.genres), director:r.director||'', runtimeMinutes:r.runtimeMinutes||'',
+      categories:filmRatingType_(r)==='full'?{
+        plot:r.plot, entertainment:r.entertainment, acting:r.acting, visuals:r.visuals, pacing:r.pacing, emotional:r.emotional
+      }:null,
+      notes:[r.plotNotes,r.entNotes,r.actingNotes,r.visualsNotes,r.pacingNotes,r.emotionalNotes,r.overallNotes].filter(Boolean).join(' | ').slice(0,700)
+    };});
+}
+
+
+function normalizeGroupMembers_(requested, username) {
+  var valid={};getUsers_().forEach(function(u){valid[String(u.name||'').toLowerCase()]=u.name;});
+  var out=[],seen={};
+  [username].concat(Array.isArray(requested)?requested:[]).forEach(function(name){var key=String(name||'').trim().toLowerCase();if(key&&valid[key]&&!seen[key]){seen[key]=true;out.push(valid[key]);}});
+  return out;
+}
+function groupFilmStates_(members) {
+  var rated={},wished={},memberKeys={};members.forEach(function(n){memberKeys[String(n).toLowerCase()]=true;});
+  sheetObjects_(getExistingSheet_(FILMS_SHEET_NAME),FILMS_HEADER).forEach(function(r){if(memberKeys[String(r.user||'').toLowerCase()]&&r.tmdbId){var id=String(r.tmdbId);if(!rated[id])rated[id]={title:r.title||'',year:r.year||'',users:[],scores:[]};rated[id].users.push(r.user);rated[id].scores.push(Number(r.score10||0));}});
+  Object.keys(rated).forEach(function(id){var x=rated[id],sum=x.scores.reduce(function(a,b){return a+b;},0);x.score10=x.scores.length?sum/x.scores.length:0;});
+  sheetObjects_(getExistingSheet_(FUTURE_FILMS_SHEET_NAME),FUTURE_FILMS_HEADER).forEach(function(r){if(memberKeys[String(r.user||'').toLowerCase()]&&r.tmdbId){var id=String(r.tmdbId);if(!wished[id])wished[id]={title:r.title||'',year:r.year||'',users:[]};wished[id].users.push(r.user);}});
+  return {rated:rated,wished:wished};
+}
+function groupFilmContext_(members) {
+  var total=0,people=members.map(function(name){var profile=buildFilmTasteProfile_(name),history=compactFilmHistoryForAi_(name).slice(0,35);total+=profile.ratingCount;return {name:name,profile:profile,representativeRatings:history};});
+  return {members:people,ratingCount:total,memberCount:members.length};
+}
+function callGeminiGroupMovieGenerator_(groupContext,payload,states) {
+  var key=getGeminiKey_(),diagnostic={attempted:false,success:false,error:key?'':'GEMINI_API_KEY is not configured.',httpStatus:'',model:'gemini-3.6-flash'};
+  if(!key)return {suggestions:null,diagnostic:diagnostic};diagnostic.attempted=true;
+  var pool=payload.pool||'new',excluded=[];
+  Object.keys(states.rated).forEach(function(id){if(pool==='new'||pool==='notWishlist')excluded.push({tmdbId:id,title:states.rated[id].title,reason:'already rated by '+states.rated[id].users.join(', ')});});
+  if(pool==='notWishlist')Object.keys(states.wished).forEach(function(id){excluded.push({tmdbId:id,title:states.wished[id].title,reason:'already wishlisted by '+states.wished[id].users.join(', ')});});
+  (payload.excludeTmdbIds||[]).forEach(function(id){excluded.push({tmdbId:String(id),reason:'already shown in this session'});});
+  var prompt={instruction:'You are a group movie matchmaker. Generate exactly 15 real feature films that create the strongest shared viewing experience for all selected people. Treat every person as important; do not simply follow the person with the most ratings. Identify overlapping tastes, avoid strong individual dislikes, and use thoughtful compromise when tastes differ. Respect every exclusion. Return strict JSON only with accurate title and release year for TMDB validation.',mode:'Group Matchmaker',style:payload.style||'balanced',pool:pool,group:groupContext.members,exclusions:excluded.slice(0,220),outputSchema:{recommendations:[{title:'exact movie title',year:'four-digit release year',role:'Best Shared Pick, Strong Match for Everyone, Slightly Adventurous, or Wildcard',explanation:'one or two specific sentences explaining why this works for the selected group and naming relevant members when useful'}]}};
+  try{var url='https://generativelanguage.googleapis.com/v1beta/models/'+diagnostic.model+':generateContent?key='+encodeURIComponent(key),res=UrlFetchApp.fetch(url,{method:'post',contentType:'application/json',muteHttpExceptions:true,payload:JSON.stringify({contents:[{parts:[{text:JSON.stringify(prompt)}]}],generationConfig:{responseMimeType:'application/json'}})});diagnostic.httpStatus=res.getResponseCode();if(res.getResponseCode()<200||res.getResponseCode()>=300){diagnostic.error='Gemini returned HTTP '+res.getResponseCode()+': '+String(res.getContentText()||'').slice(0,220);return {suggestions:null,diagnostic:diagnostic};}var data=JSON.parse(res.getContentText()),text=data.candidates&&data.candidates[0]&&data.candidates[0].content&&data.candidates[0].content.parts&&data.candidates[0].content.parts[0].text;if(!text){diagnostic.error='Gemini returned no recommendation JSON.';return {suggestions:null,diagnostic:diagnostic};}var parsed=JSON.parse(text),suggestions=parsed&&parsed.recommendations;if(!Array.isArray(suggestions))throw new Error('Gemini response did not match the required schema.');suggestions=suggestions.filter(function(x){return x&&x.title;}).slice(0,15);diagnostic.success=!!suggestions.length;diagnostic.error=diagnostic.success?'':'Gemini returned no usable movie titles.';return {suggestions:diagnostic.success?suggestions:null,diagnostic:diagnostic};}catch(e){diagnostic.error='Gemini request failed: '+e.message;return {suggestions:null,diagnostic:diagnostic};}
+}
+
+function callGeminiMovieGenerator_(source, sourceRating, profile, payload, username, states) {
+  var key=getGeminiKey_();
+  var diagnostic={attempted:false,success:false,error:key?'':'GEMINI_API_KEY is not configured.',httpStatus:'',model:'gemini-3.6-flash'};
+  if(!key) return {suggestions:null,diagnostic:diagnostic};
+  diagnostic.attempted=true;
+  var pool=payload.pool||'new';
+  var excludedIds={};
+  (payload.excludeTmdbIds||[]).forEach(function(id){excludedIds[String(id)]=true;});
+  var excluded=[];
+  Object.keys(states.rated).forEach(function(id){
+    if(pool==='new'||pool==='notWishlist') excluded.push({tmdbId:id,title:states.rated[id].title||'',year:states.rated[id].year||'',reason:'already rated'});
+  });
+  if(pool==='notWishlist') Object.keys(states.wished).forEach(function(id){excluded.push({tmdbId:id,title:states.wished[id].title||'',year:states.wished[id].year||'',reason:'already wishlisted'});});
+  Object.keys(excludedIds).forEach(function(id){excluded.push({tmdbId:id,reason:'already shown in this session'});});
+  var prompt={
+    instruction:'You are the primary movie recommendation engine. Generate exactly 15 real feature films. Do not merely list broad genre matches. Recommend based on viewing experience, themes, tone, structure, atmosphere, pacing, emotional payoff, scale, and the user\'s actual rating behavior. Respect every exclusion. Provide title and release year accurately enough for TMDB validation. Return strict JSON only. Do not include television series, shorts, documentaries unless clearly appropriate, unreleased rumors, or invented films.',
+    mode:payload.sourceMode==='taste'?'Based on the user\'s overall taste':'Based on a source movie plus the user\'s taste',
+    style:payload.style||'balanced', pool:pool,
+    source:source?{title:source.title,year:String(source.release_date||'').slice(0,4),overview:source.overview||'',genres:(source.genres||[]).map(function(g){return g.name;}),keywords:(source.keywords&&(source.keywords.keywords||source.keywords.results)||[]).slice(0,15).map(function(k){return k.name;}),director:((source.credits&&source.credits.crew||[]).filter(function(c){return c.job==='Director';})[0]||{}).name||'',runtime:source.runtime||''}:null,
+    sourceUserRating:sourceRating,
+    tasteProfile:profile,
+    representativeRatingHistory:compactFilmHistoryForAi_(username),
+    exclusions:excluded.slice(0,180),
+    outputSchema:{recommendations:[{title:'exact movie title',year:'four-digit release year',role:'short recommendation label',explanation:'one or two specific sentences tied to the source rating or taste profile'}]}
+  };
+  try{
+    var url='https://generativelanguage.googleapis.com/v1beta/models/'+diagnostic.model+':generateContent?key='+encodeURIComponent(key);
+    var res=UrlFetchApp.fetch(url,{method:'post',contentType:'application/json',muteHttpExceptions:true,payload:JSON.stringify({contents:[{parts:[{text:JSON.stringify(prompt)}]}],generationConfig:{responseMimeType:'application/json'}})});
+    diagnostic.httpStatus=res.getResponseCode();
+    if(res.getResponseCode()<200||res.getResponseCode()>=300){diagnostic.error='Gemini returned HTTP '+res.getResponseCode()+': '+String(res.getContentText()||'').slice(0,220);return {suggestions:null,diagnostic:diagnostic};}
+    var data=JSON.parse(res.getContentText());
+    var text=data.candidates&&data.candidates[0]&&data.candidates[0].content&&data.candidates[0].content.parts&&data.candidates[0].content.parts[0].text;
+    if(!text){diagnostic.error='Gemini returned no recommendation JSON.';return {suggestions:null,diagnostic:diagnostic};}
+    var parsed=JSON.parse(text), suggestions=parsed&&parsed.recommendations;
+    if(!Array.isArray(suggestions)){diagnostic.error='Gemini response did not match the required schema.';return {suggestions:null,diagnostic:diagnostic};}
+    suggestions=suggestions.filter(function(x){return x&&x.title;}).slice(0,15);
+    if(!suggestions.length){diagnostic.error='Gemini returned no usable movie titles.';return {suggestions:null,diagnostic:diagnostic};}
+    diagnostic.success=true;diagnostic.error='';
+    return {suggestions:suggestions,diagnostic:diagnostic};
+  }catch(e){diagnostic.error='Gemini request failed: '+e.message;return {suggestions:null,diagnostic:diagnostic};}
+}
+
+function normalizeMovieTitle_(value) {
+  return String(value||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+}
+
+function chooseTmdbSearchMatch_(suggestion, results) {
+  var wanted=normalizeMovieTitle_(suggestion.title), wantedYear=parseInt(suggestion.year,10)||0;
+  var ranked=(results||[]).map(function(r){
+    var title=normalizeMovieTitle_(r.title||r.original_title), year=parseInt(String(r.release_date||'').slice(0,4),10)||0, score=0;
+    if(title===wanted) score+=100;
+    else if(title.indexOf(wanted)>-1||wanted.indexOf(title)>-1) score+=55;
+    if(wantedYear&&year===wantedYear) score+=35;
+    else if(wantedYear&&year&&Math.abs(year-wantedYear)<=1) score+=15;
+    score+=Math.min(12,Math.log(Math.max(1,Number(r.vote_count||0))));
+    return {movie:r,score:score};
+  }).sort(function(a,b){return b.score-a.score;});
+  return ranked.length&&ranked[0].score>=55?ranked[0].movie:null;
+}
+
+function validateGeminiSuggestionsWithTmdb_(suggestions, payload, username, states) {
+  var requests=suggestions.map(function(s){
+    return {url:'https://api.themoviedb.org/3/search/movie?api_key='+encodeURIComponent(getTmdbKey())+'&query='+encodeURIComponent(s.title)+(s.year?'&year='+encodeURIComponent(s.year):'')+'&include_adult=false',muteHttpExceptions:true};
+  });
+  var responses=UrlFetchApp.fetchAll(requests), pool=payload.pool||'new', excluded={};
+  (payload.excludeTmdbIds||[]).forEach(function(id){excluded[String(id)]=true;});
+  var valid=[], seen={};
+  responses.forEach(function(res,i){
+    if(res.getResponseCode()<200||res.getResponseCode()>=300)return;
+    var data;try{data=JSON.parse(res.getContentText());}catch(e){return;}
+    var match=chooseTmdbSearchMatch_(suggestions[i],data.results||[]);if(!match)return;
+    var id=String(match.id);if(seen[id]||excluded[id])return;
+    if(pool==='new'&&states.rated[id])return;
+    if(pool==='notWishlist'&&(states.rated[id]||states.wished[id]))return;
+    seen[id]=true;
+    match._aiRole=suggestions[i].role||'';match._aiExplanation=suggestions[i].explanation||'';
+    match._rated=states.rated[id]||null;match._wishlisted=!!states.wished[id];
+    valid.push(match);
+  });
+  return valid.slice(0,10);
+}
+
+function hydrateRecommendationMovies_(candidates) {
+  var requests=candidates.map(function(c){return {url:'https://api.themoviedb.org/3/movie/'+encodeURIComponent(c.id)+'?api_key='+encodeURIComponent(getTmdbKey()),muteHttpExceptions:true};});
+  var responses=UrlFetchApp.fetchAll(requests);
+  return candidates.map(function(c,i){
+    var details={};try{if(responses[i].getResponseCode()>=200&&responses[i].getResponseCode()<300)details=JSON.parse(responses[i].getContentText());}catch(e){}
+    return {tmdbId:c.id,title:c.title||details.title||'',year:String(c.release_date||details.release_date||'').slice(0,4),posterPath:c.poster_path||details.poster_path||'',genres:(details.genres||[]).map(function(g){return g.name;}),runtimeMinutes:details.runtime||'',tmdbRating:Number(c.vote_average||details.vote_average||0).toFixed(1),overview:c.overview||details.overview||'',score:0,ratedScore:c._rated?Number(c._rated.score10||0):'',wishlisted:!!c._wishlisted,role:c._aiRole||'',explanation:c._aiExplanation||''};
+  });
+}
+
+function deterministicFallbackCandidates_(source, payload, username, states) {
+  var list=[];
+  if(source){
+    var data=fetchJson_('https://api.themoviedb.org/3/movie/'+encodeURIComponent(source.id)+'/recommendations?api_key='+encodeURIComponent(getTmdbKey()));
+    list=(data.results||[]);
+  }else{
+    var data2=fetchJson_('https://api.themoviedb.org/3/discover/movie?api_key='+encodeURIComponent(getTmdbKey())+'&sort_by=vote_average.desc&vote_count.gte=1200&include_adult=false');
+    list=(data2.results||[]);
+  }
+  var pool=payload.pool||'new', excluded={};(payload.excludeTmdbIds||[]).forEach(function(id){excluded[String(id)]=true;});
+  return list.filter(function(c){var id=String(c.id);if(excluded[id])return false;if(pool==='new'&&states.rated[id])return false;if(pool==='notWishlist'&&(states.rated[id]||states.wished[id]))return false;c._rated=states.rated[id]||null;c._wishlisted=!!states.wished[id];return true;}).slice(0,10);
+}
+
+function persistRecommendations_(username, payload, source, recommendations, backups, recommendationId) {
+  var tab=getOrCreateSheet_(FILM_RECOMMENDATIONS_SHEET_NAME,FILM_RECOMMENDATIONS_HEADER), now=new Date().toISOString();
+  var rows=(recommendations||[]).map(function(r,i){ return rowForHeader_(FILM_RECOMMENDATIONS_HEADER,{
+    recommendationId:recommendationId,user:username,sourceMode:payload.sourceMode||'movie',sourceTmdbId:source?source.id:'',sourceTitle:source?source.title:'',pool:payload.pool||'new',style:payload.style||'balanced',
+    recommendedTmdbId:r.tmdbId,recommendedTitle:r.title,rank:i+1,role:r.role,explanation:r.explanation,score:r.score,posterPath:r.posterPath,year:r.year,genres:(r.genres||[]).join(' · '),runtimeMinutes:r.runtimeMinutes,createdAt:now,status:'shown',groupMembers:(payload.groupMembers||[]).join(' · ')
+  }); });
+  if (rows.length) tab.getRange(tab.getLastRow()+1, 1, rows.length, FILM_RECOMMENDATIONS_HEADER.length).setValues(rows);
+  CacheService.getScriptCache().put('rec_backups_'+recommendationId,JSON.stringify(backups),21600);
+}
+
+function doGenerateFilmRecommendations_(payload, username) {
+  payload=payload||{};
+  var started=Date.now(),isGroup=payload.groupMode===true||payload.sourceMode==='group',mode=isGroup?'group':(payload.sourceMode==='taste'?'taste':'movie'),source=null,sourceRating=null,profile,states,ai,members=[];
+  if(isGroup){
+    members=normalizeGroupMembers_(payload.groupMembers,username);
+    if(members.length<2)throw new Error('Add at least one other person to use Group Matchmaker.');
+    payload.groupMembers=members;
+    profile=groupFilmContext_(members);
+    states=groupFilmStates_(members);
+    ai=callGeminiGroupMovieGenerator_(profile,payload,states);
+  }else{
+    if(mode==='movie'){
+      if(!payload.sourceTmdbId)throw new Error('Choose a source movie.');
+      source=tmdbMovieDetailsForRecommendation_(payload.sourceTmdbId);
+      sourceRating=sourceFilmRatingContext_(username,payload.sourceTmdbId);
+    }
+    profile=buildFilmTasteProfile_(username);states=ratedAndWishlistIds_(username);
+    ai=callGeminiMovieGenerator_(source,sourceRating,profile,payload,username,states);
+  }
+  var candidates=ai.suggestions?validateGeminiSuggestionsWithTmdb_(ai.suggestions,payload,username,states):[];
+  if(candidates.length<5){
+    var fallback=deterministicFallbackCandidates_(source,payload,username,states),seen={};
+    candidates.forEach(function(c){seen[String(c.id)]=true;});
+    fallback.forEach(function(c){if(candidates.length<10&&!seen[String(c.id)]){seen[String(c.id)]=true;candidates.push(c);}});
+  }
+  if(candidates.length<5)throw new Error('Not enough eligible movies were found. Try a broader recommendation pool.');
+  candidates=candidates.slice(0,10);
+  var hydrated=hydrateRecommendationMovies_(candidates);
+  hydrated.forEach(function(r,i){r.role=r.role||recommendationRole_(i,payload.style);r.explanation=r.explanation||(isGroup?'This is one of the strongest validated shared matches for the selected group.':'This is one of the strongest validated matches for your selected recommendation mode.');});
+  var recs=hydrated.slice(0,5),backups=hydrated.slice(5,10),recommendationId=Utilities.getUuid();persistRecommendations_(username,payload,source,recs,backups,recommendationId);
+  return jsonOut_({recommendationId:recommendationId,source:source?{tmdbId:source.id,title:source.title}:null,profileSummary:isGroup?{ratingCount:profile.ratingCount,memberCount:profile.memberCount,members:members}:{ratingCount:profile.ratingCount,fullCount:profile.fullCount,quickCount:profile.quickCount},aiEnhanced:!!ai.diagnostic.success,recommendations:recs,diagnostics:{engine:ai.diagnostic.success?(isGroup?'Gemini Group Matchmaker':'Gemini-generated recommendations'):'Deterministic fallback',candidateCount:candidates.length,aiCandidateCount:ai.suggestions?ai.suggestions.length:0,validatedCount:candidates.length,backupCount:backups.length,aiAttempted:ai.diagnostic.attempted,aiHttpStatus:ai.diagnostic.httpStatus,aiError:ai.diagnostic.error||'',model:ai.diagnostic.model,elapsedMs:Date.now()-started}});
+}
+
+function doReplaceFilmRecommendation_(payload, username) {
+  var id=String(payload.recommendationId||''),currentId=String(payload.currentTmdbId||'');if(!id)throw new Error('Recommendation session is missing.');
+  var cache=CacheService.getScriptCache(),raw=cache.get('rec_backups_'+id),backups=raw?JSON.parse(raw):[];
+  if(!backups.length)return jsonOut_({exhausted:true});
+  var next=backups.shift();cache.put('rec_backups_'+id,JSON.stringify(backups),21600);
+  doRecordRecommendationFeedback_({recommendationId:id,recommendedTmdbId:currentId,action:'replaced'},username);
+  next.role=next.role||'Replacement Pick';
+  return jsonOut_({recommendation:next,remainingBackups:backups.length,exhausted:false});
+}
+
+function doRecordRecommendationFeedback_(payload, username) {
+  var action=String(payload.action||'').trim(); if(!action) throw new Error('Feedback action is required.');
+  var tab=getOrCreateSheet_(FILM_RECOMMENDATION_FEEDBACK_SHEET_NAME,FILM_RECOMMENDATION_FEEDBACK_HEADER);
+  tab.appendRow(rowForHeader_(FILM_RECOMMENDATION_FEEDBACK_HEADER,{recommendationId:payload.recommendationId||'',user:username,recommendedTmdbId:payload.recommendedTmdbId||'',action:action,createdAt:new Date().toISOString()}));
+  return jsonOut_({ok:true});
+}
+
+
+
+function genericRecommendationConfig_(kind) {
+  if (kind === 'tv') return {
+    category: 'tv', recommendationsSheet: TV_RECOMMENDATIONS_SHEET_NAME,
+    feedbackSheet: TV_RECOMMENDATION_FEEDBACK_SHEET_NAME
+  };
+  return {
+    category: 'restaurant', recommendationsSheet: RESTAURANT_RECOMMENDATIONS_SHEET_NAME,
+    feedbackSheet: RESTAURANT_RECOMMENDATION_FEEDBACK_SHEET_NAME
+  };
+}
+
+function persistGenericRecommendations_(kind, username, payload, source, items, recommendationId) {
+  var cfg=genericRecommendationConfig_(kind), tab=getOrCreateSheet_(cfg.recommendationsSheet,GENERIC_RECOMMENDATIONS_HEADER), now=new Date().toISOString();
+  var rows=(items||[]).map(function(r,i){
+    var itemId=kind==='tv'?r.tmdbTvId:r.placeId;
+    var title=kind==='tv'?r.title:r.name;
+    var yearOrCity=kind==='tv'?r.year:r.city;
+    var metadata=kind==='tv'?(Array.isArray(r.genres)?r.genres.join(' · '):String(r.genres||'')):[r.address,r.cuisine,r.price].filter(Boolean).join(' · ');
+    return rowForHeader_(GENERIC_RECOMMENDATIONS_HEADER,{
+      recommendationId:recommendationId,user:username,sourceMode:payload.sourceMode||'taste',sourceId:kind==='tv'?(source&&source.id||''):(source&&source.placeId||''),
+      sourceTitle:kind==='tv'?(source&&source.name||''):(source&&source.name||''),pool:payload.pool||'new',style:payload.style||'balanced',category:cfg.category,
+      recommendedId:itemId,recommendedTitle:title,rank:i+1,role:r.role||'',explanation:r.explanation||'',yearOrCity:yearOrCity||'',metadata:metadata,createdAt:now,status:i<5?'shown':'backup'
+    });
+  });
+  if (rows.length) tab.getRange(tab.getLastRow()+1, 1, rows.length, GENERIC_RECOMMENDATIONS_HEADER.length).setValues(rows);
+}
+
+function doRecordGenericRecommendationFeedback_(payload, username, kind) {
+  var action=String(payload.action||'').trim(); if(!action) throw new Error('Feedback action is required.');
+  var cfg=genericRecommendationConfig_(kind), tab=getOrCreateSheet_(cfg.feedbackSheet,GENERIC_RECOMMENDATION_FEEDBACK_HEADER);
+  tab.appendRow(rowForHeader_(GENERIC_RECOMMENDATION_FEEDBACK_HEADER,{
+    recommendationId:payload.recommendationId||'',user:username,category:cfg.category,recommendedId:payload.recommendedId||payload.currentId||'',action:action,createdAt:new Date().toISOString()
+  }));
+  return jsonOut_({ok:true});
+}
+
+function genericRecommendationLearningContext_(kind, username) {
+  var cfg=genericRecommendationConfig_(kind), recs=sheetObjects_(getExistingSheet_(cfg.recommendationsSheet),GENERIC_RECOMMENDATIONS_HEADER), feedback=sheetObjects_(getExistingSheet_(cfg.feedbackSheet),GENERIC_RECOMMENDATION_FEEDBACK_HEADER);
+  var titles={};
+  recs.forEach(function(r){if(String(r.user||'').toLowerCase()===String(username||'').toLowerCase())titles[String(r.recommendationId||'')+'|'+String(r.recommendedId||'')]=r.recommendedTitle||'';});
+  return feedback.filter(function(f){return String(f.user||'').toLowerCase()===String(username||'').toLowerCase();}).slice(-60).map(function(f){return {title:titles[String(f.recommendationId||'')+'|'+String(f.recommendedId||'')]||'',action:f.action||'',date:f.createdAt||''};});
+}
+
+// ══════════════════════════════════════════════════════════════
+//  TV + RESTAURANT RECOMMENDATIONS — GEMINI FIRST, API VALIDATED
+// ══════════════════════════════════════════════════════════════
+function doGetTvRecommendationSources_(username) {
+  var rows=sheetObjects_(getExistingSheet_(TV_SHEET_NAME),TV_HEADER)
+    .filter(function(r){return String(r.user||'').toLowerCase()===String(username||'').toLowerCase();})
+    .map(function(r){return {tmdbTvId:r.tmdbTvId||'',title:r.seriesTitle||'',year:r.seriesYear||'',score10:Number(r.score10||0),type:r.entryType||'season',season:r.seasonNumber||'',genres:r.genres||''};})
+    .sort(function(a,b){return b.score10-a.score10||String(a.title).localeCompare(String(b.title));});
+  var seen={};rows=rows.filter(function(r){var k=String(r.tmdbTvId||r.title).toLowerCase();if(seen[k])return false;seen[k]=true;return true;});
+  return jsonOut_({rows:rows});
+}
+function tvTasteContext_(username){
+  return sheetObjects_(getExistingSheet_(TV_SHEET_NAME),TV_HEADER).filter(function(r){return String(r.user||'').toLowerCase()===String(username||'').toLowerCase();}).sort(function(a,b){return Number(b.score10||0)-Number(a.score10||0);}).slice(0,70).map(function(r){return {title:r.seriesTitle,year:r.seriesYear,type:r.entryType,season:r.seasonNumber,score10:Number(r.score10||0),genres:splitGenres_(r.genres),categories:{plot:r.plot,entertainment:r.entertainment,acting:r.acting,visuals:r.visuals,pacing:r.pacing,emotional:r.emotional},notes:r.overallNotes||''};});
+}
+function tvStates_(username){var rated={},wished={};sheetObjects_(getExistingSheet_(TV_SHEET_NAME),TV_HEADER).forEach(function(r){if(String(r.user||'').toLowerCase()===String(username).toLowerCase()&&r.tmdbTvId)rated[String(r.tmdbTvId)]=r;});sheetObjects_(getExistingSheet_(FUTURE_TV_SHEET_NAME),FUTURE_TV_HEADER).forEach(function(r){if(String(r.user||'').toLowerCase()===String(username).toLowerCase()&&r.tmdbTvId)wished[String(r.tmdbTvId)]=r;});return {rated:rated,wished:wished};}
+function callGeminiGeneric_(kind,prompt){var key=getGeminiKey_(),model='gemini-3.6-flash',diag={attempted:false,success:false,error:key?'':'GEMINI_API_KEY is not configured.',model:model,httpStatus:''};if(!key)return {items:null,diagnostic:diag};diag.attempted=true;try{var res=UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent?key='+encodeURIComponent(key),{method:'post',contentType:'application/json',muteHttpExceptions:true,payload:JSON.stringify({contents:[{parts:[{text:JSON.stringify(prompt)}]}],generationConfig:{responseMimeType:'application/json'}})});diag.httpStatus=res.getResponseCode();if(res.getResponseCode()<200||res.getResponseCode()>=300){diag.error='Gemini returned HTTP '+res.getResponseCode()+': '+String(res.getContentText()||'').slice(0,220);return {items:null,diagnostic:diag};}var data=JSON.parse(res.getContentText()),text=data.candidates&&data.candidates[0]&&data.candidates[0].content&&data.candidates[0].content.parts&&data.candidates[0].content.parts[0].text,parsed=JSON.parse(text||'{}'),items=parsed.recommendations;if(!Array.isArray(items)||!items.length){diag.error='Gemini returned no usable '+kind+' recommendations.';return {items:null,diagnostic:diag};}diag.success=true;diag.error='';return {items:items.slice(0,15),diagnostic:diag};}catch(e){diag.error='Gemini request failed: '+e.message;return {items:null,diagnostic:diag};}}
+function doGenerateTvRecommendations_(payload,username){payload=payload||{};var states=tvStates_(username),source=null;if(payload.sourceMode!=='taste'){if(!payload.sourceTmdbId)throw new Error('Choose a source TV show.');source=fetchJson_('https://api.themoviedb.org/3/tv/'+encodeURIComponent(payload.sourceTmdbId)+'?api_key='+encodeURIComponent(getTmdbKey()));}
+  var exclusions=[];Object.keys(states.rated).forEach(function(id){if(payload.pool!=='all')exclusions.push({id:id,title:states.rated[id].seriesTitle,reason:'rated'});});if(payload.pool==='notWishlist')Object.keys(states.wished).forEach(function(id){exclusions.push({id:id,title:states.wished[id].seriesTitle,reason:'wishlisted'});});(payload.excludeIds||[]).forEach(function(id){exclusions.push({id:id,reason:'already shown'});});
+  var ai=callGeminiGeneric_('TV',{instruction:'Generate exactly 15 real television series recommendations. Use the user\'s actual ratings, category scores, notes, tone, pacing, themes, and viewing experience. Respect exclusions. Return strict JSON only.',mode:payload.sourceMode==='taste'?'overall taste':'source show plus taste',style:payload.style||'balanced',source:source?{title:source.name,year:String(source.first_air_date||'').slice(0,4),overview:source.overview,genres:(source.genres||[]).map(function(g){return g.name;})}:null,history:tvTasteContext_(username),recommendationFeedback:genericRecommendationLearningContext_('tv',username),exclusions:exclusions,outputSchema:{recommendations:[{title:'exact series title',year:'first air year',role:'short label',explanation:'specific reason'}]}});
+  if(!ai.items)throw new Error(ai.diagnostic.error||'TV recommendations could not be generated.');var req=ai.items.map(function(x){return {url:'https://api.themoviedb.org/3/search/tv?api_key='+encodeURIComponent(getTmdbKey())+'&query='+encodeURIComponent(x.title)+(x.year?'&first_air_date_year='+encodeURIComponent(x.year):''),muteHttpExceptions:true};}),resp=UrlFetchApp.fetchAll(req),seen={},valid=[];resp.forEach(function(r,i){if(r.getResponseCode()<200||r.getResponseCode()>=300)return;var d=JSON.parse(r.getContentText()),m=(d.results||[])[0];if(!m)return;var id=String(m.id);if(seen[id]||(payload.excludeIds||[]).map(String).indexOf(id)>-1)return;if(payload.pool!=='all'&&states.rated[id])return;if(payload.pool==='notWishlist'&&states.wished[id])return;seen[id]=true;valid.push({tmdbTvId:m.id,title:m.name,year:String(m.first_air_date||'').slice(0,4),posterPath:m.poster_path||'',genres:[],tmdbRating:Number(m.vote_average||0).toFixed(1),role:ai.items[i].role||recommendationRole_(valid.length,payload.style),explanation:ai.items[i].explanation||'',ratedScore:states.rated[id]?Number(states.rated[id].score10||0):'',wishlisted:!!states.wished[id]});});if(valid.length<5)throw new Error('Fewer than five eligible TV recommendations validated. Try a broader pool.');valid=valid.slice(0,10);var id=Utilities.getUuid();persistGenericRecommendations_('tv',username,payload,source,valid,id);CacheService.getScriptCache().put('generic_rec_tv_'+id,JSON.stringify(valid.slice(5)),21600);return jsonOut_({recommendationId:id,recommendations:valid.slice(0,5),profileSummary:{ratingCount:tvTasteContext_(username).length},aiEnhanced:true,diagnostics:{engine:'Gemini-generated TV recommendations',validatedCount:valid.length,backupCount:Math.max(0,valid.length-5),aiCandidateCount:ai.items.length,model:ai.diagnostic.model,aiError:''}});}
+function doGetRestaurantRecommendationSources_(username){var rows=sheetObjects_(getExistingSheet_(RESTAURANTS_SHEET_NAME),RESTAURANTS_HEADER).filter(function(r){return String(r.user||'').toLowerCase()===String(username||'').toLowerCase();}).map(function(r){return {placeId:r.placeId||'',name:r.name||'',city:r.city||'',cuisine:r.cuisine||'',score10:Number(r.score10||0),address:r.address||''};}).sort(function(a,b){return b.score10-a.score10||String(a.name).localeCompare(String(b.name));});return jsonOut_({rows:rows});}
+function restaurantTasteContext_(username){return sheetObjects_(getExistingSheet_(RESTAURANTS_SHEET_NAME),RESTAURANTS_HEADER).filter(function(r){return String(r.user||'').toLowerCase()===String(username||'').toLowerCase();}).sort(function(a,b){return Number(b.score10||0)-Number(a.score10||0);}).slice(0,70).map(function(r){return {name:r.name,city:r.city,cuisine:r.cuisine,price:r.price,score10:Number(r.score10||0),categories:{food:r.food,value:r.value,service:r.service,atmosphere:r.atmosphere,craving:r.craving},notes:r.overallNotes||''};});}
+function restaurantStates_(username){var rated={},wished={};sheetObjects_(getExistingSheet_(RESTAURANTS_SHEET_NAME),RESTAURANTS_HEADER).forEach(function(r){if(String(r.user||'').toLowerCase()===String(username).toLowerCase()&&r.placeId)rated[String(r.placeId)]=r;});sheetObjects_(getExistingSheet_(FUTURE_RESTAURANTS_SHEET_NAME),FUTURE_RESTAURANTS_HEADER).forEach(function(r){if(String(r.user||'').toLowerCase()===String(username).toLowerCase()&&r.placeId)wished[String(r.placeId)]=r;});return {rated:rated,wished:wished};}
+function restaurantRecommendationArea_(payload) {
+  return [payload.city, payload.region, payload.country].map(function(part){ return String(part || '').trim(); }).filter(Boolean).join(', ');
+}
+
+function doGenerateRestaurantRecommendations_(payload, username) {
+  payload = payload || {};
+  var history = restaurantTasteContext_(username), states = restaurantStates_(username), source = null;
+  if (payload.sourceMode !== 'taste') {
+    source = doGetRestaurantRecommendationSourcesData_(username, payload.sourcePlaceId);
+    if (!source) throw new Error('Choose a source restaurant.');
+  }
+  var defaultLocation = restaurantRecommendationArea_(payload) || (source && source.city) || mostCommonCity_(history);
+  if (!defaultLocation) throw new Error('Enter a recommendation area or rate a restaurant with a city first.');
+
+  var exclusions = [], excludedIds = {};
+  Object.keys(states.rated).forEach(function(id) {
+    if (payload.pool !== 'all') exclusions.push({name:states.rated[id].name,city:states.rated[id].city,reason:'rated'});
+  });
+  if (payload.pool === 'notWishlist') Object.keys(states.wished).forEach(function(id) {
+    exclusions.push({name:states.wished[id].name,city:states.wished[id].city,reason:'wishlisted'});
+  });
+  (payload.excludeIds || []).forEach(function(id){ excludedIds[String(id)] = true; });
+
+  var ai = callGeminiGeneric_('restaurant', {
+    instruction:'Generate exactly 12 real operating restaurant recommendations in the requested area. Use cuisine, food quality, value, service, atmosphere, craving, price, notes, and the user\'s actual history. Respect exclusions. Return strict JSON only.',
+    mode:payload.sourceMode === 'taste' ? 'overall restaurant taste' : 'source restaurant plus taste',
+    style:payload.style || 'balanced',
+    location:defaultLocation,
+    source:source,
+    history:history,
+    recommendationFeedback:genericRecommendationLearningContext_('restaurant', username),
+    exclusions:exclusions,
+    outputSchema:{recommendations:[{name:'exact restaurant name',city:'city',role:'short label',explanation:'specific reason'}]}
+  });
+  if (!ai.items) throw new Error(ai.diagnostic.error || 'Restaurant recommendations could not be generated.');
+
+  var candidates = ai.items.slice(0, 12), key = getPlacesKey();
+  var requests = candidates.map(function(item) {
+    var itemLocation = item.city ? [item.city, payload.region, payload.country].filter(Boolean).join(', ') : defaultLocation;
+    return {url:'https://maps.googleapis.com/maps/api/place/textsearch/json?query='+encodeURIComponent(item.name+' restaurant '+itemLocation)+'&type=restaurant&key='+encodeURIComponent(key),muteHttpExceptions:true};
+  });
+  var responses = UrlFetchApp.fetchAll(requests), seen = {}, valid = [];
+  responses.forEach(function(response, index) {
+    if (response.getResponseCode() < 200 || response.getResponseCode() >= 300) return;
+    var data = JSON.parse(response.getContentText()), match = (data.results || [])[0];
+    if (!match) return;
+    var placeId = String(match.place_id);
+    if (seen[placeId] || excludedIds[placeId]) return;
+    if (payload.pool !== 'all' && states.rated[placeId]) return;
+    if (payload.pool === 'notWishlist' && states.wished[placeId]) return;
+    seen[placeId] = true;
+    var parts = String(match.formatted_address || '').split(',');
+    valid.push({
+      placeId:placeId,name:match.name,address:match.formatted_address || '',city:parts.length > 1 ? parts[parts.length - 2].trim() : defaultLocation,
+      cuisine:'',price:match.price_level === undefined ? '' : ['', '$', '$$', '$$$', '$$$$'][match.price_level],googleRating:match.rating || '',photo:'',
+      role:candidates[index].role || recommendationRole_(valid.length, payload.style),explanation:candidates[index].explanation || '',
+      ratedScore:states.rated[placeId] ? Number(states.rated[placeId].score10 || 0) : '',wishlisted:!!states.wished[placeId]
+    });
+  });
+  if (valid.length < 5) throw new Error('Fewer than five eligible restaurant recommendations validated. Try a broader pool or another area.');
+  valid = valid.slice(0, 10);
+  var recommendationId = Utilities.getUuid();
+  persistGenericRecommendations_('restaurant', username, payload, source, valid, recommendationId);
+  CacheService.getScriptCache().put('generic_rec_restaurant_'+recommendationId, JSON.stringify(valid.slice(5)), 21600);
+  return jsonOut_({recommendationId:recommendationId,recommendations:valid.slice(0,5),profileSummary:{ratingCount:history.length},aiEnhanced:true,diagnostics:{engine:'Gemini-generated restaurant recommendations',validatedCount:valid.length,backupCount:Math.max(0,valid.length-5),aiCandidateCount:candidates.length,model:ai.diagnostic.model,aiError:'',city:defaultLocation}});
+}
+function doGetRestaurantRecommendationSourcesData_(username,placeId){return sheetObjects_(getExistingSheet_(RESTAURANTS_SHEET_NAME),RESTAURANTS_HEADER).filter(function(r){return String(r.user||'').toLowerCase()===String(username||'').toLowerCase()&&String(r.placeId||'')===String(placeId||'');})[0]||null;}
+function mostCommonCity_(history){var c={};(history||[]).forEach(function(r){if(r.city)c[r.city]=(c[r.city]||0)+1;});return Object.keys(c).sort(function(a,b){return c[b]-c[a];})[0]||'';}
+function doReplaceGenericRecommendation_(payload,username,kind){var id=String(payload.recommendationId||'');if(!id)throw new Error('Recommendation session is missing.');var cache=CacheService.getScriptCache(),key='generic_rec_'+kind+'_'+id,raw=cache.get(key),arr=raw?JSON.parse(raw):[];if(!arr.length)return jsonOut_({exhausted:true});doRecordGenericRecommendationFeedback_({recommendationId:id,recommendedId:payload.currentId||'',action:payload.action||'replaced'},username,kind);var next=arr.shift();cache.put(key,JSON.stringify(arr),21600);return jsonOut_({recommendation:next,remainingBackups:arr.length,exhausted:false});}
