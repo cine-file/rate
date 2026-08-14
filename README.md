@@ -1,6 +1,6 @@
 # Cine-file Ratings Dashboard
 
-**Build:** `2026.08.08-login-first-security.15`
+**Build:** `2026.08.14-restaurant-location-performance.16`
 
 Cine-file is a private, small-group ratings dashboard. GitHub Pages serves the static frontend and Google Apps Script is the JSON backend for Google Sheets, third-party lookups, authentication, and recommendation generation.
 
@@ -13,6 +13,7 @@ Cine-file is a private, small-group ratings dashboard. GitHub Pages serves the s
 - `assets/js/films.js` - Film rating flow and shared stats helpers.
 - `assets/js/tv.js` - TV search, season/overall ratings, and TV stats.
 - `assets/js/restaurants.js` - Le Guide search, rating flow, restaurant stats, deletion, and navigation support.
+- `assets/js/restaurant-location.js` - per-user Restaurant city/state/country filter and voluntary browser-location handling.
 - `assets/js/wishlist.js`, `recommendations.js`, and `activity.js` - focused Wishlist, recommendations, and Recent Activity features.
 - `assets/js/shell.js` - final navigation and startup wiring. It loads last so the existing inline controls remain globally available.
 - `Code.gs` - Apps Script backend. This is the file to paste into the Apps Script editor.
@@ -38,11 +39,13 @@ In Apps Script, open **Project Settings** then add these Script Properties:
 | `SHEET_ID` | Yes | ID of the private Google Sheet. |
 | `ADMIN_PIN` | Yes | Four-digit PIN used for Settings. |
 | `TMDB_API_KEY` | Yes | Film and TV search/details. |
-| `GOOGLE_PLACES_KEY` | Yes | Restaurant search/details. |
+| `GOOGLE_PLACES_KEY` | Yes | Restaurant search/details and location lookup. |
 | `OMDB_API_KEY` | No | IMDb and Rotten Tomatoes metadata. |
 | `GEMINI_API_KEY` | No | Gemini-powered recommendations. The deterministic recommendation fallback still works without it. |
 
 Do not put any of these values in the public frontend, GitHub Secrets, or the Google Sheet.
+
+For the optional **Use my location** button to populate city, state/region, and country, enable the Google Maps **Geocoding API** for the same Google Cloud project as `GOOGLE_PLACES_KEY`. Restaurant search still works with manually entered fields if that API is unavailable or a user declines location permission.
 
 ## Sheet Tabs
 
@@ -73,6 +76,8 @@ Database tabs contain one row per user rating. Summary tabs contain one row per 
 5. Confirm `CONFIG.GAS_URL` in `assets/js/config.js` points to the active `/exec` deployment URL. It is normal for the URL to be public; access control lives in Apps Script sessions and Script Properties.
 
 Run `setupActiveSheetTabs()` only when tabs are missing, a summary needs rebuilding, or the Recent Activity index needs backfilling. It is not required for a normal frontend-only deployment.
+
+Restaurant search areas are saved locally per signed-in user and are only sent with Restaurant Rate, Wishlist, or Recommendation searches. Repeated Restaurant searches are cached briefly, and autocomplete results intentionally omit downloaded photo data to keep lookups responsive.
 
 ## Security Notes
 
