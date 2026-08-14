@@ -72,6 +72,7 @@ function startRating(mode){
     CATS = RESTAURANT_CATS;
     setLgMode(true);
     updateNavUser();
+    prepareRestaurantLocation();
     showScreen('lg-search');
     return;
   }
@@ -117,15 +118,6 @@ function lgGoHome(){
 
 // ── LE GUIDE SEARCH ───────────────────────────────────────────
 let lgSearchTimer = null;
-let lgUserLat = null, lgUserLng = null;
-
-// Try to get user location for biasing
-if(navigator.geolocation){
-  navigator.geolocation.getCurrentPosition(pos=>{
-    lgUserLat = pos.coords.latitude;
-    lgUserLng = pos.coords.longitude;
-  }, ()=>{});
-}
 
 document.addEventListener('DOMContentLoaded', ()=>{
   const inp = document.getElementById('lg-search-input');
@@ -143,8 +135,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
 
 async function lgDoSearch(q){
   try{
-    const body = { action:'searchRestaurants', query:q };
-    if(lgUserLat) { body.lat = lgUserLat; body.lng = lgUserLng; }
+    const body = { action:'searchRestaurants', ...restaurantSearchPayload(q) };
     const res = await lgCall(body);
     if(res && res.results) lgRenderDropdown(res.results);
   }catch(e){ console.error('Restaurant search failed:', e); }
@@ -666,4 +657,3 @@ async function confirmDeleteRating(){
 async function lgCall(body){
   return apiCall(body.action, {...body, token: getSessionToken()});
 }
-
