@@ -24,7 +24,7 @@
     <button class="nav-btn" id="nav-home"     onclick="goHome()">Home</button>
     <button class="nav-btn" id="nav-rate"     onclick="goActiveRate()">Rate</button>
     <button class="nav-btn" id="nav-stats"    onclick="goActiveStats()">Stats</button>
-    <button class="nav-btn" id="nav-wishlist" onclick="goWishlist(activeCategory==='tv'?'tv':'film')">Wishlist</button>
+    <button class="nav-btn" id="nav-wishlist" onclick="goActiveWishlist()">Wishlist</button>
     <button class="nav-btn" id="nav-settings" onclick="promptAdminPin()">Settings</button>
   </div>
   <div class="nav-links" id="nav-lg-links" style="display:none">
@@ -70,10 +70,20 @@
         <div class="home-card-title" style="font-size:22px;color:#F5ECD7">Le Guide</div>
         <div class="home-card-sub" style="color:#8a4a4a">Rate a restaurant</div>
       </div>
+      <div class="home-card" onclick="startRating('game')">
+        <div class="home-card-icon">🎮</div>
+        <div class="home-card-title">Games</div>
+        <div class="home-card-sub">Rate a video game</div>
+      </div>
+      <div class="home-card" onclick="startRating('book')">
+        <div class="home-card-icon">📚</div>
+        <div class="home-card-title">Books</div>
+        <div class="home-card-sub">Rate a book</div>
+      </div>
     </div>
   </div>
   <section class="activity-section" id="recent-activity-section">
-    <div class="activity-head"><div><div class="activity-title">Recent Activity</div><div class="activity-sub">The latest 15 ratings across Film, TV, and Le Guide.</div></div></div>
+    <div class="activity-head"><div><div class="activity-title">Recent Activity</div><div class="activity-sub">The latest 15 ratings across every Cine-file category.</div></div></div>
     <div class="activity-list" id="recent-activity-list"><div class="stats-loading">Loading recent ratings...</div></div>
   </section>
   </div>
@@ -121,8 +131,8 @@
 <div id="screen-search" class="screen">
   <div class="search-inner">
     <div class="s-eyebrow" id="search-eyebrow">Rate a Film</div>
-    <h1 class="s-title">Find Your Film</h1>
-    <p class="s-sub">Search for the movie you just watched</p>
+    <h1 class="s-title" id="search-title">Find Your Film</h1>
+    <p class="s-sub" id="search-sub">Search for the movie you just watched</p>
     <div class="search-wrap">
       <div class="search-field">
         <span class="search-icon">🎬</span>
@@ -130,6 +140,10 @@
         <span class="search-spinner" id="spinner">⟳</span>
       </div>
       <div class="dropdown" id="dropdown"></div>
+    </div>
+    <div class="media-year-filter" id="movie-year-filter-wrap">
+      <label for="movie-year-filter">Release year (optional)</label>
+      <input id="movie-year-filter" type="number" min="1880" max="2100" inputmode="numeric" placeholder="Example: 1995"/>
     </div>
     <button class="advanced-search-toggle" type="button" onclick="toggleAdvancedSearch('movie')">Can't find it? Advanced Search</button>
     <div class="advanced-search-panel" id="movie-advanced-panel">
@@ -169,6 +183,10 @@
         <span class="search-spinner" id="tv-spinner">⟳</span>
       </div>
       <div class="dropdown" id="tv-dropdown"></div>
+    </div>
+    <div class="media-year-filter">
+      <label for="tv-year-filter">First-air year (optional)</label>
+      <input id="tv-year-filter" type="number" min="1880" max="2100" inputmode="numeric" placeholder="Example: 2014"/>
     </div>
     <button class="advanced-search-toggle" type="button" onclick="toggleAdvancedSearch('tv')">Can't find it? Advanced Search</button>
     <div class="advanced-search-panel" id="tv-advanced-panel">
@@ -397,6 +415,7 @@
       <input type="checkbox" id="lg-quick-toggle" onchange="lgToggleQuick(this.checked)" checked/>
       <span class="quick-toggle-label" style="color:#8a4a4a">⚡ Quick Rating</span>
     </label>
+    <button class="manual-restaurant-launch" type="button" onclick="openManualRestaurant('rate')">Enter a restaurant manually</button>
   </div>
 </div>
 
@@ -702,6 +721,11 @@
       </div>
       <div class="wishlist-dropdown" id="wishlist-dropdown"></div>
     </div>
+    <div class="wishlist-year-filter" id="wishlist-year-filter-wrap" style="display:none">
+      <label for="wishlist-year-filter">Release / first-air year (optional)</label>
+      <input id="wishlist-year-filter" type="number" min="1880" max="2100" inputmode="numeric" placeholder="Example: 1995"/>
+    </div>
+    <button class="manual-restaurant-launch" id="wishlist-manual-restaurant" type="button" onclick="openManualRestaurant('wishlist')" style="display:none">Enter a restaurant manually</button>
     <div class="settings-msg" id="wishlist-msg"></div>
     <div class="stats-section" style="margin-top:28px">
       <div class="stats-section-title" id="wishlist-list-title">Your Saved Films</div>
@@ -780,6 +804,41 @@
         <button class="recommend-generate" id="restaurant-rec-generate" onclick="generateGenericRecommendations('restaurant')">Generate 5 Restaurants</button><div class="recommend-status" id="restaurant-rec-status"></div><div class="recommend-diagnostics" id="restaurant-rec-diagnostics" style="display:none"></div><div class="recommend-results" id="restaurant-rec-results"></div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     RESTAURANT MANUAL ENTRY
+══════════════════════════════════════ -->
+<div id="screen-lg-manual" class="screen">
+  <div class="inner manual-restaurant-form">
+    <button class="lg-back-btn" onclick="closeManualRestaurant()">← Back</button>
+    <div class="s-eyebrow">Le Guide</div>
+    <h1 class="s-title" id="manual-restaurant-title">Enter a Restaurant</h1>
+    <p class="s-sub">Use this when the correct place does not appear in search.</p>
+    <div class="manual-restaurant-grid">
+      <label>Restaurant name<input id="manual-restaurant-name" type="text" autocomplete="organization"></label>
+      <label>Street address<input id="manual-restaurant-address" type="text" autocomplete="street-address"></label>
+      <label>City<input id="manual-restaurant-city" type="text" autocomplete="address-level2"></label>
+      <label>State / region<input id="manual-restaurant-region" type="text" autocomplete="address-level1"></label>
+      <label>Country<input id="manual-restaurant-country" type="text" autocomplete="country-name"></label>
+      <label>Cuisine<input id="manual-restaurant-cuisine" type="text" placeholder="Optional"></label>
+      <label>Price<input id="manual-restaurant-price" type="text" placeholder="Optional, e.g. $$"></label>
+      <label>Google rating<input id="manual-restaurant-rating" type="number" min="0" max="5" step="0.1" placeholder="Optional"></label>
+    </div>
+    <div class="settings-msg" id="manual-restaurant-msg"></div>
+    <div class="btn-row"><button class="btn-pri" type="button" onclick="submitManualRestaurant()">Continue</button></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     GAMES + BOOKS STATS
+══════════════════════════════════════ -->
+<div id="screen-catalog-stats" class="screen">
+  <div class="inner stats-inner">
+    <div class="stats-head"><div><div class="stats-eyebrow" id="catalog-stats-eyebrow">My Ratings</div><h1 class="stats-title" id="catalog-stats-title">Games</h1></div><div class="score-mode-toggle"><button class="score-mode-btn active" data-mode="10" onclick="setScoreMode('10')">/10</button><button class="score-mode-btn" data-mode="raw" onclick="setScoreMode('raw')">/100</button></div></div>
+    <div class="stats-tabs"><button class="stats-tab active" id="catalog-tab-my" onclick="switchCatalogStatsTab('my')">My Stats</button><button class="stats-tab" id="catalog-tab-group" onclick="switchCatalogStatsTab('group')">Group</button><button class="stats-tab" id="catalog-tab-h2h" onclick="switchCatalogStatsTab('h2h')">Head to Head</button><button class="stats-tab" id="catalog-tab-individual" onclick="switchCatalogStatsTab('individual')">Individual Ratings</button></div>
+    <div id="catalog-stats-content"></div>
   </div>
 </div>
 
@@ -904,6 +963,7 @@
   <script defer src="assets/js/films.js"></script>
   <script defer src="assets/js/tv.js"></script>
   <script defer src="assets/js/restaurants.js"></script>
+  <script defer src="assets/js/catalog.js"></script>
   <script defer src="assets/js/shell.js"></script>
 </body>
 </html>
