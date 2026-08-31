@@ -14,7 +14,7 @@ function showScreen(id){
       if(b) b.classList.toggle('active',
         n===id ||
         ((id==='search'||id==='score'||id==='round'||id==='result'||id==='quick'||id==='tv-search'||id==='tv-select')&&n==='rate') ||
-        ((id==='stats'||id==='tv-stats')&&n==='stats')
+        ((id==='stats'||id==='tv-stats'||id==='catalog-stats')&&n==='stats')
       );
     });
   } else {
