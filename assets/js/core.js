@@ -47,6 +47,22 @@ const TV_CATS = [
   {id:"emotional",     label:"Impact",                 w:0.10, prompt:"How much did it make you feel, think, or want to discuss it?"}
 ];
 
+const GAME_CATS = [
+  {id:"gameplay",     label:"Gameplay",             w:0.30, prompt:"How satisfying are the controls, systems, challenge, and moment-to-moment play?"},
+  {id:"story",        label:"Story & Characters",   w:0.20, prompt:"How strong are the narrative, characters, and payoff?"},
+  {id:"world",        label:"World & Design",       w:0.18, prompt:"How memorable are the world, levels, exploration, and design choices?"},
+  {id:"presentation", label:"Presentation",         w:0.17, prompt:"How effective are the visuals, music, sound, and technical presentation?"},
+  {id:"replay",       label:"Replay & Lasting Fun", w:0.15, prompt:"How much would you return to it or recommend it to someone else?"}
+];
+
+const BOOK_CATS = [
+  {id:"story",     label:"Story & Characters", w:0.30, prompt:"How compelling are the story, characters, and resolution?"},
+  {id:"writing",   label:"Writing Style",      w:0.25, prompt:"How effective, distinctive, and readable is the writing?"},
+  {id:"ideas",     label:"World & Ideas",      w:0.20, prompt:"How strong are the setting, themes, concepts, or subject matter?"},
+  {id:"pacing",    label:"Pacing",             w:0.15, prompt:"Did the book move at a satisfying pace?"},
+  {id:"emotional", label:"Emotional Impact",   w:0.10, prompt:"How much did it make you feel, think, or want to discuss it?"}
+];
+
 // Restaurant categories ready to drop in when needed
 const RESTAURANT_CATS = [
   {id:"food",      label:"Food & Taste",    w:0.35, prompt:"How good was the food? Flavor, quality, seasoning, memorability."},
@@ -57,6 +73,13 @@ const RESTAURANT_CATS = [
 ];
 
 let CATS = FILM_CATS; // active category set
+
+// Keep canonical names in every API and Sheet operation. Only the label changes.
+const USER_DISPLAY_NAMES = { Megan: "Megs" };
+function displayUserName(name){
+  const canonical = String(name || "");
+  return USER_DISPLAY_NAMES[canonical] || canonical;
+}
 
 // ── HELPERS ──────────────────────────────────────────────────
 function grade(s) {
@@ -350,16 +373,16 @@ function renderPinScreen(){
     return;
   }
   list.innerHTML = users.map(u=>`
-    <button class="user-btn" onclick='selectPinUser(${JSON.stringify(u.name)})'>${escHtml(u.name)}</button>`).join("");
+    <button class="user-btn" data-user="${escHtml(u.name)}" onclick='selectPinUser(${JSON.stringify(u.name)})'>${escHtml(displayUserName(u.name))}</button>`).join("");
 }
 
 function selectPinUser(name){
   pinSelected = name; pinEntered = "";
   document.querySelectorAll(".user-btn").forEach(b=>{
-    b.classList.toggle("selected", b.textContent===name);
+    b.classList.toggle("selected", b.dataset.user===name);
   });
   document.getElementById("pin-entry").style.display = "block";
-  document.getElementById("pin-entry-label").textContent = `Enter PIN for ${name}`;
+  document.getElementById("pin-entry-label").textContent = `Enter PIN for ${displayUserName(name)}`;
   document.getElementById("pin-error").textContent = "";
   updatePinDots();
   focusPinInput();
@@ -432,7 +455,7 @@ async function checkPin(){
 }
 
 function updateNavUser(){
-  document.getElementById("nav-user-name").textContent = currentUser?.name || "";
+  document.getElementById("nav-user-name").textContent = displayUserName(currentUser?.name);
 }
 
 // ── SETTINGS — USERS ─────────────────────────────────────────
@@ -441,7 +464,7 @@ function renderSettingsUsers(){
   document.getElementById("settings-user-list").innerHTML = users.length
     ? users.map((u,i)=>`
         <div class="user-row">
-          <div class="user-row-name">${escHtml(u.name)}</div>
+          <div class="user-row-name">${escHtml(displayUserName(u.name))}</div>
           <div class="user-row-pin">PIN: ••••</div>
           <button class="user-row-del" onclick="deleteUser(${i})">Remove</button>
         </div>`).join("")
@@ -512,4 +535,3 @@ function saveConfig(){
   msg.textContent="Backend URL saved to this device."; msg.className="settings-msg";
   syncUsersFromSheets();
 }
-
