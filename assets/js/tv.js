@@ -7,6 +7,73 @@ let tvRatingsCache = [];
 let tvStatsType = 'season';
 let tvStatsTab = 'my';
 let tvStatsData = {ratings:[], summary:{rows:[]}};
+let _tvRenderedRatings = [];
+
+function tvEntryType(row){
+  return String(row?.['Type'] || row?.Type || 'season').trim().toLowerCase() === 'overall' ? 'overall' : 'season';
+}
+function tvSeriesKey(row){
+  return String(row?.['TMDB TV ID'] || row?.['TMDB TV Id'] || row?.tmdbTvId || '').trim() || (String(row?.['Series'] || row?.seriesTitle || '').trim().toLowerCase()+'|'+String(row?.['Year'] || row?.seriesYear || '').trim());
+}
+
+// A manual overall score wins for that user. Until it exists, their season average
+// becomes a derived overall score so unfinished shows still appear in Overall Stats.
+function effectiveTvRatings(rows){
+  const groups={};
+  (rows||[]).forEach(function(row){
+    const key=tvSeriesKey(row); if(!key) return;
+    if(!groups[key]) groups[key]={manual:null,seasons:[]};
+    if(tvEntryType(row)==='overall') groups[key].manual=row;
+    else groups[key].seasons.push(row);
+  });
+  return Object.keys(groups).map(function(key){
+    const group=groups[key];
+    if(group.manual) return {...group.manual, Type:'overall', DerivedOverall:false};
+    if(!group.seasons.length) return null;
+    const scores=group.seasons.map(function(row){ return storedNumber(row['Score /10']); }).filter(function(value){ return value!==null; });
+    if(!scores.length) return null;
+    const rawScores=group.seasons.map(rawScoreForRating).filter(function(value){ return value!==null; });
+    const sample=group.seasons[0];
+    const score=averageScores(scores);
+    return {...sample, Type:'overall', Season:'', 'Season Name':'Season average', 'Score /10':score.toFixed(1), 'Raw /100':(averageScores(rawScores) ?? score*10).toFixed(1), Grade:grade(score), DerivedOverall:true, DerivedSeasonCount:group.seasons.length};
+  }).filter(Boolean);
+}
+
+function effectiveTvSummary(rows){
+  const groups={};
+  (rows||[]).forEach(function(row){
+    const key=tvSeriesKey(row); if(!key) return;
+    if(!groups[key]) groups[key]={sample:row,manual:null,seasons:[]};
+    if(tvEntryType(row)==='overall') groups[key].manual=row;
+    else groups[key].seasons.push(row);
+  });
+  return Object.keys(groups).map(function(key){
+    const group=groups[key], sample=group.manual || group.sample;
+    const userValues={};
+    if(group.manual){
+      Object.entries(group.manual.userScores||{}).forEach(function(entry){ userValues[entry[0]]={score:storedNumber(entry[1]),raw:storedNumber(group.manual.userRawScores?.[entry[0]])}; });
+    }
+    const seasonValues={};
+    group.seasons.forEach(function(row){
+      Object.entries(row.userScores||{}).forEach(function(entry){
+        const user=entry[0];
+        if(userValues[user]?.score!==null && userValues[user]?.score!==undefined) return;
+        if(!seasonValues[user]) seasonValues[user]=[];
+        const score=storedNumber(entry[1]);
+        if(score!==null) seasonValues[user].push({score:score,raw:storedNumber(row.userRawScores?.[user])});
+      });
+    });
+    Object.entries(seasonValues).forEach(function(entry){
+      if(userValues[entry[0]]?.score!==null && userValues[entry[0]]?.score!==undefined) return;
+      const values=entry[1];
+      userValues[entry[0]]={score:averageScores(values.map(function(item){ return item.score; })),raw:averageScores(values.map(function(item){ return item.raw ?? item.score*10; }))};
+    });
+    const userScores={},userRawScores={};
+    Object.entries(userValues).forEach(function(entry){ if(entry[1].score!==null){ userScores[entry[0]]=entry[1].score; userRawScores[entry[0]]=entry[1].raw ?? entry[1].score*10; } });
+    const scores=Object.values(userScores), rawScores=Object.values(userRawScores);
+    return {...sample, Type:'overall', Season:'', 'Season Name':'Overall Series', userScores:userScores,userRawScores:userRawScores,scores:scores,rawScores:rawScores,DerivedOverall:!group.manual};
+  }).filter(function(row){ return row.scores.length; });
+}
 
 document.getElementById('tv-search-input').addEventListener('input', function(){
   const query = this.value.trim();
@@ -18,11 +85,15 @@ document.getElementById('tv-search-input').addEventListener('input', function(){
 document.getElementById('tv-search-input').addEventListener('blur', function(){
   setTimeout(function(){ document.getElementById('tv-dropdown').classList.remove('open'); }, 160);
 });
+document.getElementById('tv-year-filter').addEventListener('change', function(){
+  const query=document.getElementById('tv-search-input').value.trim();
+  if(query) searchTv(query,!!this.value);
+});
 
 async function searchTv(query,advanced=false){
   try{
-    const year=advanced ? document.getElementById('tv-advanced-year').value.trim() : '';
-    const data = await apiCall('searchTv', {token:getSessionToken(),query:query,advanced:advanced,year:year,pages:3});
+    const year=(document.getElementById('tv-year-filter').value || (advanced ? document.getElementById('tv-advanced-year').value : '')).trim();
+    const data = await apiCall('searchTv', {token:getSessionToken(),query:query,advanced:advanced||!!year,year:year,pages:3});
     const results = data.results || [];
     const dropdown = document.getElementById('tv-dropdown');
     dropdown.classList.toggle('advanced-results',advanced);
@@ -60,15 +131,15 @@ function renderTvSeriesSelect(){
   const poster = document.getElementById('tv-select-poster');
   if(series.poster){ poster.src='https://image.tmdb.org/t/p/w200' + series.poster; poster.style.display='block'; }
   else poster.style.display='none';
-  const seasons = tvRatingsCache.filter(function(r){ return String(r['TMDB TV ID'])===String(series.id) && r['Type']==='season'; });
+  const seasons = tvRatingsCache.filter(function(r){ return String(r['TMDB TV ID'])===String(series.id) && tvEntryType(r)==='season'; });
   const average = seasons.length ? seasons.reduce(function(sum,r){ return sum + Number(r['Score /10']||0); },0) / seasons.length : null;
-  const manual = tvRatingsCache.find(function(r){ return String(r['TMDB TV ID'])===String(series.id) && r['Type']==='overall'; });
+  const manual = tvRatingsCache.find(function(r){ return String(r['TMDB TV ID'])===String(series.id) && tvEntryType(r)==='overall'; });
   document.getElementById('tv-overall-option').innerHTML =
     '<div class="wishlist-item"><div class="wishlist-item-main"><div class="wishlist-item-title">Overall Series</div><div class="wishlist-item-meta">' +
     (manual ? 'Your manual overall rating: ' + Number(manual['Score /10']).toFixed(1) : (average !== null ? 'Season-average placeholder: ' + average.toFixed(1) : 'No seasons rated yet')) +
     '</div></div><button class="wishlist-add" onclick="startTvRating(\'overall\')">' + (manual ? 'Re-rate' : 'Rate Overall') + '</button></div>';
   document.getElementById('tv-season-options').innerHTML = (series.seasons || []).map(function(season){
-    const rated = tvRatingsCache.find(function(r){ return String(r['TMDB TV ID'])===String(series.id) && r['Type']==='season' && String(r['Season'])===String(season.seasonNumber); });
+    const rated = tvRatingsCache.find(function(r){ return String(r['TMDB TV ID'])===String(series.id) && tvEntryType(r)==='season' && String(r['Season'])===String(season.seasonNumber); });
     return '<div class="wishlist-item"><div class="wishlist-item-main"><div class="wishlist-item-title">' + escHtml(season.seasonName) + '</div><div class="wishlist-item-meta">' +
       [season.year,season.episodeCount && season.episodeCount + ' episodes',rated && 'Your rating: ' + Number(rated['Score /10']).toFixed(1)].filter(Boolean).join(' · ') +
       '</div></div><button class="wishlist-add" onclick="startTvRating(\'season\',' + Number(season.seasonNumber) + ')">' + (rated ? 'Re-rate' : 'Rate Season') + '</button></div>';
@@ -80,10 +151,10 @@ function startTvRating(entryType, seasonNumber){
   if(!series) return;
   const season = (series.seasons || []).find(function(s){ return Number(s.seasonNumber)===Number(seasonNumber); });
   const existing = tvRatingsCache.find(function(r){
-    return String(r['TMDB TV ID'])===String(series.id) && r['Type']===entryType &&
+    return String(r['TMDB TV ID'])===String(series.id) && tvEntryType(r)===entryType &&
       (entryType==='overall' || String(r['Season'])===String(seasonNumber));
   });
-  const seasonRatings = tvRatingsCache.filter(function(r){ return String(r['TMDB TV ID'])===String(series.id) && r['Type']==='season'; });
+  const seasonRatings = tvRatingsCache.filter(function(r){ return String(r['TMDB TV ID'])===String(series.id) && tvEntryType(r)==='season'; });
   const suggested = entryType==='overall' && !existing && seasonRatings.length
     ? seasonRatings.reduce(function(sum,r){ return sum+Number(r['Score /10']||0); },0)/seasonRatings.length : null;
   const item = {
@@ -167,8 +238,10 @@ function switchTvStatsTab(tab){
 
 function renderTvStats(){
   const content=document.getElementById('tv-stats-content');
-  const ratings=(tvStatsData.ratings||[]).filter(function(r){ return r['Type']===tvStatsType && rowMatchesGenre(r,_statsGenres.tv); });
-  const summary={rows:(tvStatsData.summary?.rows || []).filter(function(row){ return row['Type']===tvStatsType && rowMatchesGenre(row,_statsGenres.tv); })};
+  const baseRatings=tvStatsType==='overall' ? effectiveTvRatings(tvStatsData.ratings||[]) : (tvStatsData.ratings||[]).filter(function(row){ return tvEntryType(row)==='season'; });
+  const baseSummary=tvStatsType==='overall' ? effectiveTvSummary(tvStatsData.summary?.rows||[]) : (tvStatsData.summary?.rows||[]).filter(function(row){ return tvEntryType(row)==='season'; });
+  const ratings=baseRatings.filter(function(r){ return rowMatchesGenre(r,_statsGenres.tv); });
+  const summary={rows:baseSummary.filter(function(row){ return rowMatchesGenre(row,_statsGenres.tv); })};
   const label=tvStatsType==='season'?'Seasons':'Overall Shows';
   const title=function(row){ return String(row['Series'] || '') + (tvStatsType==='season' ? ' — '+String(row['Season Name'] || 'Season '+row['Season']) : ''); };
   const meta=function(row){ return String(row['Year'] || ''); };
@@ -185,11 +258,12 @@ function renderTvStats(){
     return {label:entry[0], value:values.length ? averageScores(values) : null};
   });
   const allId='tv-all-ratings-'+tvStatsType;
-  const rowTitle=function(r){ return escHtml(r['Series'])+(r['Type']==='season'?' — '+escHtml(r['Season Name'] || 'Season '+r['Season']):''); };
-  const rowHtml=function(r,index){ return '<div class="film-row"><div class="film-row-rank">#'+(index+1)+'</div><div class="film-row-title">'+rowTitle(r)+'</div><div class="film-row-year">'+escHtml(r['Year'] || '')+'</div><div class="film-row-score">'+ratingDisplayScore(r).toFixed(1)+'</div></div>'; };
+  _tvRenderedRatings=ratings;
+  const rowTitle=function(r){ return escHtml(r['Series'])+(tvEntryType(r)==='season'?' — '+escHtml(r['Season Name'] || 'Season '+r['Season']):''); };
+  const rowHtml=function(r,index){ return '<div class="film-row" role="button" tabindex="0" data-tv-rating-index="'+_tvRenderedRatings.indexOf(r)+'" onclick="showMyTvRating(Number(this.dataset.tvRatingIndex))"><div class="film-row-rank">#'+(index+1)+'</div><div class="film-row-title">'+rowTitle(r)+'</div><div class="film-row-year">'+escHtml(r['Year'] || '')+(r.DerivedOverall?' · Season average':'')+'</div><div class="film-row-score">'+ratingDisplayScore(r).toFixed(1)+'</div></div>'; };
   const recent=ratings.slice().reverse().slice(0,5);
   content.innerHTML=`
-    <div class="stats-section"><div class="stats-section-title">Overview — ${escHtml(currentUser.name)}</div><div class="stats-grid">
+    <div class="stats-section"><div class="stats-section-title">Overview — ${escHtml(displayUserName(currentUser.name))}</div><div class="stats-grid">
       <div class="stat-card"><div class="stat-card-num">${ratings.length}</div><div class="stat-card-lbl">${escHtml(label)} Rated</div></div>
       <div class="stat-card"><div class="stat-card-num">${avg.toFixed(1)}</div><div class="stat-card-lbl">Average ${scoreLabel()}</div></div>
       <div class="stat-card"><div class="stat-card-num">${ratingDisplayScore(sorted[0]).toFixed(1)}</div><div class="stat-card-lbl">Highest</div></div>
@@ -199,13 +273,25 @@ function renderTvStats(){
     <div class="stats-section"><div class="stats-section-title">Your Top 5 ${escHtml(label)}</div><div class="film-list">${sorted.slice(0,5).map(rowHtml).join('')}</div>
       ${sorted.length>5?'<button class="view-all-btn" data-label="View All '+sorted.length+' '+escHtml(label)+' ↓" onclick="toggleNamedRatings(\''+allId+'\',this)">View All '+sorted.length+' '+escHtml(label)+' ↓</button><div class="all-ratings-wrap" id="'+allId+'"><div class="film-list">'+sorted.map(rowHtml).join('')+'</div></div>':''}
     </div>
-    <div class="stats-section"><div class="stats-section-title">Recently Rated</div><div class="film-list">${recent.map(function(r){ return '<div class="film-row"><div class="film-row-title">'+rowTitle(r)+'</div><div class="film-row-year">'+escHtml(r['Date']||r['Year']||'')+'</div><div class="film-row-score">'+ratingDisplayScore(r).toFixed(1)+'</div></div>'; }).join('')}</div></div>
+    <div class="stats-section"><div class="stats-section-title">Recently Rated</div><div class="film-list">${recent.map(function(r){ return '<div class="film-row" role="button" tabindex="0" data-tv-rating-index="'+_tvRenderedRatings.indexOf(r)+'" onclick="showMyTvRating(Number(this.dataset.tvRatingIndex))"><div class="film-row-title">'+rowTitle(r)+'</div><div class="film-row-year">'+escHtml(r['Date']||r['Year']||'')+'</div><div class="film-row-score">'+ratingDisplayScore(r).toFixed(1)+'</div></div>'; }).join('')}</div></div>
     <div class="stats-section"><div class="stats-section-title">Category Averages</div><div class="cat-bars">${categoryAverages.map(function(entry){ return '<div class="cat-bar-row"><div class="cat-bar-label">'+escHtml(entry.label)+'</div><div class="cat-bar-track"><div class="cat-bar-fill" style="width:'+(entry.value===null?0:entry.value)+'%"></div></div><div class="cat-bar-val">'+(entry.value===null?'—':entry.value.toFixed(1))+'</div></div>'; }).join('')}</div></div>
     <div class="stats-danger-zone"><button class="delete-rating-btn" onclick="openDeleteRating('tv')">Delete a Rating</button></div>`;
+}
+
+function showMyTvRating(index){
+  const rating=_tvRenderedRatings[index];
+  if(!rating) return;
+  const score10=storedNumber(rating['Score /10']) ?? 0;
+  const summaryRows=tvStatsType==='overall' ? effectiveTvSummary(tvStatsData.summary?.rows||[]) : (tvStatsData.summary?.rows||[]).filter(function(row){ return tvEntryType(row)==='season'; });
+  const group=summaryRows.find(function(row){ return tvSeriesKey(row)===tvSeriesKey(rating) && (tvStatsType==='overall' || String(row['Season'])===String(rating['Season'])); });
+  const others=Object.entries(group?.userScores||{}).filter(function(entry){ return entry[0]!==currentUser?.name; }).map(function(entry){ return displayUserName(entry[0])+' '+Number(entry[1]).toFixed(1); });
+  const categories=[['Story & Concept','Plot'],['Entertainment Value','Entertainment'],['Performances & Cast','Acting'],['Production & Direction','Visuals'],['Pacing','Pacing'],['Impact','Emotional']]
+    .filter(function(entry){ return storedNumber(rating[entry[1]])!==null && Number(rating[entry[1]])>0; })
+    .map(function(entry){ return {label:entry[0],value:Number(rating[entry[1]]).toFixed(1)}; });
+  openRatingDetail({eyebrow:rating.DerivedOverall?'Your derived overall rating':'Your rating',title:String(rating['Series']||''),meta:[tvStatsType==='season' ? rating['Season Name'] : (rating.DerivedOverall ? 'Average of '+rating.DerivedSeasonCount+' rated season'+(rating.DerivedSeasonCount===1?'':'s') : 'Overall Series'),rating['Year'],rating['Date']&&'Rated '+rating['Date']],score:ratingDisplayScore(rating),grade:grade(score10),lines:categories,comment:rating['Overall Notes']||'',secondaryBoxes:[{label:'IMDb',value:String(rating['IMDb']||'—')},{label:'Other ratings',value:others.length?others.join(' · '):'No one else has rated it yet'}]});
 }
 function toggleNamedRatings(id,button){
   const wrap=document.getElementById(id);
   const open=wrap.classList.toggle('open');
   button.textContent=open ? 'Hide ↑' : button.dataset.label;
 }
-
