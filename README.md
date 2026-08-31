@@ -1,6 +1,6 @@
 # Cine-file Ratings Dashboard
 
-**Build:** `2026.08.14-restaurant-location-performance.16`
+**Build:** `2026.08.30-catalog-tv-derived.17`
 
 Cine-file is a private, small-group ratings dashboard. GitHub Pages serves the static frontend and Google Apps Script is the JSON backend for Google Sheets, third-party lookups, authentication, and recommendation generation.
 
@@ -13,6 +13,7 @@ Cine-file is a private, small-group ratings dashboard. GitHub Pages serves the s
 - `assets/js/films.js` - Film rating flow and shared stats helpers.
 - `assets/js/tv.js` - TV search, season/overall ratings, and TV stats.
 - `assets/js/restaurants.js` - Le Guide search, rating flow, restaurant stats, deletion, and navigation support.
+- `assets/js/catalog.js` - shared Games and Books search, rating, Wishlist, and stats behavior.
 - `assets/js/restaurant-location.js` - per-user Restaurant city/state/country filter and voluntary browser-location handling.
 - `assets/js/wishlist.js`, `recommendations.js`, and `activity.js` - focused Wishlist, recommendations, and Recent Activity features.
 - `assets/js/shell.js` - final navigation and startup wiring. It loads last so the existing inline controls remain globally available.
@@ -25,7 +26,7 @@ The public GitHub repository may contain the Apps Script source. It must never c
 
 1. The site opens on the user selector. Users are sorted alphabetically in two columns.
 2. A user enters their PIN and then lands on the category screen.
-3. The category screen shows Film, TV, and Le Guide (Restaurants), plus shared Recent Activity.
+3. The category screen shows Film, TV, Le Guide (Restaurants), Games, and Books, plus shared Recent Activity.
 4. Authenticated requests use a six-hour Apps Script session token. Refreshing or using Switch User requires logging in again.
 
 Recent Activity is shared with every authenticated user, but it is not readable before login.
@@ -56,6 +57,8 @@ Core rating tabs:
 - `Users`
 - `Database-Films`, `Summary-Films`, `Future-Films`
 - `Database-TV`, `Summary-TV`, `Future-TV`
+- `Database-Games`, `Summary-Games`, `Future-Games`
+- `Database-Books`, `Summary-Books`, `Future-Books`
 - `Database-Restaurants`, `Summary-Restaurants`, `Future-Restaurants`
 - `Recent-Activity`
 
@@ -65,7 +68,15 @@ Recommendation history tabs:
 - `Recommendations-TV`, `Recommendation-Feedback-TV`
 - `Recommendations-Restaurants`, `Recommendation-Feedback-Restaurants`
 
-Database tabs contain one row per user rating. Summary tabs contain one row per film, TV unit, or restaurant and one score column per user. Re-rating an item updates that user’s database record and the corresponding summary cell instead of adding a duplicate.
+Database tabs contain one row per user rating. Summary tabs contain one row per item and one score column per user. Re-rating an item updates that user’s database record and the corresponding summary cell instead of adding a duplicate.
+
+TV has two views: Seasons and Overall Shows. A person's manual overall rating is used when present. Until then, that person’s average across rated seasons is shown as a derived overall score, while the original season ratings remain in the Seasons view.
+
+Games are searched through Steam and show Steam’s native review percentage/label when available. Games without a matching Steam result simply have no external score. Books use Google Books metadata and its available rating/count. Neither provider key is stored in the public frontend.
+
+Restaurants can be entered manually from Rate or Wishlist. A manual entry must have a name plus an address or at least one location field. Apps Script creates a stable private `manual_` place identifier, so re-ratings update the original row and remove matching wishlist entries.
+
+`Megan` remains the canonical user name in `Users` and every database record. `Megs` is the display label in the UI and summary-table columns; this preserves joins to existing ratings.
 
 ## Deployment
 
@@ -75,7 +86,7 @@ Database tabs contain one row per user rating. Summary tabs contain one row per 
 4. Commit the complete folder structure: `index.html`, `assets/`, `README.md`, and `appsscript.json` to the GitHub Pages repository root.
 5. Confirm `CONFIG.GAS_URL` in `assets/js/config.js` points to the active `/exec` deployment URL. It is normal for the URL to be public; access control lives in Apps Script sessions and Script Properties.
 
-Run `setupActiveSheetTabs()` only when tabs are missing, a summary needs rebuilding, or the Recent Activity index needs backfilling. It is not required for a normal frontend-only deployment.
+Run `setupActiveSheetTabs()` once after deploying this build to create and format the new Games and Books tabs and rebuild all summaries/activity. Use it later only when tabs are missing, a summary needs rebuilding, or the Recent Activity index needs backfilling. It is not required for a normal frontend-only deployment.
 
 Restaurant search areas are saved locally per signed-in user and are only sent with Restaurant Rate, Wishlist, or Recommendation searches. Repeated Restaurant searches are cached briefly, and autocomplete results intentionally omit downloaded photo data to keep lookups responsive.
 
