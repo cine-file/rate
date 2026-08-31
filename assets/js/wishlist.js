@@ -13,7 +13,7 @@ function wishlistUserCacheKey(){
 }
 
 function goWishlist(mode){
-  wishlistMode = ['film','restaurant','tv'].includes(mode) ? mode : 'film';
+  wishlistMode = ['film','restaurant','tv','game','book'].includes(mode) ? mode : 'film';
   showScreen('wishlist');
   renderWishlistMode();
   loadWishlist();
@@ -22,22 +22,26 @@ function goWishlist(mode){
 function renderWishlistMode(){
   const films = wishlistMode === 'film';
   const tv = wishlistMode === 'tv';
-  document.getElementById('wishlist-title').textContent = films ? 'Film Wishlist' : (tv ? 'TV Wishlist' : 'Restaurant Wishlist');
-  document.getElementById('wishlist-sub').textContent = films ? 'Search for films you want to watch.' : (tv ? 'Search for series you want to watch.' : 'Search for restaurants you want to try.');
-  document.getElementById('wishlist-search-icon').textContent = films ? '🎬' : (tv ? '📺' : '🍽️');
-  document.getElementById('wishlist-search-input').placeholder = films ? 'Search for a film to save...' : (tv ? 'Search for a series to save...' : 'Search for a restaurant to save...');
-  document.getElementById('wishlist-list-title').textContent = films ? 'Your Saved Films' : (tv ? 'Your Saved Series' : 'Your Saved Restaurants');
+  const catalog=catalogConfig(wishlistMode);
+  document.getElementById('wishlist-title').textContent = films ? 'Film Wishlist' : (tv ? 'TV Wishlist' : (catalog ? catalog.singular+' Wishlist' : 'Restaurant Wishlist'));
+  document.getElementById('wishlist-sub').textContent = films ? 'Search for films you want to watch.' : (tv ? 'Search for series you want to watch.' : (catalog ? 'Search for '+catalog.plural.toLowerCase()+' you want to save.' : 'Search for restaurants you want to try.'));
+  document.getElementById('wishlist-search-icon').textContent = films ? '🎬' : (tv ? '📺' : (catalog ? catalog.icon : '🍽️'));
+  document.getElementById('wishlist-search-input').placeholder = films ? 'Search for a film to save...' : (tv ? 'Search for a series to save...' : (catalog ? 'Search for a '+catalog.singular.toLowerCase()+' to save...' : 'Search for a restaurant to save...'));
+  document.getElementById('wishlist-list-title').textContent = films ? 'Your Saved Films' : (tv ? 'Your Saved Series' : (catalog ? 'Your Saved '+catalog.plural : 'Your Saved Restaurants'));
+  document.getElementById('wishlist-year-filter-wrap').style.display = (films || tv) ? 'block' : 'none';
+  document.getElementById('wishlist-year-filter').value = '';
   document.getElementById('wishlist-search-input').value = '';
   document.getElementById('wishlist-dropdown').classList.remove('open');
   document.getElementById('wishlist-msg').textContent = '';
   document.getElementById('film-recommendation-section').style.display = films ? 'block' : 'none';
   document.getElementById('tv-recommendation-section').style.display = tv ? 'block' : 'none';
-  document.getElementById('restaurant-recommendation-section').style.display = (!films && !tv) ? 'block' : 'none';
-  document.getElementById('restaurant-wishlist-location').style.display = (!films && !tv) ? 'block' : 'none';
+  document.getElementById('restaurant-recommendation-section').style.display = (!films && !tv && !catalog) ? 'block' : 'none';
+  document.getElementById('restaurant-wishlist-location').style.display = (!films && !tv && !catalog) ? 'block' : 'none';
+  document.getElementById('wishlist-manual-restaurant').style.display = (!films && !tv && !catalog) ? 'block' : 'none';
   if(!films) document.getElementById('recommend-panel').classList.remove('open');
   if(!tv) document.getElementById('tv-recommend-panel').classList.remove('open');
   if(films||tv) document.getElementById('restaurant-recommend-panel').classList.remove('open');
-  if(!films && !tv) prepareRestaurantLocation();
+  if(!films && !tv && !catalog) prepareRestaurantLocation();
 }
 
 async function loadWishlist(force){
@@ -55,7 +59,8 @@ async function loadWishlist(force){
   }
   list.innerHTML = '<div class="stats-loading">Loading your saved items...</div>';
   try{
-    const action = wishlistMode === 'film' ? 'getFutureFilms' : (wishlistMode === 'tv' ? 'getFutureTv' : 'getFutureRestaurants');
+    const catalog=catalogConfig(wishlistMode);
+    const action = wishlistMode === 'film' ? 'getFutureFilms' : (wishlistMode === 'tv' ? 'getFutureTv' : (catalog ? catalog.futureGetAction : 'getFutureRestaurants'));
     const data = await apiCall(action, {token:getSessionToken()});
     wishlistItems = Array.isArray(data) ? data : [];
     wishlistCache.set(cacheKey, {items:wishlistItems, savedAt:Date.now()});
@@ -69,15 +74,16 @@ function renderWishlistItems(){
   const list = document.getElementById('wishlist-items');
   const films = wishlistMode === 'film';
   const tv = wishlistMode === 'tv';
+  const catalog=catalogConfig(wishlistMode);
   if(!wishlistItems.length){
-    list.innerHTML = '<div class="stats-empty">No saved ' + (films ? 'films' : (tv ? 'series' : 'restaurants')) + ' yet.</div>';
+    list.innerHTML = '<div class="stats-empty">No saved ' + (films ? 'films' : (tv ? 'series' : (catalog ? catalog.plural.toLowerCase() : 'restaurants'))) + ' yet.</div>';
     return;
   }
   list.innerHTML = wishlistItems.map(function(item, index){
-    const title = films ? item['Title'] : (tv ? item['Series'] : item['Name']);
+    const title = films ? item['Title'] : (tv ? item['Series'] : (catalog ? item['Title'] : item['Name']));
     const meta = films
       ? [item['Year'], item['Director'] && 'Dir. ' + item['Director'], item['Movie length'], item['IMDb'] && 'IMDb ' + item['IMDb'], item['RT Audience'] && 'RT ' + item['RT Audience']].filter(Boolean).join(' · ')
-      : (tv ? [item['Year'], item['Creator'] && 'Created by ' + item['Creator'], item['IMDb'] && 'IMDb ' + item['IMDb']].filter(Boolean).join(' · ') : [item['Cuisine'], item['Address'], item['Google Rating'] && 'Google ' + item['Google Rating']].filter(Boolean).join(' · '));
+      : (tv ? [item['Year'], item['Creator'] && 'Created by ' + item['Creator'], item['IMDb'] && 'IMDb ' + item['IMDb']].filter(Boolean).join(' · ') : (catalog ? [item['Year'],item['Creator'] && catalog.creatorLabel+' '+item['Creator'],item['External Score'] && (item['External Label']||catalog.externalLabel)+' '+item['External Score']].filter(Boolean).join(' · ') : [item['Cuisine'], item['Address'], item['Google Rating'] && 'Google ' + item['Google Rating']].filter(Boolean).join(' · ')));
     const average = item['Group Average'];
     const count = Number(item['Group Rating Count'] || 0);
     return '<div class="wishlist-item">' +
@@ -92,7 +98,8 @@ async function removeWishlistItem(index){
   const item = wishlistItems[index];
   if(!item) return;
   try{
-    const action = wishlistMode === 'film' ? 'deleteFutureFilm' : (wishlistMode === 'tv' ? 'deleteFutureTv' : 'deleteFutureRestaurant');
+    const catalog=catalogConfig(wishlistMode);
+    const action = wishlistMode === 'film' ? 'deleteFutureFilm' : (wishlistMode === 'tv' ? 'deleteFutureTv' : (catalog ? catalog.futureDeleteAction : 'deleteFutureRestaurant'));
     await apiCall(action, {token:getSessionToken(), payload:item});
     wishlistItems.splice(index, 1);
     wishlistCache.set(wishlistUserCacheKey(), {items:wishlistItems, savedAt:Date.now()});
@@ -110,7 +117,8 @@ async function searchWishlist(query){
   if(!query){ dropdown.classList.remove('open'); return; }
   const request = ++wishlistSearchRequest;
   const location = wishlistMode === 'restaurant' ? restaurantSearchPayload(query) : null;
-  const cacheKey = wishlistMode + '|' + query.toLowerCase() + '|' + JSON.stringify(location || {});
+  const year=(wishlistMode==='film'||wishlistMode==='tv') ? String(document.getElementById('wishlist-year-filter')?.value||'').trim() : '';
+  const cacheKey = wishlistMode + '|' + query.toLowerCase() + '|' + year + '|' + JSON.stringify(location || {});
   const cached = wishlistSearchCache.get(cacheKey);
   if(cached && Date.now() - cached.savedAt < 120000){
     wishlistResults = cached.items;
@@ -119,8 +127,9 @@ async function searchWishlist(query){
   }
   spinner.classList.add('visible');
   try{
-    const action = wishlistMode === 'film' ? 'searchMovies' : (wishlistMode === 'tv' ? 'searchTv' : 'searchRestaurants');
-    const data = await apiCall(action, {token:getSessionToken(), ...(location || {query:query})});
+    const catalog=catalogConfig(wishlistMode);
+    const action = wishlistMode === 'film' ? 'searchMovies' : (wishlistMode === 'tv' ? 'searchTv' : (catalog ? catalog.searchAction : 'searchRestaurants'));
+    const data = await apiCall(action, {token:getSessionToken(), ...(location || {query:query,year:year,advanced:!!year,pages:year?3:1})});
     if(request !== wishlistSearchRequest) return;
     wishlistResults = (data.results || data || []).slice(0, 7);
     wishlistSearchCache.set(cacheKey, {items:wishlistResults, savedAt:Date.now()});
@@ -135,10 +144,11 @@ function renderWishlistResults(){
   const dropdown = document.getElementById('wishlist-dropdown');
   const films = wishlistMode === 'film';
   const tv = wishlistMode === 'tv';
+  const catalog=catalogConfig(wishlistMode);
   if(!wishlistResults.length){ dropdown.classList.remove('open'); return; }
   dropdown.innerHTML = wishlistResults.map(function(item, index){
-    const title = films ? item.title : (tv ? item.name : item.name);
-    const meta = films ? (item.year || String(item.release_date || '').slice(0,4)) : (tv ? item.year : [item.cuisine, item.address].filter(Boolean).join(' · '));
+    const title = films ? item.title : (tv ? item.name : (catalog ? item.title : item.name));
+    const meta = films ? (item.year || String(item.release_date || '').slice(0,4)) : (tv ? item.year : (catalog ? [item.year,item.creator].filter(Boolean).join(' · ') : [item.cuisine, item.address].filter(Boolean).join(' · ')));
     return '<button class="wishlist-result" onclick="addWishlistResult(' + index + ', this)"><span class="wishlist-result-title">' + escHtml(String(title || '')) + '<br><small>' + escHtml(String(meta || '')) + '</small></span><span class="wishlist-add">Save</span></button>';
   }).join('');
   dropdown.classList.add('open');
@@ -161,7 +171,11 @@ async function addWishlistResult(index, button){
       action = 'addFutureTv';
       payload = await apiCall('getTvDetails', {token:getSessionToken(), id:item.id});
     } else {
-      action = 'addFutureRestaurant';
+      const catalog=catalogConfig(wishlistMode);
+      if(catalog){
+        action=catalog.futureAddAction;
+        payload=await apiCall(catalog.detailsAction,{token:getSessionToken(),id:item.id});
+      }else action = 'addFutureRestaurant';
     }
     await apiCall(action, {token:getSessionToken(), payload:payload});
     wishlistCache.delete(wishlistUserCacheKey());
@@ -183,5 +197,7 @@ document.getElementById('wishlist-search-input').addEventListener('input', funct
 document.getElementById('wishlist-search-input').addEventListener('blur', function(){
   setTimeout(function(){ document.getElementById('wishlist-dropdown').classList.remove('open'); }, 160);
 });
-
-
+document.getElementById('wishlist-year-filter').addEventListener('change', function(){
+  const query=document.getElementById('wishlist-search-input').value.trim();
+  if(query) searchWishlist(query);
+});
