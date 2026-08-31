@@ -32,9 +32,8 @@ async function loadRecentActivity(){
       const s=activitySentiment(r.score10);
       const categoryInfo=r.category==='restaurant'
         ? {label:'Le Guide',emoji:'🍽️'}
-        : (r.category==='tv'?{label:'TV',emoji:'📺'}:{label:'Film',emoji:'🎬'});
-      return '<div class="activity-item"><div class="activity-emoji">'+s.emoji+'</div><div class="activity-main"><div class="activity-line"><strong>'+escHtml(r.user||'Someone')+'</strong> '+s.word+' <span class="activity-title-name">'+escHtml(r.title||'')+'</span></div><div class="activity-meta">'+categoryInfo.emoji+' '+escHtml(categoryInfo.label)+' · '+escHtml(formatActivityDate(r.displayDate||r.date||r.timestamp||''))+'</div></div><div class="activity-score">'+Number(r.score10||0).toFixed(1)+'<span>/10</span></div></div>';
+        : (r.category==='tv'?{label:'TV',emoji:'📺'}:(r.category==='game'?{label:'Games',emoji:'🎮'}:(r.category==='book'?{label:'Books',emoji:'📚'}:{label:'Film',emoji:'🎬'})));
+      return '<div class="activity-item"><div class="activity-emoji">'+s.emoji+'</div><div class="activity-main"><div class="activity-line"><strong>'+escHtml(displayUserName(r.user||'Someone'))+'</strong> '+s.word+' <span class="activity-title-name">'+escHtml(r.title||'')+'</span></div><div class="activity-meta">'+categoryInfo.emoji+' '+escHtml(categoryInfo.label)+' · '+escHtml(formatActivityDate(r.displayDate||r.date||r.timestamp||''))+'</div></div><div class="activity-score">'+Number(r.score10||0).toFixed(1)+'<span>/10</span></div></div>';
     }).join('');
   }catch(e){wrap.innerHTML='<div class="stats-empty">Recent activity took too long to load. <button type="button" class="activity-retry" id="activity-retry">Retry</button></div>';document.getElementById('activity-retry')?.addEventListener('click',loadRecentActivity);}
 }
-
