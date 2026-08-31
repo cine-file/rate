@@ -25,8 +25,13 @@ document.getElementById("search-input").addEventListener("input",function(){
 document.getElementById("search-input").addEventListener("blur",()=>{
   setTimeout(closeDropdown,160);
 });
+document.getElementById('movie-year-filter').addEventListener('change',function(){
+  const query=document.getElementById('search-input').value.trim();
+  if(query) doSearch(query,!!this.value);
+});
 
 async function doSearch(q,advanced=false){
+  if(activeCategory === 'game' || activeCategory === 'book') return catalogSearch(q,advanced);
   if(!CONFIG.GAS_URL){
     document.getElementById("setup-notice").style.display="block";
     document.getElementById("spinner").classList.remove("visible");
@@ -34,8 +39,8 @@ async function doSearch(q,advanced=false){
   }
   document.getElementById("spinner").classList.add("visible");
   try{
-    const year=advanced ? document.getElementById('movie-advanced-year').value.trim() : '';
-    const data = await apiCall("searchMovies", {token:getSessionToken(),query:q,advanced:advanced,year:year,pages:3});
+    const year=(document.getElementById('movie-year-filter').value || (advanced ? document.getElementById('movie-advanced-year').value : '')).trim();
+    const data = await apiCall("searchMovies", {token:getSessionToken(),query:q,advanced:advanced||!!year,year:year,pages:3});
     document.getElementById("setup-notice").style.display="none";
     renderDropdown((data.results || data || []),advanced);
   }catch(e){
@@ -168,23 +173,27 @@ function loadDemo(){
 function loadMovie(movie){
   currentMovie=movie; scores={}; notes={};
   const isTv = activeCategory === 'tv';
+  const isGame = activeCategory === 'game';
+  const isBook = activeCategory === 'book';
+  const catalog = isGame || isBook;
   document.getElementById("search-input").value="";
-  document.getElementById('quick-note').placeholder = isTv ? 'Any thoughts on the season or series...' : 'Any thoughts on the film...';
-  document.getElementById('overall-note').placeholder = isTv ? 'Final thoughts on the season or series...' : 'Final thoughts on the film...';
+  document.getElementById('quick-note').placeholder = isTv ? 'Any thoughts on the season or series...' : (isGame ? 'Any thoughts on the game...' : (isBook ? 'Any thoughts on the book...' : 'Any thoughts on the film...'));
+  document.getElementById('overall-note').placeholder = isTv ? 'Final thoughts on the season or series...' : (isGame ? 'Final thoughts on the game...' : (isBook ? 'Final thoughts on the book...' : 'Final thoughts on the film...'));
   document.getElementById('quick-note-label').textContent = 'Notes (optional)';
   document.getElementById('rating-stamp-subject').textContent = isTv
     ? 'The Following Television Rating Has Been Officially Reviewed By'
-    : 'The Following Film Has Been Officially Reviewed By';
-  document.getElementById('re-rate-button').textContent = isTv ? 'Re-rate This TV Entry' : 'Re-rate This Film';
+    : (isGame ? 'The Following Game Has Been Officially Reviewed By' : (isBook ? 'The Following Book Has Been Officially Reviewed By' : 'The Following Film Has Been Officially Reviewed By'));
+  document.getElementById('re-rate-button').textContent = isTv ? 'Re-rate This TV Entry' : (isGame ? 'Re-rate This Game' : (isBook ? 'Re-rate This Book' : 'Re-rate This Film'));
   document.getElementById("score-title").textContent=movie.title;
   document.getElementById("score-meta").innerHTML=
     [movie.year,
-     movie.director&&`Dir. ${movie.director}`,
+     movie.director&&`${catalog ? (isBook ? 'By' : 'Creator') : 'Dir.'} ${movie.director}`,
      (movie.rt&&movie.rt!=="—")&&`RT Audience: ${movie.rt}`,
-     (movie.imdb&&movie.imdb!=="—")&&`IMDb: ${movie.imdb}`]
+     (movie.imdb&&movie.imdb!=="—")&&`IMDb: ${movie.imdb}`,
+     movie.externalScore&&`${movie.externalLabel||'Rating'}: ${movie.externalScore}`]
     .filter(Boolean).map(s=>`<span>${escHtml(s)}</span>`).join(" · ");
   const poster=document.getElementById("score-poster");
-  if(movie.poster){poster.src=`https://image.tmdb.org/t/p/w200${movie.poster}`;poster.style.display="block";}
+  if(movie.poster){poster.src=movie.posterUrl || `https://image.tmdb.org/t/p/w200${movie.poster}`;poster.style.display="block";}
   else poster.style.display="none";
   document.getElementById("scorer-body").innerHTML=CATS.map(c=>`
     <tr>
@@ -205,9 +214,10 @@ function loadMovie(movie){
     // Set up quick rating screen
     document.getElementById('quick-title').textContent = movie.title;
     document.getElementById('quick-sub').textContent =
-      [movie.year, movie.director && `Dir. ${movie.director}`,
+      [movie.year, movie.director && `${catalog ? (isBook ? 'By' : 'Creator') : 'Dir.'} ${movie.director}`,
        (movie.rt&&movie.rt!=='—') && `RT: ${movie.rt}`,
-       movie.imdb && `IMDb: ${movie.imdb}`].filter(Boolean).join(' · ');
+       movie.imdb && `IMDb: ${movie.imdb}`,
+       movie.externalScore && `${movie.externalLabel||'Rating'}: ${movie.externalScore}`].filter(Boolean).join(' · ');
     const suggested = currentMovie.suggestedScore10 == null ? 5 : Number(currentMovie.suggestedScore10);
     document.getElementById('quick-slider').value = Math.max(0,Math.min(100,Math.round(suggested*10)));
     document.getElementById('quick-note').value = '';
@@ -306,7 +316,8 @@ function generateCard(){
       <div class="sbox-rt-num">${escHtml(currentMovie.imdb)}</div>
       <div class="sbox-lbl">IMDb Rating</div>
     </div>`:""}
-    ${currentMovie.poster?`<img class="card-poster" src="https://image.tmdb.org/t/p/w185${currentMovie.poster}" alt="${escHtml(currentMovie.title)}">`:""}
+    ${currentMovie.externalScore?`<div class="sbox"><div class="sbox-rt-num">${escHtml(currentMovie.externalScore)}</div><div class="sbox-lbl">${escHtml(currentMovie.externalLabel||'External Rating')}</div>${currentMovie.externalCount?`<div class="sbox-lbl">${escHtml(currentMovie.externalCount)}</div>`:''}</div>`:""}
+    ${currentMovie.poster?`<img class="card-poster" src="${escHtml(currentMovie.posterUrl || `https://image.tmdb.org/t/p/w185${currentMovie.poster}`)}" alt="${escHtml(currentMovie.title)}">`:""}
   `;
 
   // Show/hide category table based on mode
@@ -346,6 +357,7 @@ function generateCard(){
 // ── GOOGLE SHEETS ─────────────────────────────────────────────
 function pushToSheets(raw100, g, overallNote, today){
   if(activeCategory === 'tv') return pushTvToSheets(raw100, g, overallNote, today);
+  if(activeCategory === 'game' || activeCategory === 'book') return pushCatalogToSheets(raw100, g, overallNote, today);
   _ratingsCache = null;
   if(!CONFIG.GAS_URL || !getSessionToken()) return;
   const row={
@@ -385,7 +397,7 @@ function pushToSheets(raw100, g, overallNote, today){
 async function loadRankReveal(){
   const reveal=document.getElementById("rank-reveal");
   const stats =document.getElementById("rank-stats");
-  if(activeCategory === 'tv'){
+  if(activeCategory !== 'film'){
     reveal.style.display='none';
     return;
   }
@@ -547,8 +559,8 @@ function populateFilmGenreFilter(){
   populateGenreFilter('film',_statsData.ratings||[],_statsData.summary?.rows||[]);
 }
 function populateTvGenreFilter(){
-  const ratings=(tvStatsData.ratings||[]).filter(function(row){ return row['Type']===tvStatsType; });
-  const rows=(tvStatsData.summary?.rows||[]).filter(function(row){ return row['Type']===tvStatsType; });
+  const ratings=tvStatsType==='overall' ? effectiveTvRatings(tvStatsData.ratings||[]) : (tvStatsData.ratings||[]).filter(function(row){ return tvEntryType(row)==='season'; });
+  const rows=tvStatsType==='overall' ? effectiveTvSummary(tvStatsData.summary?.rows||[]) : (tvStatsData.summary?.rows||[]).filter(function(row){ return tvEntryType(row)==='season'; });
   populateGenreFilter('tv',ratings,rows);
 }
 
@@ -572,6 +584,7 @@ function setScoreMode(mode){
   const active=document.querySelector('.screen.active')?.id;
   if(active==='screen-tv-stats') renderTvStats();
   else if(active==='screen-lg-stats') lgRenderCurrentTab();
+  else if(active==='screen-catalog-stats') renderCatalogStats();
   else renderCurrentTab();
 }
 
@@ -592,7 +605,7 @@ async function goStats(){
       apiCall("getSummary", {token: getSessionToken()})
     ]);
     if(!ratings||!ratings.length){
-      content.innerHTML=`<div class="stats-empty">No ratings yet for ${currentUser.name}. Rate your first film!</div>`;
+      content.innerHTML=`<div class="stats-empty">No ratings yet for ${displayUserName(currentUser.name)}. Rate your first film!</div>`;
       return;
     }
     _statsData = {ratings, summary};
@@ -628,7 +641,7 @@ function closeRatingDetail(event){
   document.getElementById('rating-detail-modal').classList.remove('open');
 }
 
-function openRatingDetail({eyebrow,title,meta,score,grade: ratingGrade,lines,secondaryBoxes=[]}){
+function openRatingDetail({eyebrow,title,meta,score,grade: ratingGrade,lines,secondaryBoxes=[],comment=''}){
   document.getElementById('rating-detail-eyebrow').textContent=eyebrow;
   document.getElementById('rating-detail-title').textContent=title;
   document.getElementById('rating-detail-meta').textContent=meta.filter(Boolean).join(' · ');
@@ -636,12 +649,15 @@ function openRatingDetail({eyebrow,title,meta,score,grade: ratingGrade,lines,sec
     <div class="rating-detail-score-box"><div class="rating-detail-score">${Number(score).toFixed(1)}</div><div class="rating-detail-label">${_scoreMode==='raw'?'out of 100':'out of 10'}</div></div>
     <div class="rating-detail-score-box"><div class="rating-detail-grade">${escHtml(ratingGrade)}</div><div class="rating-detail-label">Grade</div></div>`;
   document.querySelectorAll('#rating-detail-modal .rating-detail-secondary').forEach(el=>el.remove());
+  document.querySelectorAll('#rating-detail-modal .rating-detail-comment').forEach(el=>el.remove());
   document.getElementById('rating-detail-scores').insertAdjacentHTML('afterend', secondaryBoxes.length ? `
     <div class="rating-detail-secondary">${secondaryBoxes.map(box=>`
       <div class="rating-detail-score-box"><div class="rating-detail-secondary-value">${escHtml(box.value)}</div><div class="rating-detail-label">${escHtml(box.label)}</div></div>
     `).join('')}</div>` : '');
-  document.getElementById('rating-detail-list').innerHTML=lines.map(line=>`
+  const list=document.getElementById('rating-detail-list');
+  list.innerHTML=lines.map(line=>`
     <div class="rating-detail-line"><span>${escHtml(line.label)}</span><strong>${escHtml(line.value)}</strong></div>`).join('');
+  if(String(comment||'').trim()) list.insertAdjacentHTML('beforebegin',`<div class="rating-detail-comment"><div class="rating-detail-comment-label">Your comment</div><div>${escHtml(String(comment).trim())}</div></div>`);
   document.getElementById('rating-detail-modal').classList.add('open');
 }
 
@@ -655,15 +671,14 @@ function showMyRatedFilm(title){
     ['Visuals & Production','Visuals'],['Pacing','Pacing'],['Emotional Impact','Emotional']
   ].filter(([,key])=>rating[key]!==''&&rating[key]!=null&&Number(rating[key])>0)
    .map(([label,key])=>({label,value:Number(rating[key]).toFixed(1)}));
-  if(rating['Overall Notes']) lines.push({label:'Notes',value:String(rating['Overall Notes'])});
   const group=(_statsData.summary?.rows||[]).find(r=>String(r.Title||'').toLowerCase()===String(title||'').toLowerCase());
   const others=Object.entries(group?.userScores||{})
     .filter(([name])=>name!==currentUser?.name)
-    .map(([name,value])=>name+' '+Number(value).toFixed(1));
+    .map(([name,value])=>displayUserName(name)+' '+Number(value).toFixed(1));
   openRatingDetail({
     eyebrow:'Your rating', title:String(rating['Title']||''),
     meta:[rating['Year'],rating['Date']&&`Rated ${rating['Date']}`],
-    score, grade:grade(score10), lines,
+    score, grade:grade(score10), lines, comment:rating['Overall Notes'] || '',
     secondaryBoxes:[
       {label:'IMDb',value:String(rating['IMDb']||'—')},
       {label:'RT Audience',value:String(rating['RT Audience']||'—')},
@@ -701,7 +716,7 @@ function showGroupFilm(title){
   Object.keys(row.userScores||{}).sort().forEach(name=>{
     if(name!==currentUser?.name){
       const value=summaryUserDisplayScore(row,name);
-      if(value!=null) lines.push({label:name,value:Number(value).toFixed(1)});
+      if(value!=null) lines.push({label:displayUserName(name),value:Number(value).toFixed(1)});
     }
   });
   openRatingDetail({
@@ -764,7 +779,7 @@ function renderMyStats(ratings, summary){
   container.innerHTML=`
     <!-- Overview -->
     <div class="stats-section">
-      <div class="stats-section-title">Overview — ${escHtml(currentUser.name)}</div>
+      <div class="stats-section-title">Overview — ${escHtml(displayUserName(currentUser.name))}</div>
       <div class="stats-grid">
         <div class="stat-card"><div class="stat-card-num">${ratings.length}</div><div class="stat-card-lbl">Films Rated</div></div>
         <div class="stat-card"><div class="stat-card-num">${avg.toFixed(useRaw?1:1)}</div><div class="stat-card-lbl">Avg ${scoreL}</div></div>
@@ -898,7 +913,7 @@ function renderGroupStats(summary){
         ${userAvgs.map(u=>`
           <div class="stat-card">
             <div class="stat-card-num">${u.avg}</div>
-            <div class="stat-card-lbl">${escHtml(u.name)}</div>
+            <div class="stat-card-lbl">${escHtml(displayUserName(u.name))}</div>
           </div>`).join("")}
       </div>
     </div>
@@ -924,7 +939,7 @@ function renderGroupStats(summary){
               <th>#</th>
               <th>Film</th>
               <th class="tc">Group Avg</th>
-              ${allUsers.map(u=>`<th class="tc">${escHtml(u)}</th>`).join("")}
+              ${allUsers.map(u=>`<th class="tc">${escHtml(displayUserName(u))}</th>`).join("")}
             </tr>
           </thead>
           <tbody>
@@ -1002,11 +1017,11 @@ function renderH2H(summary){
   container.innerHTML=`
     <div class="h2h-select-row">
       <select class="h2h-select" id="h2h-user1" onchange="updateH2H()">
-        ${allUsers.map(u=>`<option value="${escHtml(u)}" ${u===u1?'selected':''}>${escHtml(u)}</option>`).join("")}
+        ${allUsers.map(u=>`<option value="${escHtml(u)}" ${u===u1?'selected':''}>${escHtml(displayUserName(u))}</option>`).join("")}
       </select>
       <div class="h2h-vs">VS</div>
       <select class="h2h-select" id="h2h-user2" onchange="updateH2H()">
-        ${allUsers.map(u=>`<option value="${escHtml(u)}" ${u===u2?'selected':''}>${escHtml(u)}</option>`).join("")}
+        ${allUsers.map(u=>`<option value="${escHtml(u)}" ${u===u2?'selected':''}>${escHtml(displayUserName(u))}</option>`).join("")}
       </select>
     </div>
     <div id="h2h-results"></div>`;
@@ -1022,7 +1037,7 @@ function updateH2H(){
   const summary=getFilteredFilmSummary();
   if(!summary) return;
   const both=summary.rows.filter(row=>summaryUserDisplayScore(row,u1)!=null&&summaryUserDisplayScore(row,u2)!=null);
-  if(!both.length){ results.innerHTML=`<div class="stats-empty">No films rated by both ${escHtml(u1)} and ${escHtml(u2)} yet.</div>`; return; }
+  if(!both.length){ results.innerHTML=`<div class="stats-empty">No films rated by both ${escHtml(displayUserName(u1))} and ${escHtml(displayUserName(u2))} yet.</div>`; return; }
   const score1=row=>summaryUserDisplayScore(row,u1);
   const score2=row=>summaryUserDisplayScore(row,u2);
   const s1=both.map(score1),s2=both.map(score2);
@@ -1033,11 +1048,11 @@ function updateH2H(){
   const byDiff=both.slice().sort((a,b)=>Math.abs(score2(b)-score1(b))-Math.abs(score2(a)-score1(a)));
   const byAgreement=byDiff.slice().reverse();
   results.innerHTML=`
-    <div class="h2h-stat-row"><div class="h2h-stat"><div class="h2h-stat-num">${avg1}</div><div class="h2h-stat-lbl">${escHtml(u1)} avg ${scoreLabel()}</div></div><div class="h2h-stat"><div class="h2h-stat-num">${both.length}</div><div class="h2h-stat-lbl">Films both rated</div></div><div class="h2h-stat"><div class="h2h-stat-num">${avg2}</div><div class="h2h-stat-lbl">${escHtml(u2)} avg ${scoreLabel()}</div></div></div>
-    <div class="h2h-stat-row"><div class="h2h-stat"><div class="h2h-stat-num">${u1Higher}</div><div class="h2h-stat-lbl">${escHtml(u1)} rated higher</div></div><div class="h2h-stat"><div class="h2h-stat-num">${tied}</div><div class="h2h-stat-lbl">Tied</div></div><div class="h2h-stat"><div class="h2h-stat-num">${u2Higher}</div><div class="h2h-stat-lbl">${escHtml(u2)} rated higher</div></div></div>
-    <div class="stats-section"><div class="stats-section-title">🔥 Biggest Disagreements</div><div class="film-list">${byDiff.map((row,index)=>{const one=score1(row),two=score2(row),diff=Math.abs(one-two);return `<div class="film-row ${index>=5?'h2h-diff-extra':''}"${index>=5?' style="display:none"':''}><div class="film-row-title">${escHtml(String(row.Title||''))}</div><div class="film-row-year">${escHtml(u1)}: ${one.toFixed(1)} · ${escHtml(u2)}: ${two.toFixed(1)}</div><div class="film-row-score">Δ${diff.toFixed(1)}</div></div>`;}).join('')}</div>${byDiff.length>5?'<button class="view-all-btn" data-label="View All '+byDiff.length+' Films ↓" onclick="toggleH2HList(\'h2h-diff-extra\',this)">View All '+byDiff.length+' Films ↓</button>':''}</div>
-    <div class="stats-section"><div class="stats-section-title">🤝 Most Agreement</div><div class="film-list">${byAgreement.map((row,index)=>{const one=score1(row),two=score2(row);return `<div class="film-row ${index>=5?'h2h-agreement-extra':''}"${index>=5?' style="display:none"':''}><div class="film-row-title">${escHtml(String(row.Title||''))}</div><div class="film-row-year">${escHtml(u1)}: ${one.toFixed(1)} · ${escHtml(u2)}: ${two.toFixed(1)}</div><div class="film-row-score">${one.toFixed(1)}</div></div>`;}).join('')}</div>${byAgreement.length>5?'<button class="view-all-btn" data-label="View All '+byAgreement.length+' Films ↓" onclick="toggleH2HList(\'h2h-agreement-extra\',this)">View All '+byAgreement.length+' Films ↓</button>':''}</div>
-    <div class="stats-section"><div class="stats-section-title">All ${both.length} Films Both Rated</div><div style="overflow-x:auto"><table class="group-table"><thead><tr><th>Film</th><th class="tc">${escHtml(u1)}</th><th class="tc">${escHtml(u2)}</th><th class="tc">Diff</th></tr></thead><tbody>${both.slice().sort((a,b)=>((score1(b)+score2(b))/2)-((score1(a)+score2(a))/2)).map((row,index)=>{const one=score1(row),two=score2(row),diff=one-two;return `<tr class="${index>=5?'h2h-both-extra stats-extra-row':''}"><td class="film-title-cell">${escHtml(String(row.Title||''))}</td><td class="tc">${one.toFixed(1)}</td><td class="tc">${two.toFixed(1)}</td><td class="tc">${diff>0?'+':''}${diff.toFixed(1)}</td></tr>`;}).join('')}</tbody></table></div>${both.length>5?'<button class="view-all-btn" data-label="View All '+both.length+' Films ↓" onclick="toggleStatsRows(\'h2h-both-extra\',this)">View All '+both.length+' Films ↓</button>':''}</div>`;
+    <div class="h2h-stat-row"><div class="h2h-stat"><div class="h2h-stat-num">${avg1}</div><div class="h2h-stat-lbl">${escHtml(displayUserName(u1))} avg ${scoreLabel()}</div></div><div class="h2h-stat"><div class="h2h-stat-num">${both.length}</div><div class="h2h-stat-lbl">Films both rated</div></div><div class="h2h-stat"><div class="h2h-stat-num">${avg2}</div><div class="h2h-stat-lbl">${escHtml(displayUserName(u2))} avg ${scoreLabel()}</div></div></div>
+    <div class="h2h-stat-row"><div class="h2h-stat"><div class="h2h-stat-num">${u1Higher}</div><div class="h2h-stat-lbl">${escHtml(displayUserName(u1))} rated higher</div></div><div class="h2h-stat"><div class="h2h-stat-num">${tied}</div><div class="h2h-stat-lbl">Tied</div></div><div class="h2h-stat"><div class="h2h-stat-num">${u2Higher}</div><div class="h2h-stat-lbl">${escHtml(displayUserName(u2))} rated higher</div></div></div>
+    <div class="stats-section"><div class="stats-section-title">🔥 Biggest Disagreements</div><div class="film-list">${byDiff.map((row,index)=>{const one=score1(row),two=score2(row),diff=Math.abs(one-two);return `<div class="film-row ${index>=5?'h2h-diff-extra':''}"${index>=5?' style="display:none"':''}><div class="film-row-title">${escHtml(String(row.Title||''))}</div><div class="film-row-year">${escHtml(displayUserName(u1))}: ${one.toFixed(1)} · ${escHtml(displayUserName(u2))}: ${two.toFixed(1)}</div><div class="film-row-score">Δ${diff.toFixed(1)}</div></div>`;}).join('')}</div>${byDiff.length>5?'<button class="view-all-btn" data-label="View All '+byDiff.length+' Films ↓" onclick="toggleH2HList(\'h2h-diff-extra\',this)">View All '+byDiff.length+' Films ↓</button>':''}</div>
+    <div class="stats-section"><div class="stats-section-title">🤝 Most Agreement</div><div class="film-list">${byAgreement.map((row,index)=>{const one=score1(row),two=score2(row);return `<div class="film-row ${index>=5?'h2h-agreement-extra':''}"${index>=5?' style="display:none"':''}><div class="film-row-title">${escHtml(String(row.Title||''))}</div><div class="film-row-year">${escHtml(displayUserName(u1))}: ${one.toFixed(1)} · ${escHtml(displayUserName(u2))}: ${two.toFixed(1)}</div><div class="film-row-score">${one.toFixed(1)}</div></div>`;}).join('')}</div>${byAgreement.length>5?'<button class="view-all-btn" data-label="View All '+byAgreement.length+' Films ↓" onclick="toggleH2HList(\'h2h-agreement-extra\',this)">View All '+byAgreement.length+' Films ↓</button>':''}</div>
+    <div class="stats-section"><div class="stats-section-title">All ${both.length} Films Both Rated</div><div style="overflow-x:auto"><table class="group-table"><thead><tr><th>Film</th><th class="tc">${escHtml(displayUserName(u1))}</th><th class="tc">${escHtml(displayUserName(u2))}</th><th class="tc">Diff</th></tr></thead><tbody>${both.slice().sort((a,b)=>((score1(b)+score2(b))/2)-((score1(a)+score2(a))/2)).map((row,index)=>{const one=score1(row),two=score2(row),diff=one-two;return `<tr class="${index>=5?'h2h-both-extra stats-extra-row':''}"><td class="film-title-cell">${escHtml(String(row.Title||''))}</td><td class="tc">${one.toFixed(1)}</td><td class="tc">${two.toFixed(1)}</td><td class="tc">${diff>0?'+':''}${diff.toFixed(1)}</td></tr>`;}).join('')}</tbody></table></div>${both.length>5?'<button class="view-all-btn" data-label="View All '+both.length+' Films ↓" onclick="toggleStatsRows(\'h2h-both-extra\',this)">View All '+both.length+' Films ↓</button>':''}</div>`;
 }
 
 function toggleH2HList(className, btn){
@@ -1079,7 +1094,7 @@ function renderIndividualRatings(options){
       <div class="stats-section-title">Individual ${escHtml(options.itemLabel)} Ratings</div>
       <div class="h2h-select-row">
         <select class="h2h-select" id="individual-user-${options.id}" onchange="updateIndividualRatings('${options.id}')">
-          ${users.map(function(user){ return '<option value="'+escHtml(user)+'" '+(user===_individualContexts[options.id].selectedUser?'selected':'')+'>'+escHtml(user)+'</option>'; }).join('')}
+          ${users.map(function(user){ return '<option value="'+escHtml(user)+'" '+(user===_individualContexts[options.id].selectedUser?'selected':'')+'>'+escHtml(displayUserName(user))+'</option>'; }).join('')}
         </select>
         <input class="stats-search" id="individual-search-${options.id}" type="search" placeholder="Search this person's ratings" oninput="updateIndividualRatings('${options.id}')"/>
       </div>
@@ -1103,7 +1118,7 @@ function updateIndividualRatings(id){
   const result = document.getElementById('individual-results-'+id);
   if(!result) return;
   if(!matches.length){
-    result.innerHTML='<div class="stats-empty">'+(query ? escHtml(user)+' has not rated a matching item.' : escHtml(user)+' has no ratings yet.')+'</div>';
+    result.innerHTML='<div class="stats-empty">'+(query ? escHtml(displayUserName(user))+' has not rated a matching item.' : escHtml(displayUserName(user))+' has no ratings yet.')+'</div>';
     return;
   }
   result.innerHTML=matches.map(function(entry,index){
@@ -1134,7 +1149,7 @@ function renderSummaryGroupStats(options){
   const varianceRows=function(entries,agreement){ return entries.map(function(entry){ return '<div class="film-row"><div class="film-row-title">'+escHtml(options.title(entry.row))+'</div><div class="film-row-year">'+escHtml(options.meta(entry.row))+'</div><div class="film-row-score">'+(agreement?'σ ':'σ ')+Math.sqrt(entry.variance).toFixed(1)+'</div></div>'; }).join(''); };
   container.innerHTML=`
     <div class="stats-section"><div class="stats-section-title">Average Rating by Person — ${scoreLabel()}</div><div class="stats-grid">
-      ${userAverages.map(function(entry){ return '<div class="stat-card"><div class="stat-card-num">'+entry.average.toFixed(1)+'</div><div class="stat-card-lbl">'+escHtml(entry.user)+'</div></div>'; }).join('')}
+      ${userAverages.map(function(entry){ return '<div class="stat-card"><div class="stat-card-num">'+entry.average.toFixed(1)+'</div><div class="stat-card-lbl">'+escHtml(displayUserName(entry.user))+'</div></div>'; }).join('')}
     </div></div>
     <div class="stats-section"><div class="stats-section-title">Group Rating Distribution — ${distributionValues.length} Individual Ratings</div>${renderDistributionChart(distributionValues,{restaurant:!!options.restaurant})}</div>
     <div class="stats-section"><div class="stats-section-title">Group Rankings — ${ranked.length} ${escHtml(options.itemLabel)}</div><div class="film-list">${ranked.slice(0,5).map(function(row,index){ return '<div class="film-row"><div class="film-row-rank">#'+(index+1)+'</div><div class="film-row-title">'+escHtml(options.title(row))+'</div><div class="film-row-year">'+escHtml(options.meta(row))+'</div><div class="film-row-score">'+averageScores(summaryDisplayScores(row)).toFixed(1)+'</div></div>'; }).join('')}</div>
@@ -1163,9 +1178,9 @@ function renderSummaryH2H(options){
   }
   _comparisonContexts[options.id]={...options,users:users};
   container.innerHTML=`<div class="h2h-select-row">
-    <select class="h2h-select" id="comparison-user1-${options.id}" onchange="updateSummaryH2H('${options.id}')">${users.map(function(user,index){ return '<option value="'+escHtml(user)+'" '+(!index?'selected':'')+'>'+escHtml(user)+'</option>'; }).join('')}</select>
+    <select class="h2h-select" id="comparison-user1-${options.id}" onchange="updateSummaryH2H('${options.id}')">${users.map(function(user,index){ return '<option value="'+escHtml(user)+'" '+(!index?'selected':'')+'>'+escHtml(displayUserName(user))+'</option>'; }).join('')}</select>
     <div class="h2h-vs">VS</div>
-    <select class="h2h-select" id="comparison-user2-${options.id}" onchange="updateSummaryH2H('${options.id}')">${users.map(function(user,index){ return '<option value="'+escHtml(user)+'" '+(index===1?'selected':'')+'>'+escHtml(user)+'</option>'; }).join('')}</select>
+    <select class="h2h-select" id="comparison-user2-${options.id}" onchange="updateSummaryH2H('${options.id}')">${users.map(function(user,index){ return '<option value="'+escHtml(user)+'" '+(index===1?'selected':'')+'>'+escHtml(displayUserName(user))+'</option>'; }).join('')}</select>
   </div><div id="comparison-results-${options.id}"></div>`;
   updateSummaryH2H(options.id);
 }
@@ -1187,11 +1202,10 @@ function updateSummaryH2H(id){
   const average2=averageScores(both.map(score2));
   const byDifference=both.slice().sort(function(a,b){ return Math.abs(score1(b)-score2(b))-Math.abs(score1(a)-score2(a)); });
   const byAgreement=byDifference.slice().reverse();
-  function rowsHtml(rows,showDifference){ return rows.slice(0,5).map(function(row){ const one=score1(row); const two=score2(row); const delta=Math.abs(one-two); return '<div class="film-row"><div class="film-row-title">'+escHtml(context.title(row))+'</div><div class="film-row-year">'+escHtml(u1)+': '+one.toFixed(1)+' · '+escHtml(u2)+': '+two.toFixed(1)+'</div><div class="film-row-score">'+(showDifference?'Δ'+delta.toFixed(1):one.toFixed(1))+'</div></div>'; }).join(''); }
+  function rowsHtml(rows,showDifference){ return rows.slice(0,5).map(function(row){ const one=score1(row); const two=score2(row); const delta=Math.abs(one-two); return '<div class="film-row"><div class="film-row-title">'+escHtml(context.title(row))+'</div><div class="film-row-year">'+escHtml(displayUserName(u1))+': '+one.toFixed(1)+' · '+escHtml(displayUserName(u2))+': '+two.toFixed(1)+'</div><div class="film-row-score">'+(showDifference?'Δ'+delta.toFixed(1):one.toFixed(1))+'</div></div>'; }).join(''); }
   const tableRows=both.slice().sort(function(a,b){ return ((score1(b)+score2(b))/2)-((score1(a)+score2(a))/2); }).map(function(row,index){ const one=score1(row),two=score2(row),diff=one-two; return '<tr class="'+(index>=5?'comparison-extra-'+id+' stats-extra-row':'')+'"><td class="film-title-cell">'+escHtml(context.title(row))+'</td><td class="tc">'+one.toFixed(1)+'</td><td class="tc">'+two.toFixed(1)+'</td><td class="tc">'+(diff>0?'+':'')+diff.toFixed(1)+'</td></tr>'; }).join('');
-  target.innerHTML=`<div class="h2h-stat-row"><div class="h2h-stat"><div class="h2h-stat-num">${average1.toFixed(1)}</div><div class="h2h-stat-lbl">${escHtml(u1)} avg ${scoreLabel()}</div></div><div class="h2h-stat"><div class="h2h-stat-num">${both.length}</div><div class="h2h-stat-lbl">${escHtml(context.itemLabel)} both rated</div></div><div class="h2h-stat"><div class="h2h-stat-num">${average2.toFixed(1)}</div><div class="h2h-stat-lbl">${escHtml(u2)} avg ${scoreLabel()}</div></div></div>
+  target.innerHTML=`<div class="h2h-stat-row"><div class="h2h-stat"><div class="h2h-stat-num">${average1.toFixed(1)}</div><div class="h2h-stat-lbl">${escHtml(displayUserName(u1))} avg ${scoreLabel()}</div></div><div class="h2h-stat"><div class="h2h-stat-num">${both.length}</div><div class="h2h-stat-lbl">${escHtml(context.itemLabel)} both rated</div></div><div class="h2h-stat"><div class="h2h-stat-num">${average2.toFixed(1)}</div><div class="h2h-stat-lbl">${escHtml(displayUserName(u2))} avg ${scoreLabel()}</div></div></div>
   <div class="stats-section"><div class="stats-section-title">Biggest Disagreements</div><div class="film-list">${rowsHtml(byDifference,true)}</div></div>
   <div class="stats-section"><div class="stats-section-title">Most Agreement</div><div class="film-list">${rowsHtml(byAgreement,false)}</div></div>
-  <div class="stats-section"><div class="stats-section-title">All ${both.length} ${escHtml(context.itemLabel)} Both Rated</div><div style="overflow-x:auto"><table class="group-table"><thead><tr><th>${escHtml(context.itemLabel.slice(0,-1)||'Item')}</th><th class="tc">${escHtml(u1)}</th><th class="tc">${escHtml(u2)}</th><th class="tc">Diff</th></tr></thead><tbody>${tableRows}</tbody></table></div>${both.length>5?'<button class="view-all-btn" data-label="View All '+both.length+' '+escHtml(context.itemLabel)+' ↓" onclick="toggleStatsRows(\'comparison-extra-'+id+'\',this)">View All '+both.length+' '+escHtml(context.itemLabel)+' ↓</button>':''}</div>`;
+  <div class="stats-section"><div class="stats-section-title">All ${both.length} ${escHtml(context.itemLabel)} Both Rated</div><div style="overflow-x:auto"><table class="group-table"><thead><tr><th>${escHtml(context.itemLabel.slice(0,-1)||'Item')}</th><th class="tc">${escHtml(displayUserName(u1))}</th><th class="tc">${escHtml(displayUserName(u2))}</th><th class="tc">Diff</th></tr></thead><tbody>${tableRows}</tbody></table></div>${both.length>5?'<button class="view-all-btn" data-label="View All '+both.length+' '+escHtml(context.itemLabel)+' ↓" onclick="toggleStatsRows(\'comparison-extra-'+id+'\',this)">View All '+both.length+' '+escHtml(context.itemLabel)+' ↓</button>':''}</div>`;
 }
-
