@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 //  CINE-FILE — Google Apps Script
-//  Version: 2026.08.14-restaurant-location-performance.16
+//  Version: 2026.08.30-catalog-tv-derived.17
 //  Runtime: GitHub Pages frontend + Apps Script JSON backend
 //
 //  Version notes:
@@ -19,11 +19,13 @@
 //  - cross-category-recommendations.8: adds matching Gemini-first recommendation rooms for TV and restaurants, validated by TMDB and Google Places.
 //  - cross-category-learning.9: persists TV and restaurant recommendation sessions and feedback, feeds prior actions back into future Gemini prompts, and removes off-theme search glows.
 //  - restaurant-location-performance.16: adds voluntary city/state/country restaurant filtering, location-aware restaurant recommendations, cached searches, and batched recommendation history writes.
+//  - catalog-tv-derived.17: adds Steam games, Google Books, manual Le Guide entries,
+//    display-only user aliases, and season-derived TV overall statistics.
 //
 //  Original by friend, restaurant functions added by Claude
 // ─────────────────────────────────────────────────────────────
 
-const BACKEND_VERSION = '2026.08.14-restaurant-location-performance.16';
+const BACKEND_VERSION = '2026.08.30-catalog-tv-derived.17';
 const SESSION_TTL_SECONDS = 6 * 60 * 60;
 const LOGIN_RATE_WINDOW_SECONDS = 15 * 60;
 const LOGIN_RATE_MAX_ATTEMPTS = 8;
@@ -37,6 +39,12 @@ const FUTURE_RESTAURANTS_SHEET_NAME = 'Future-Restaurants';
 const TV_SHEET_NAME = 'Database-TV';
 const TV_SUMMARY_SHEET_NAME = 'Summary-TV';
 const FUTURE_TV_SHEET_NAME = 'Future-TV';
+const GAMES_SHEET_NAME = 'Database-Games';
+const GAMES_SUMMARY_SHEET_NAME = 'Summary-Games';
+const FUTURE_GAMES_SHEET_NAME = 'Future-Games';
+const BOOKS_SHEET_NAME = 'Database-Books';
+const BOOKS_SUMMARY_SHEET_NAME = 'Summary-Books';
+const FUTURE_BOOKS_SHEET_NAME = 'Future-Books';
 const FILM_RECOMMENDATIONS_SHEET_NAME = 'Recommendations-Films';
 const FILM_RECOMMENDATION_FEEDBACK_SHEET_NAME = 'Recommendation-Feedback';
 const TV_RECOMMENDATIONS_SHEET_NAME = 'Recommendations-TV';
@@ -49,7 +57,9 @@ const RECENT_ACTIVITY_SNAPSHOT_PROPERTY = 'RECENT_ACTIVITY_SNAPSHOT_V14';
 const FILM_SUMMARY_BASE_COLUMNS = ['Title','Year','Genre','Director','Movie length','RT Audience','IMDb'];
 const FILM_SUMMARY_AVERAGE_COLUMN = 'Average Rating';
 const FILM_SUMMARY_USER_ORDER = ['Michael','Megan','Stephen','Hannah','Chace','Natasha'];
-const SUMMARY_DISPLAY_NAMES = {};
+// Canonical names remain in Users and every database row. This only controls
+// human-facing summary column labels; API score keys stay canonical.
+const SUMMARY_DISPLAY_NAMES = { Megan: 'Megs' };
 
 const FILMS_HEADER = [
   'user','date','title','year','director','rtAudience','imdb',
@@ -99,6 +109,21 @@ const FUTURE_TV_HEADER = [
   'posterPath','createdAt','updatedAt'
 ];
 
+const CATALOG_HEADER = [
+  'user','date','title','year','creator','genres','externalScore','externalLabel','externalCount','sourceId','posterUrl',
+  'score10','raw100','grade',
+  'category1','category1Grade','category1Notes',
+  'category2','category2Grade','category2Notes',
+  'category3','category3Grade','category3Notes',
+  'category4','category4Grade','category4Notes',
+  'category5','category5Grade','category5Notes',
+  'overallNotes','createdAt','updatedAt'
+];
+
+const FUTURE_CATALOG_HEADER = [
+  'user','title','year','creator','genres','externalScore','externalLabel','externalCount','sourceId','posterUrl','createdAt','updatedAt'
+];
+
 const FILM_RECOMMENDATIONS_HEADER = [
   'recommendationId','user','sourceMode','sourceTmdbId','sourceTitle','pool','style',
   'recommendedTmdbId','recommendedTitle','rank','role','explanation','score',
@@ -121,6 +146,17 @@ const GENERIC_RECOMMENDATION_FEEDBACK_HEADER = [
 const RECENT_ACTIVITY_HEADER = [
   'activityKey','user','category','title','score10','displayDate','sortDate','updatedAt'
 ];
+
+const CATALOG_CONFIGS = {
+  game: { database: GAMES_SHEET_NAME, summary: GAMES_SUMMARY_SHEET_NAME, future: FUTURE_GAMES_SHEET_NAME, externalLabel: 'Steam' },
+  book: { database: BOOKS_SHEET_NAME, summary: BOOKS_SUMMARY_SHEET_NAME, future: FUTURE_BOOKS_SHEET_NAME, externalLabel: 'Google Books' }
+};
+
+function catalogConfig_(kind) {
+  var config = CATALOG_CONFIGS[String(kind || '').toLowerCase()];
+  if (!config) throw new Error('Unsupported catalog category.');
+  return config;
+}
 
 
 function getScriptProps() {
@@ -385,6 +421,22 @@ function doPost(e) {
     if (action === 'getFutureTv')             return doGetFutureTv_(username);
     if (action === 'addFutureTv')             return doAddFutureTv_(d.payload || d, username);
     if (action === 'deleteFutureTv')          return doDeleteFutureTv_(d.payload || d, username);
+    if (action === 'searchGames')            return doSearchGames_(d);
+    if (action === 'getGameDetails')         return doGetGameDetails_(d);
+    if (action === 'saveGameRating')         return doSaveCatalogRating_(d.payload || d, username, 'game');
+    if (action === 'getGameRatings')         return doGetCatalogRatings_(username, 'game');
+    if (action === 'getGameSummary')         return doGetCatalogSummary_('game');
+    if (action === 'getFutureGames')         return doGetFutureCatalog_(username, 'game');
+    if (action === 'addFutureGame')          return doAddFutureCatalog_(d.payload || d, username, 'game');
+    if (action === 'deleteFutureGame')       return doDeleteFutureCatalog_(d.payload || d, username, 'game');
+    if (action === 'searchBooks')            return doSearchBooks_(d);
+    if (action === 'getBookDetails')         return doGetBookDetails_(d);
+    if (action === 'saveBookRating')         return doSaveCatalogRating_(d.payload || d, username, 'book');
+    if (action === 'getBookRatings')         return doGetCatalogRatings_(username, 'book');
+    if (action === 'getBookSummary')         return doGetCatalogSummary_('book');
+    if (action === 'getFutureBooks')         return doGetFutureCatalog_(username, 'book');
+    if (action === 'addFutureBook')          return doAddFutureCatalog_(d.payload || d, username, 'book');
+    if (action === 'deleteFutureBook')       return doDeleteFutureCatalog_(d.payload || d, username, 'book');
     if (action === 'searchRestaurants')      return doSearchRestaurants_(d);
     if (action === 'saveRestaurantRating')   return doSaveRestaurantRating_(d.payload || d, username);
     if (action === 'getRestaurantRatings')   return doGetRestaurantRatings_(username);
@@ -550,6 +602,8 @@ function rebuildSummariesSafe_() {
   try { rebuildFilmSummary_(); } catch(e) {}
   try { rebuildRestaurantSummary_(); } catch(e) {}
   try { rebuildTvSummary_(); } catch(e) {}
+  try { rebuildCatalogSummary_('game'); } catch(e) {}
+  try { rebuildCatalogSummary_('book'); } catch(e) {}
 }
 
 // ── SEARCH MOVIES ─────────────────────────────────────────────
@@ -751,6 +805,14 @@ function restaurantGroupKey_(r) {
   return 'name|' + normalizeKeyPart_(r.name || r.Name) + '|' + normalizeKeyPart_(r.address || r.Address);
 }
 
+function manualRestaurantPlaceId_(name, address, city) {
+  var source = normalizeKeyPart_(name) + '|' + normalizeKeyPart_(address) + '|' + normalizeKeyPart_(city);
+  if (!source.replace(/\|/g, '')) return '';
+  var bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, source, Utilities.Charset.UTF_8);
+  var hash = bytes.map(function(b){ return ('0' + (b & 0xFF).toString(16)).slice(-2); }).join('');
+  return 'manual_' + hash.slice(0, 20);
+}
+
 function deleteExtraRows_(tab, rows) {
   rows.slice(1).sort(function(a, b){ return b - a; }).forEach(function(rowNumber) {
     tab.deleteRow(rowNumber);
@@ -782,15 +844,20 @@ function futureFilmPayloadToSheetRow_(d, username, existing) {
 function futureRestaurantPayloadToSheetRow_(d, username, existing) {
   var now = new Date().toISOString();
   existing = existing || {};
+  var name = d.name || existing.name || '';
+  var address = d.address || existing.address || '';
+  var city = d.city || existing.city || '';
+  var placeId = d.placeId || d['Place ID'] || d.place_id || d.id || existing.placeId || '';
+  if (!placeId) placeId = manualRestaurantPlaceId_(name, address, city);
   return {
     user: username,
-    name: d.name || existing.name || '',
-    address: d.address || existing.address || '',
-    city: d.city || existing.city || '',
+    name: name,
+    address: address,
+    city: city,
     cuisine: d.cuisine || existing.cuisine || '',
     price: d.price || existing.price || '',
     googleRating: d.googleRating || d.rating || existing.googleRating || '',
-    placeId: d.placeId || d['Place ID'] || d.place_id || d.id || existing.placeId || '',
+    placeId: placeId,
     createdAt: existing.createdAt || now,
     updatedAt: now
   };
@@ -1133,11 +1200,11 @@ function doGetSummary_() {
     var score = parseFloat(r.score10);
     if (!isNaN(score) && r.user) {
       grouped[key].scores.push(score);
-      grouped[key].userScores[summaryDisplayName_(r.user)] = score;
+      grouped[key].userScores[String(r.user)] = score;
       var rawScore = parseFloat(r.raw100);
       if (isNaN(rawScore)) rawScore = score * 10;
       grouped[key].rawScores.push(rawScore);
-      grouped[key].userRawScores[summaryDisplayName_(r.user)] = rawScore;
+      grouped[key].userRawScores[String(r.user)] = rawScore;
     }
   });
   return jsonOut_({ rows: Object.keys(grouped).map(function(k){ return grouped[k]; }) });
@@ -1293,9 +1360,13 @@ function writeTable_(tab, header, rows) {
 // ══════════════════════════════════════════════════════════════
 //  TV — SEASONS + OPTIONAL OVERALL SERIES RATINGS
 // ══════════════════════════════════════════════════════════════
+function normalizeTvEntryType_(value) {
+  return String(value || '').trim().toLowerCase() === 'overall' ? 'overall' : 'season';
+}
+
 function tvGroupKey_(r) {
   var id = normalizeKeyPart_(r.tmdbTvId || r['TMDB TV ID']);
-  var type = normalizeKeyPart_(r.entryType || r.Type || 'season');
+  var type = normalizeTvEntryType_(r.entryType || r.Type);
   var season = type === 'overall' ? 'overall' : String(r.seasonNumber || r.Season || '');
   return (id ? 'tv|' + id : 'tvtitle|' + normalizeKeyPart_(r.seriesTitle || r.Series)) + '|' + type + '|' + season;
 }
@@ -1321,7 +1392,7 @@ function tvPayloadToSheetRow_(d, username, existing) {
   existing = existing || {};
   var genres = d.genres || existing.genres || '';
   if (Array.isArray(genres)) genres = genres.join(' · ');
-  var entryType = String(d.entryType || existing.entryType || 'season').toLowerCase() === 'overall' ? 'overall' : 'season';
+  var entryType = normalizeTvEntryType_(d.entryType || existing.entryType);
   return {
     user: username,
     date: d.date || existing.date || '',
@@ -1353,7 +1424,7 @@ function tvPayloadToSheetRow_(d, username, existing) {
 
 function tvToApiRow_(r) {
   return {
-    'Date': r.date, 'Type': r.entryType, 'Series': r.seriesTitle, 'Year': r.seriesYear,
+    'Date': r.date, 'Type': normalizeTvEntryType_(r.entryType), 'Series': r.seriesTitle, 'Year': r.seriesYear,
     'Season': r.seasonNumber, 'Season Name': r.seasonName, 'Episodes': r.episodeCount,
     'Creator': r.creator, 'Genres': r.genres, 'IMDb': r.imdb, 'TMDB TV ID': r.tmdbTvId,
     'Poster Path': r.posterPath, 'Score /10': r.score10, 'Raw /100': r.raw100, 'Grade': r.grade,
@@ -1456,19 +1527,19 @@ function doGetTvSummary_() {
   data.forEach(function(r) {
     var key = tvGroupKey_(r);
     if (!grouped[key]) grouped[key] = {
-      'Series':r.seriesTitle, 'Year':r.seriesYear, 'Type':r.entryType, 'Season':r.seasonNumber,
+      'Series':r.seriesTitle, 'Year':r.seriesYear, 'Type':normalizeTvEntryType_(r.entryType), 'Season':r.seasonNumber,
       'Season Name':r.seasonName, 'Episodes':r.episodeCount, 'Creator':r.creator,
-      'Genre':r.genres, 'IMDb':r.imdb,
+      'Genre':r.genres, 'IMDb':r.imdb, 'TMDB TV ID':r.tmdbTvId,
       scores:[], rawScores:[], userScores:{}, userRawScores:{}
     };
     var score = parseFloat(r.score10);
     if (!isNaN(score) && r.user) {
       grouped[key].scores.push(score);
-      grouped[key].userScores[summaryDisplayName_(r.user)] = score;
+      grouped[key].userScores[String(r.user)] = score;
       var rawScore = parseFloat(r.raw100);
       if (isNaN(rawScore)) rawScore = score * 10;
       grouped[key].rawScores.push(rawScore);
-      grouped[key].userRawScores[summaryDisplayName_(r.user)] = rawScore;
+      grouped[key].userRawScores[String(r.user)] = rawScore;
     }
   });
   return jsonOut_({ rows:Object.keys(grouped).map(function(key){ return grouped[key]; }) });
@@ -1491,7 +1562,7 @@ function rebuildTvSummary_() {
     var scores = users.map(function(user){ return scoresByUser[user] === undefined ? '' : Number(scoresByUser[user]); });
     var numeric = scores.filter(function(score){ return score !== '' && !isNaN(score); });
     var avg = numeric.length ? Number((numeric.reduce(function(a,b){ return a+b; },0) / numeric.length).toFixed(1)) : '';
-    return [sample.seriesTitle,sample.seriesYear,sample.entryType,sample.seasonNumber,sample.seasonName,
+    return [sample.seriesTitle,sample.seriesYear,normalizeTvEntryType_(sample.entryType),sample.seasonNumber,sample.seasonName,
       sample.episodeCount,sample.creator,sample.genres,sample.imdb].concat(scores).concat([avg]);
   }).sort(function(a,b){ return String(a[0]).localeCompare(String(b[0])); });
   writeTable_(getOrCreateSummarySheet_(TV_SUMMARY_SHEET_NAME), header, rows);
@@ -1702,12 +1773,17 @@ function restaurantToApiRow_(r) {
 function restaurantPayloadToSheetRow_(d, username, existing) {
   var now = new Date().toISOString();
   existing = existing || {};
+  var name = d.name || existing.name || '';
+  var address = d.address || existing.address || '';
+  var city = d.city || existing.city || '';
+  var placeId = d.placeId || d.place_id || d.id || existing.placeId || '';
+  if (!placeId) placeId = manualRestaurantPlaceId_(name, address, city);
   return {
     user: username,
     date: d.date || existing.date || '',
-    name: d.name || existing.name || '',
-    address: d.address || existing.address || '',
-    city: d.city || existing.city || '',
+    name: name,
+    address: address,
+    city: city,
     cuisine: d.cuisine || existing.cuisine || '',
     price: d.price || existing.price || '',
     googleRating: d.googleRating || existing.googleRating || '',
@@ -1726,7 +1802,7 @@ function restaurantPayloadToSheetRow_(d, username, existing) {
     craving: d.craving || '',
     cravingGrade: d.cravingGrade || '',
     overallNotes: d.notes || d.overallNotes || '',
-    placeId: d.placeId || d.place_id || d.id || existing.placeId || '',
+    placeId: placeId,
     createdAt: existing.createdAt || now,
     updatedAt: now
   };
@@ -1785,11 +1861,11 @@ function doGetRestaurantSummary_() {
     var score = parseFloat(r.score10);
     if (!isNaN(score) && r.user) {
       grouped[key].scores.push(score);
-      grouped[key].userScores[summaryDisplayName_(r.user)] = score;
+      grouped[key].userScores[String(r.user)] = score;
       var rawScore = parseFloat(r.raw100);
       if (isNaN(rawScore)) rawScore = score * 10;
       grouped[key].rawScores.push(rawScore);
-      grouped[key].userRawScores[summaryDisplayName_(r.user)] = rawScore;
+      grouped[key].userRawScores[String(r.user)] = rawScore;
     }
   });
   return jsonOut_({ rows: Object.keys(grouped).map(function(k){ return grouped[k]; }) });
@@ -1909,6 +1985,234 @@ function doDeleteRestaurantRating_(d, username) {
   });
 }
 
+// ══════════════════════════════════════════════════════════════
+//  GAMES + BOOKS — SHARED CATALOG BACKEND
+// ══════════════════════════════════════════════════════════════
+function catalogGroupKey_(r) {
+  var sourceId = normalizeKeyPart_(r.sourceId || r['Source ID']);
+  if (sourceId) return 'source|' + sourceId;
+  return 'title|' + normalizeKeyPart_(r.title || r.Title) + '|' + normalizeKeyPart_(r.year || r.Year);
+}
+
+function catalogPayloadToSheetRow_(d, username, existing, kind) {
+  var now = new Date().toISOString();
+  existing = existing || {};
+  var config = catalogConfig_(kind);
+  var genres = d.genres || d.Genres || existing.genres || '';
+  if (Array.isArray(genres)) genres = genres.join(' · ');
+  var row = {
+    user: username,
+    date: d.date || existing.date || '',
+    title: d.title || d.Title || existing.title || '',
+    year: d.year || d.Year || existing.year || '',
+    creator: d.creator || d.director || d.Creator || existing.creator || '',
+    genres: genres,
+    externalScore: d.externalScore || d['External Score'] || existing.externalScore || '',
+    externalLabel: d.externalLabel || d['External Label'] || existing.externalLabel || config.externalLabel,
+    externalCount: d.externalCount || d['External Rating Count'] || existing.externalCount || '',
+    sourceId: d.sourceId || d['Source ID'] || d.id || existing.sourceId || '',
+    posterUrl: d.posterUrl || d['Poster URL'] || existing.posterUrl || '',
+    score10: d.score10 === 0 ? 0 : (d.score10 || existing.score10 || ''),
+    raw100: d.score100 === 0 ? 0 : (d.score100 || d.raw100 || existing.raw100 || ''),
+    grade: d.grade || existing.grade || '',
+    overallNotes: d.notes || d.overallNotes || '',
+    createdAt: existing.createdAt || now,
+    updatedAt: now
+  };
+  for (var i = 1; i <= 5; i++) {
+    row['category' + i] = d['category' + i] === 0 ? 0 : (d['category' + i] || '');
+    row['category' + i + 'Grade'] = d['category' + i + 'Grade'] || '';
+    row['category' + i + 'Notes'] = d['category' + i + 'Notes'] || '';
+  }
+  return row;
+}
+
+function catalogToApiRow_(r) {
+  var row = {
+    'Date': r.date, 'Title': r.title, 'Year': r.year, 'Creator': r.creator, 'Genres': r.genres,
+    'External Score': r.externalScore, 'External Label': r.externalLabel, 'External Rating Count': r.externalCount,
+    'Source ID': r.sourceId, 'Poster URL': r.posterUrl, 'Score /10': r.score10, 'Raw /100': r.raw100,
+    'Grade': r.grade, 'Overall Notes': r.overallNotes
+  };
+  for (var i = 1; i <= 5; i++) {
+    row['Category ' + i] = r['category' + i];
+    row['Category ' + i + ' Grade'] = r['category' + i + 'Grade'];
+    row['Category ' + i + ' Notes'] = r['category' + i + 'Notes'];
+  }
+  return row;
+}
+
+function doSaveCatalogRating_(d, username, kind) {
+  return withScriptLock_(function() {
+    var config = catalogConfig_(kind);
+    var tab = getOrCreateSheet_(config.database, CATALOG_HEADER);
+    var rowObj = catalogPayloadToSheetRow_(d, username, {}, kind);
+    if (!rowObj.title) throw new Error('A title is required.');
+    var rows = categoryRowsForPayload_(tab, CATALOG_HEADER, rowObj, 'sourceId', 'title', 'year');
+    if (rows.length) {
+      var existing = objectAtSheetRow_(tab, rows[0]);
+      rowObj = catalogPayloadToSheetRow_(d, username, existing, kind);
+      tab.getRange(rows[0], 1, 1, CATALOG_HEADER.length).setValues([rowForHeader_(CATALOG_HEADER, rowObj)]);
+      deleteExtraRows_(tab, rows);
+    } else {
+      tab.appendRow(rowForHeader_(CATALOG_HEADER, rowObj));
+    }
+    removeFutureCatalog_(rowObj, username, kind);
+    upsertRecentActivity_({activityKey:recentActivityKey_(kind, username, rowObj.sourceId, rowObj.title+'|'+rowObj.year),user:username,category:kind,title:rowObj.title||'',score10:Number(rowObj.score10||0),displayDate:activityDisplayDate_(rowObj),sortDate:activityDateValue_(rowObj),updatedAt:rowObj.updatedAt||''});
+    rebuildCatalogSummary_(kind);
+    return jsonOut_({ ok: true });
+  });
+}
+
+function doGetCatalogRatings_(username, kind) {
+  var config = catalogConfig_(kind);
+  var rows = sheetObjects_(getExistingSheet_(config.database), CATALOG_HEADER).filter(function(r) {
+    return String(r.user || '').toLowerCase() === String(username || '').toLowerCase();
+  });
+  return jsonOut_(rows.map(catalogToApiRow_));
+}
+
+function doGetCatalogSummary_(kind) {
+  var config = catalogConfig_(kind);
+  var grouped = {};
+  sheetObjects_(getExistingSheet_(config.database), CATALOG_HEADER).forEach(function(r) {
+    var key = catalogGroupKey_(r);
+    if (!grouped[key]) grouped[key] = { Title:r.title, Year:r.year, Genre:r.genres || '', Creator:r.creator || '', 'External Score':r.externalScore || '', 'External Label':r.externalLabel || config.externalLabel, 'External Rating Count':r.externalCount || '', 'Source ID':r.sourceId || '', scores:[], rawScores:[], userScores:{}, userRawScores:{} };
+    var score = parseFloat(r.score10);
+    if (!isNaN(score) && r.user) {
+      grouped[key].scores.push(score);
+      grouped[key].userScores[String(r.user)] = score;
+      var raw = parseFloat(r.raw100); if (isNaN(raw)) raw = score * 10;
+      grouped[key].rawScores.push(raw);
+      grouped[key].userRawScores[String(r.user)] = raw;
+    }
+  });
+  return jsonOut_({ rows:Object.keys(grouped).map(function(key){ return grouped[key]; }) });
+}
+
+function rebuildCatalogSummary_(kind) {
+  var config = catalogConfig_(kind);
+  var data = sheetObjects_(getExistingSheet_(config.database), CATALOG_HEADER);
+  var users = getSummaryUserNames_(data);
+  var grouped = {};
+  data.forEach(function(r) {
+    var key=catalogGroupKey_(r);
+    if (!grouped[key]) grouped[key]={title:r.title,year:r.year,genres:r.genres||'',creator:r.creator||'',externalScore:r.externalScore||'',sourceId:r.sourceId||'',byUser:{}};
+    grouped[key].genres=grouped[key].genres || r.genres || '';
+    grouped[key].creator=grouped[key].creator || r.creator || '';
+    grouped[key].externalScore=grouped[key].externalScore || r.externalScore || '';
+    var score=parseFloat(r.score10); if(!isNaN(score) && r.user) grouped[key].byUser[String(r.user)]=score;
+  });
+  var header=['Title','Year','Genre','Creator',config.externalLabel].concat(users).concat([FILM_SUMMARY_AVERAGE_COLUMN]);
+  var rows=Object.keys(grouped).map(function(key){
+    var group=grouped[key];
+    var scores=users.map(function(user){ return group.byUser[user] === undefined ? '' : Number(group.byUser[user]); });
+    var numeric=scores.filter(function(score){ return score !== ''; }).map(Number);
+    var avg=numeric.length ? Number((numeric.reduce(function(a,b){ return a+b; },0)/numeric.length).toFixed(1)) : '';
+    return [group.title,group.year,group.genres,group.creator,group.externalScore].concat(scores).concat([avg]);
+  }).sort(function(a,b){ return String(a[0]||'').localeCompare(String(b[0]||'')); });
+  var tab=getOrCreateSummarySheet_(config.summary);
+  writeTable_(tab,header,rows);
+  return {sheet:config.summary,rows:rows.length};
+}
+
+function catalogGroupStats_(kind) {
+  var config=catalogConfig_(kind), grouped={};
+  sheetObjects_(getExistingSheet_(config.database), CATALOG_HEADER).forEach(function(r){
+    var key=catalogGroupKey_(r); if(!grouped[key]) grouped[key]={scores:[]};
+    var score=parseFloat(r.score10); if(!isNaN(score)) grouped[key].scores.push(score);
+  });
+  return grouped;
+}
+
+function futureCatalogPayloadToSheetRow_(d, username, existing, kind) {
+  var now=new Date().toISOString(); existing=existing||{};
+  var config=catalogConfig_(kind); var genres=d.genres || d.Genres || existing.genres || '';
+  if(Array.isArray(genres)) genres=genres.join(' · ');
+  return {user:username,title:d.title||d.Title||existing.title||'',year:d.year||d.Year||existing.year||'',creator:d.creator||d.director||d.Creator||existing.creator||'',genres:genres,externalScore:d.externalScore||d['External Score']||existing.externalScore||'',externalLabel:d.externalLabel||d['External Label']||existing.externalLabel||config.externalLabel,externalCount:d.externalCount||d['External Rating Count']||existing.externalCount||'',sourceId:d.sourceId||d['Source ID']||d.id||existing.sourceId||'',posterUrl:d.posterUrl||d['Poster URL']||existing.posterUrl||'',createdAt:existing.createdAt||now,updatedAt:now};
+}
+
+function removeFutureCatalog_(rowObj, username, kind) {
+  var config=catalogConfig_(kind), tab=getExistingSheet_(config.future);
+  if(!tab) return;
+  categoryRowsForPayload_(tab,FUTURE_CATALOG_HEADER,{user:username,sourceId:rowObj.sourceId,title:rowObj.title,year:rowObj.year},'sourceId','title','year').sort(function(a,b){ return b-a; }).forEach(function(rowNumber){ tab.deleteRow(rowNumber); });
+}
+
+function userHasRatedCatalog_(rowObj,username,kind) {
+  var config=catalogConfig_(kind), tab=getExistingSheet_(config.database);
+  if(!tab) return false;
+  return categoryRowsForPayload_(tab,CATALOG_HEADER,{user:username,sourceId:rowObj.sourceId,title:rowObj.title,year:rowObj.year},'sourceId','title','year').length>0;
+}
+
+function doAddFutureCatalog_(d, username, kind) {
+  var config=catalogConfig_(kind), tab=getOrCreateSheet_(config.future,FUTURE_CATALOG_HEADER), rowObj=futureCatalogPayloadToSheetRow_(d,username,{},kind);
+  if(!rowObj.title) throw new Error('A title is required.');
+  if(userHasRatedCatalog_(rowObj,username,kind)) return jsonOut_({ok:false,error:'You have already rated this '+(kind==='game'?'game':'book')+'.'});
+  var rows=categoryRowsForPayload_(tab,FUTURE_CATALOG_HEADER,rowObj,'sourceId','title','year');
+  if(rows.length){
+    rowObj=futureCatalogPayloadToSheetRow_(d,username,objectAtSheetRow_(tab,rows[0]),kind);
+    tab.getRange(rows[0],1,1,FUTURE_CATALOG_HEADER.length).setValues([rowForHeader_(FUTURE_CATALOG_HEADER,rowObj)]);
+    deleteExtraRows_(tab,rows);
+  }else tab.appendRow(rowForHeader_(FUTURE_CATALOG_HEADER,rowObj));
+  return jsonOut_({ok:true});
+}
+
+function doDeleteFutureCatalog_(d,username,kind) {
+  removeFutureCatalog_(futureCatalogPayloadToSheetRow_(d,username,{},kind),username,kind);
+  return jsonOut_({ok:true});
+}
+
+function doGetFutureCatalog_(username,kind) {
+  var config=catalogConfig_(kind), stats=catalogGroupStats_(kind);
+  var rows=sheetObjects_(getExistingSheet_(config.future),FUTURE_CATALOG_HEADER).filter(function(r){ return String(r.user||'').toLowerCase()===String(username||'').toLowerCase(); });
+  return jsonOut_(rows.map(function(r){
+    var scores=(stats[catalogGroupKey_(r)]||{scores:[]}).scores;
+    var avg=scores.length ? Number((scores.reduce(function(a,b){ return a+b; },0)/scores.length).toFixed(1)) : '';
+    return {'Title':r.title,'Year':r.year,'Creator':r.creator,'Genres':r.genres,'External Score':r.externalScore,'External Label':r.externalLabel||config.externalLabel,'External Rating Count':r.externalCount,'Source ID':r.sourceId,'Poster URL':r.posterUrl,'Group Average':avg,'Group Rating Count':scores.length};
+  }));
+}
+
+function numberLabel_(value) {
+  return String(Number(value || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+function doSearchGames_(d) {
+  var query=String(d.query||'').trim();
+  if(!query) return jsonOut_({results:[]});
+  var data=fetchJson_('https://store.steampowered.com/api/storesearch/?term='+encodeURIComponent(query)+'&l=english&cc=us');
+  var results=(data.items||[]).filter(function(item){ return item && item.id && item.name; }).slice(0,12).map(function(item){
+    return {id:String(item.id),title:item.name,year:String(item.release?.date||'').match(/(\d{4})/)?.[1]||'',posterUrl:item.tiny_image||item.header_image||'',creator:''};
+  });
+  return jsonOut_({results:results});
+}
+
+function doGetGameDetails_(d) {
+  var id=String(d.id||'').replace(/\D/g,'');
+  if(!id) throw new Error('A Steam game ID is required.');
+  var details=fetchJson_('https://store.steampowered.com/api/appdetails?appids='+encodeURIComponent(id)+'&l=english&cc=us');
+  var wrapper=details[id]; if(!wrapper || !wrapper.success || !wrapper.data) throw new Error('Steam could not load this game.');
+  var game=wrapper.data, review={};
+  try { review=fetchJson_('https://store.steampowered.com/appreviews/'+encodeURIComponent(id)+'?json=1&filter=summary&language=all&purchase_type=all').query_summary || {}; } catch(e) {}
+  var total=Number(review.total_reviews||0), positive=Number(review.total_positive||0);
+  var percent=total ? Math.round((positive/total)*100) : '';
+  return jsonOut_({id:id,title:game.name||'',year:String(game.release_date?.date||'').match(/(\d{4})/)?.[1]||'',director:(game.developers||[]).join(', '),genres:(game.genres||[]).map(function(item){ return item.description; }),posterUrl:game.header_image||game.capsule_image||'',externalScore:percent!==''?percent+'% positive':'',externalLabel:'Steam',externalCount:total?numberLabel_(total)+' reviews':'',externalSummary:review.review_score_desc||''});
+}
+
+function doSearchBooks_(d) {
+  var query=String(d.query||'').trim();
+  if(!query) return jsonOut_({results:[]});
+  var data=fetchJson_('https://www.googleapis.com/books/v1/volumes?q=intitle:'+encodeURIComponent(query)+'&maxResults=12&printType=books');
+  var results=(data.items||[]).map(function(item){ var info=item.volumeInfo||{}; return {id:item.id,title:info.title||'',year:String(info.publishedDate||'').match(/(\d{4})/)?.[1]||'',creator:(info.authors||[]).join(', '),posterUrl:(info.imageLinks||{}).thumbnail?.replace(/^http:/,'https:')||''}; }).filter(function(item){ return item.id && item.title; });
+  return jsonOut_({results:results});
+}
+
+function doGetBookDetails_(d) {
+  var id=String(d.id||'').trim(); if(!id) throw new Error('A Google Books ID is required.');
+  var data=fetchJson_('https://www.googleapis.com/books/v1/volumes/'+encodeURIComponent(id));
+  var info=data.volumeInfo||{}, average=info.averageRating;
+  return jsonOut_({id:data.id||id,title:info.title||'',year:String(info.publishedDate||'').match(/(\d{4})/)?.[1]||'',director:(info.authors||[]).join(', '),genres:info.categories||[],posterUrl:(info.imageLinks||{}).thumbnail?.replace(/^http:/,'https:')||'',externalScore:average===undefined||average===null?'':String(average)+'/5',externalLabel:'Google Books',externalCount:info.ratingsCount?numberLabel_(info.ratingsCount)+' ratings':''});
+}
+
 function setupActiveSheetTabs() {
   var filmDb = getOrCreateSheet_(FILMS_SHEET_NAME, FILMS_HEADER);
   var restaurantDb = getOrCreateSheet_(RESTAURANTS_SHEET_NAME, RESTAURANTS_HEADER);
@@ -1916,6 +2220,10 @@ function setupActiveSheetTabs() {
   var futureRestaurants = getOrCreateSheet_(FUTURE_RESTAURANTS_SHEET_NAME, FUTURE_RESTAURANTS_HEADER);
   var tvDb = getOrCreateSheet_(TV_SHEET_NAME, TV_HEADER);
   var futureTv = getOrCreateSheet_(FUTURE_TV_SHEET_NAME, FUTURE_TV_HEADER);
+  var gamesDb = getOrCreateSheet_(GAMES_SHEET_NAME, CATALOG_HEADER);
+  var futureGames = getOrCreateSheet_(FUTURE_GAMES_SHEET_NAME, FUTURE_CATALOG_HEADER);
+  var booksDb = getOrCreateSheet_(BOOKS_SHEET_NAME, CATALOG_HEADER);
+  var futureBooks = getOrCreateSheet_(FUTURE_BOOKS_SHEET_NAME, FUTURE_CATALOG_HEADER);
   var filmRecommendations = getOrCreateSheet_(FILM_RECOMMENDATIONS_SHEET_NAME, FILM_RECOMMENDATIONS_HEADER);
   var recommendationFeedback = getOrCreateSheet_(FILM_RECOMMENDATION_FEEDBACK_SHEET_NAME, FILM_RECOMMENDATION_FEEDBACK_HEADER);
   var tvRecommendations = getOrCreateSheet_(TV_RECOMMENDATIONS_SHEET_NAME, GENERIC_RECOMMENDATIONS_HEADER);
@@ -1929,6 +2237,10 @@ function setupActiveSheetTabs() {
   formatSheetAsTable_(futureRestaurants);
   formatSheetAsTable_(tvDb);
   formatSheetAsTable_(futureTv);
+  formatSheetAsTable_(gamesDb);
+  formatSheetAsTable_(futureGames);
+  formatSheetAsTable_(booksDb);
+  formatSheetAsTable_(futureBooks);
   formatSheetAsTable_(filmRecommendations);
   formatSheetAsTable_(recommendationFeedback);
   formatSheetAsTable_(tvRecommendations);
@@ -1939,6 +2251,8 @@ function setupActiveSheetTabs() {
   var filmSummary = rebuildFilmSummary_();
   var restaurantSummary = rebuildRestaurantSummary_();
   var tvSummary = rebuildTvSummary_();
+  var gamesSummary = rebuildCatalogSummary_('game');
+  var booksSummary = rebuildCatalogSummary_('book');
   var recentActivityCount = rebuildRecentActivity_();
   var result = {
     version: BACKEND_VERSION,
@@ -1953,6 +2267,12 @@ function setupActiveSheetTabs() {
     recentActivityCount: recentActivityCount,
     summaryTv: tvSummary,
     futureTv: FUTURE_TV_SHEET_NAME,
+    databaseGames: GAMES_SHEET_NAME,
+    summaryGames: gamesSummary,
+    futureGames: FUTURE_GAMES_SHEET_NAME,
+    databaseBooks: BOOKS_SHEET_NAME,
+    summaryBooks: booksSummary,
+    futureBooks: FUTURE_BOOKS_SHEET_NAME,
     filmRecommendations: FILM_RECOMMENDATIONS_SHEET_NAME,
     recommendationFeedback: FILM_RECOMMENDATION_FEEDBACK_SHEET_NAME,
     tvRecommendations: TV_RECOMMENDATIONS_SHEET_NAME,
@@ -2046,6 +2366,8 @@ function rebuildRecentActivity_() {
   sheetObjects_(getExistingSheet_(FILMS_SHEET_NAME),FILMS_HEADER).forEach(function(r){ rows.push({activityKey:recentActivityKey_('film',r.user,r.tmdbId,r.title+'|'+r.year),user:r.user||'',category:'film',title:r.title||'',score10:Number(r.score10||0),displayDate:activityDisplayDate_(r),sortDate:activityDateValue_(r),updatedAt:r.updatedAt||r.createdAt||''}); });
   sheetObjects_(getExistingSheet_(TV_SHEET_NAME),TV_HEADER).forEach(function(r){ var title=r.seriesTitle||''; if(String(r.entryType||'').toLowerCase()==='season'&&r.seasonNumber) title+=' — Season '+r.seasonNumber; rows.push({activityKey:recentActivityKey_('tv',r.user,(r.tmdbTvId||'')+'|'+(r.entryType||'')+'|'+(r.seasonNumber||''),title),user:r.user||'',category:'tv',title:title,score10:Number(r.score10||0),displayDate:activityDisplayDate_(r),sortDate:activityDateValue_(r),updatedAt:r.updatedAt||r.createdAt||''}); });
   sheetObjects_(getExistingSheet_(RESTAURANTS_SHEET_NAME),RESTAURANTS_HEADER).forEach(function(r){ rows.push({activityKey:recentActivityKey_('restaurant',r.user,r.placeId,r.name+'|'+r.address),user:r.user||'',category:'restaurant',title:r.name||'',score10:Number(r.score10||0),displayDate:activityDisplayDate_(r),sortDate:activityDateValue_(r),updatedAt:r.updatedAt||r.createdAt||''}); });
+  sheetObjects_(getExistingSheet_(GAMES_SHEET_NAME),CATALOG_HEADER).forEach(function(r){ rows.push({activityKey:recentActivityKey_('game',r.user,r.sourceId,r.title+'|'+r.year),user:r.user||'',category:'game',title:r.title||'',score10:Number(r.score10||0),displayDate:activityDisplayDate_(r),sortDate:activityDateValue_(r),updatedAt:r.updatedAt||r.createdAt||''}); });
+  sheetObjects_(getExistingSheet_(BOOKS_SHEET_NAME),CATALOG_HEADER).forEach(function(r){ rows.push({activityKey:recentActivityKey_('book',r.user,r.sourceId,r.title+'|'+r.year),user:r.user||'',category:'book',title:r.title||'',score10:Number(r.score10||0),displayDate:activityDisplayDate_(r),sortDate:activityDateValue_(r),updatedAt:r.updatedAt||r.createdAt||''}); });
   rows=rows.filter(function(r){ return r.user&&r.title&&!isNaN(r.score10); });
   if(rows.length) tab.getRange(2,1,rows.length,RECENT_ACTIVITY_HEADER.length).setValues(rows.map(function(r){ return rowForHeader_(RECENT_ACTIVITY_HEADER,r); }));
   formatSheetAsTable_(tab);
