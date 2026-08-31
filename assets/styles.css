@@ -1438,3 +1438,47 @@ body.theme-cream .lg-card::before,body.theme-gold .lg-card::before{border-color:
 body.theme-cream .lg-card-table td,body.theme-gold .lg-card-table td{border-color:var(--theme-border);}
 body.theme-cream .lg-card-notes,body.theme-gold .lg-card-notes{background:var(--theme-bg-2);border-color:var(--theme-border);}
 @media(max-width:640px){.restaurant-location-grid{grid-template-columns:1fr;}.restaurant-location-head{align-items:flex-start;}}
+
+/* Current restaurant controls use the same active theme tokens as every other category. */
+.manual-restaurant-launch{display:block;margin:14px auto 0;padding:9px 14px;background:transparent;border:1px solid var(--lg-border,#1e3a1e);border-radius:2px;color:var(--lg-muted,#4a7a4a);font:11px 'Barlow Condensed',sans-serif;letter-spacing:.13em;text-transform:uppercase;cursor:pointer;}
+.manual-restaurant-launch:hover{border-color:var(--lg-red,#4a9a4a);color:var(--lg-gold,#80d080);background:var(--lg-panel,#0b120b);}
+.manual-restaurant-form{max-width:720px;}
+.manual-restaurant-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:22px 0;}
+.manual-restaurant-grid label{display:flex;flex-direction:column;gap:6px;color:var(--lg-muted,#4a7a4a);font:10px 'Barlow Condensed',sans-serif;letter-spacing:.16em;text-transform:uppercase;}
+.manual-restaurant-grid input{width:100%;padding:10px 12px;background:var(--lg-panel,#0b120b);border:1px solid var(--lg-border,#1e3a1e);border-radius:2px;color:var(--lg-text,#e8f8e8);font:14px 'Barlow',sans-serif;outline:none;text-transform:none;letter-spacing:0;}
+.manual-restaurant-grid input:focus{border-color:var(--lg-red,#4a9a4a);}
+.wishlist-year-filter{margin:12px 0 0;text-align:left;}
+.media-year-filter{margin:12px 0 0;text-align:left;}
+.wishlist-year-filter label,.media-year-filter label{display:block;margin-bottom:6px;color:#4a7a4a;font:10px 'Barlow Condensed',sans-serif;letter-spacing:.15em;text-transform:uppercase;}
+.wishlist-year-filter input,.media-year-filter input{width:100%;padding:9px 11px;background:#090f09;border:1px solid #1e3a1e;border-radius:2px;color:#dff0df;font:13px 'Barlow',sans-serif;outline:none;}
+.wishlist-year-filter input:focus,.media-year-filter input:focus{border-color:#4a9a4a;}
+.rating-detail-comment{margin:0 0 14px;padding:12px 14px;background:#0b1f0b;border:1px solid #224422;color:#dff0df;font-size:13px;line-height:1.55;white-space:pre-wrap;}
+.rating-detail-comment-label{margin-bottom:6px;color:#4a9a4a;font:9px 'Barlow Condensed',sans-serif;letter-spacing:.18em;text-transform:uppercase;}
+.lg-film-row[role="button"],.film-row[role="button"]{cursor:pointer;}
+
+/* Remove the last hard-coded Le Guide red/green surfaces in Light and Gold. */
+body.theme-cream .home-card.restaurant,body.theme-gold .home-card.restaurant{background:var(--theme-panel);border-color:var(--theme-border);}
+body.theme-cream .home-card.restaurant:hover,body.theme-gold .home-card.restaurant:hover{background:var(--theme-panel-2);border-color:var(--theme-accent);box-shadow:none;}
+body.theme-cream .home-card.restaurant .home-card-title[style],body.theme-gold .home-card.restaurant .home-card-title[style],body.theme-cream .home-card.restaurant .home-card-sub[style],body.theme-gold .home-card.restaurant .home-card-sub[style]{color:var(--theme-text)!important;}
+body.theme-cream .home-card.restaurant .home-card-sub[style],body.theme-gold .home-card.restaurant .home-card-sub[style]{color:var(--theme-muted)!important;}
+body:not(.theme-cream):not(.theme-gold) .home-card.restaurant{background:var(--lg-panel);border-color:var(--lg-border);}
+body:not(.theme-cream):not(.theme-gold) .home-card.restaurant:hover{background:var(--lg-panel-2);border-color:var(--lg-red);box-shadow:none;}
+body:not(.theme-cream):not(.theme-gold) .home-card.restaurant .home-card-title[style]{color:var(--lg-cream)!important;}
+body:not(.theme-cream):not(.theme-gold) .home-card.restaurant .home-card-sub[style]{color:var(--lg-muted)!important;}
+body.theme-cream #screen-lg-search,body.theme-gold #screen-lg-search,body.theme-cream #screen-lg-manual,body.theme-gold #screen-lg-manual{background:var(--theme-bg);}
+body.theme-cream #screen-catalog-stats,body.theme-gold #screen-catalog-stats{background:var(--theme-bg);}
+body.theme-cream .lg-eyebrow,body.theme-gold .lg-eyebrow,body.theme-cream .lg-sub,body.theme-gold .lg-sub,body.theme-cream .lg-search-input,body.theme-gold .lg-search-input,body.theme-cream .lg-drop-item,body.theme-gold .lg-drop-item,body.theme-cream .lg-drop-name,body.theme-gold .lg-drop-name{color:var(--theme-text)!important;}
+body.theme-cream .lg-search-field,body.theme-gold .lg-search-field,body.theme-cream .lg-dropdown,body.theme-gold .lg-dropdown,body.theme-cream .lg-drop-item,body.theme-gold .lg-drop-item{background:var(--theme-panel);border-color:var(--theme-border);box-shadow:none;}
+body.theme-cream .lg-drop-item:hover,body.theme-gold .lg-drop-item:hover{background:var(--theme-panel-2);}
+body.theme-cream #screen-lg-stats .stats-section-title,body.theme-gold #screen-lg-stats .stats-section-title{color:var(--theme-accent)!important;border-color:var(--theme-border)!important;}
+body.theme-cream #screen-lg-stats .stats-loading,body.theme-gold #screen-lg-stats .stats-loading,body.theme-cream #screen-lg-stats .stats-empty,body.theme-gold #screen-lg-stats .stats-empty{color:var(--theme-muted)!important;}
+body.theme-cream #screen-lg-stats .cat-bar-label,body.theme-gold #screen-lg-stats .cat-bar-label{color:var(--theme-muted)!important;}
+body.theme-cream #screen-lg-stats .cat-bar-val,body.theme-gold #screen-lg-stats .cat-bar-val{color:var(--theme-accent)!important;}
+body.theme-cream #screen-lg-stats .grade-bar-track,body.theme-gold #screen-lg-stats .grade-bar-track{background:var(--theme-bg-2)!important;}
+body.theme-cream .manual-restaurant-grid label,body.theme-gold .manual-restaurant-grid label,body.theme-cream .wishlist-year-filter label,body.theme-gold .wishlist-year-filter label,body.theme-cream .media-year-filter label,body.theme-gold .media-year-filter label{color:var(--theme-muted);}
+body.theme-cream .manual-restaurant-grid input,body.theme-gold .manual-restaurant-grid input,body.theme-cream .wishlist-year-filter input,body.theme-gold .wishlist-year-filter input,body.theme-cream .media-year-filter input,body.theme-gold .media-year-filter input{background:var(--theme-bg-2);border-color:var(--theme-border);color:var(--theme-text);}
+body.theme-cream .manual-restaurant-launch,body.theme-gold .manual-restaurant-launch{border-color:var(--theme-border);color:var(--theme-accent);background:transparent;}
+body.theme-cream .rating-detail-comment,body.theme-gold .rating-detail-comment{background:var(--theme-bg-2);border-color:var(--theme-border);color:var(--theme-text);}
+body.theme-cream .rating-detail-comment-label,body.theme-gold .rating-detail-comment-label{color:var(--theme-muted);}
+
+@media(max-width:640px){.manual-restaurant-grid{grid-template-columns:1fr;}}
