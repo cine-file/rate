@@ -14,6 +14,9 @@ let _lgRatingsCache = null;
 let _lgRatingsCacheTime = 0;
 let _lgStatsTab = 'my';
 let _lgStatsData = { ratings: null, summary: null };
+let _lgSearchResults = [];
+let _manualRestaurantMode = 'rate';
+let _lgRenderedRatings = [];
 
 // ── MICHELIN STAR SVG ─────────────────────────────────────────
 function starSVG(filled){
@@ -86,8 +89,19 @@ function startRating(mode){
     showScreen('tv-search');
     return;
   }
+  if(mode === 'game' || mode === 'book'){
+    startCatalogRating(mode);
+    return;
+  }
   activeCategory = 'film';
   CATS = FILM_CATS;
+  document.getElementById('search-eyebrow').textContent='Rate a Film';
+  document.getElementById('search-title').textContent='Find Your Film';
+  document.getElementById('search-sub').textContent='Search for the movie you just watched';
+  document.getElementById('search-input').placeholder='Type a movie title...';
+  document.querySelector('.search-icon').textContent='🎬';
+  document.getElementById('movie-year-filter-wrap').style.display='block';
+  document.querySelector('.advanced-search-toggle').style.display='inline-block';
   setLgMode(false);
   updateNavUser();
   showScreen('search');
@@ -95,17 +109,24 @@ function startRating(mode){
 
 function goActiveRate(){
   if(activeCategory === 'tv') showScreen('tv-search');
+  else if(activeCategory === 'game' || activeCategory === 'book') startCatalogRating(activeCategory);
   else showScreen('search');
 }
 
 function goBackToActiveSearch(){
   if(activeCategory === 'tv') showScreen('tv-search');
+  else if(activeCategory === 'game' || activeCategory === 'book') showScreen('search');
   else showScreen('search');
 }
 
 function goActiveStats(){
   if(activeCategory === 'tv') goTvStats();
+  else if(activeCategory === 'game' || activeCategory === 'book') goCatalogStats(activeCategory);
   else goStats();
+}
+
+function goActiveWishlist(){
+  goWishlist(['film','tv','restaurant','game','book'].includes(activeCategory) ? activeCategory : 'film');
 }
 
 function lgGoHome(){
@@ -145,8 +166,9 @@ async function lgDoSearch(q){
 function lgRenderDropdown(results){
   const dd = document.getElementById('lg-dropdown');
   if(!results.length){ dd.classList.remove('open'); return; }
-  dd.innerHTML = results.map(r=>`
-    <button class="lg-drop-item" onmousedown="lgPickPlace('${escHtml(JSON.stringify(r).replace(/'/g,"\'"))}')">
+  _lgSearchResults = results.slice();
+  dd.innerHTML = _lgSearchResults.map((r,index)=>`
+    <button class="lg-drop-item" data-place-index="${index}" type="button">
       ${r.photo ? `<img class="lg-drop-photo" src="${escHtml(r.photo)}" alt="" onerror="this.style.display='none'">` : '<div class="lg-drop-photo"></div>'}
       <div>
         <div class="lg-drop-name">${escHtml(r.name)}</div>
@@ -154,19 +176,65 @@ function lgRenderDropdown(results){
         <div class="lg-drop-meta">${escHtml(r.cuisine||'')}${r.price?' · '+r.price:''}${r.rating?' · ⭐'+r.rating:''}</div>
       </div>
     </button>`).join('');
+  dd.querySelectorAll('.lg-drop-item').forEach(function(button){
+    button.addEventListener('pointerdown', function(event){
+      event.preventDefault();
+      lgPickPlace(_lgSearchResults[Number(button.dataset.placeIndex)]);
+    });
+  });
   dd.classList.add('open');
 }
 
 function closeLgDropdown(){ document.getElementById('lg-dropdown').classList.remove('open'); }
 
-async function lgPickPlace(jsonStr){
+async function lgPickPlace(place){
   closeLgDropdown();
-  let place;
-  try{ place = JSON.parse(jsonStr); }catch(e){ return; }
+  if(!place) return;
   lgCurrentPlace = place;
   document.getElementById('lg-search-input').value = '';
 
   // Check already rated
+  await lgCheckAlreadyRated(place);
+}
+
+function openManualRestaurant(mode){
+  _manualRestaurantMode = mode === 'wishlist' ? 'wishlist' : 'rate';
+  document.getElementById('manual-restaurant-title').textContent = _manualRestaurantMode === 'wishlist' ? 'Save a Restaurant' : 'Enter a Restaurant';
+  document.getElementById('manual-restaurant-msg').textContent = '';
+  ['name','address','city','region','country','cuisine','price','rating'].forEach(function(field){
+    const input=document.getElementById('manual-restaurant-'+field);
+    if(input) input.value='';
+  });
+  const area=restaurantSearchPayload('');
+  ['city','region','country'].forEach(function(field){
+    const input=document.getElementById('manual-restaurant-'+field);
+    if(input && area[field]) input.value=area[field];
+  });
+  showScreen('lg-manual');
+  setTimeout(function(){ document.getElementById('manual-restaurant-name')?.focus(); },0);
+}
+
+function closeManualRestaurant(){
+  showScreen(_manualRestaurantMode === 'wishlist' ? 'wishlist' : 'lg-search');
+}
+
+async function submitManualRestaurant(){
+  const value=function(field){ return String(document.getElementById('manual-restaurant-'+field)?.value || '').trim(); };
+  const name=value('name'), address=value('address'), city=value('city'), region=value('region'), country=value('country');
+  const msg=document.getElementById('manual-restaurant-msg');
+  if(!name){ msg.textContent='Enter the restaurant name.'; msg.className='settings-msg err'; return; }
+  if(!address && !city && !region && !country){ msg.textContent='Add an address or at least one location field so this restaurant can be identified later.'; msg.className='settings-msg err'; return; }
+  const place={name:name,address:address,city:[city,region,country].filter(Boolean).join(', '),cuisine:value('cuisine'),price:value('price'),rating:value('rating'),placeId:'',manual:true};
+  if(_manualRestaurantMode === 'wishlist'){
+    msg.textContent='Saving...'; msg.className='settings-msg';
+    try{
+      await apiCall('addFutureRestaurant',{token:getSessionToken(),payload:place});
+      wishlistCache.delete(wishlistUserCacheKey());
+      closeManualRestaurant();
+      await loadWishlist(true);
+    }catch(error){ msg.textContent=error.message || 'Could not save this restaurant.'; msg.className='settings-msg err'; }
+    return;
+  }
   await lgCheckAlreadyRated(place);
 }
 
@@ -530,24 +598,44 @@ function lgRenderMyStats(){
     const values=cuisineGroups[cuisine];
     return {cuisine:cuisine,count:values.length,average:averageScores(values)};
   }).sort(function(a,b){ return b.average-a.average || b.count-a.count || a.cuisine.localeCompare(b.cuisine); });
-  const restaurantRow=(r,index,ranked=true)=>`<div class="lg-film-row"><div class="lg-film-row-rank">${ranked?'#'+(index+1):''}</div><div style="flex:1"><div class="lg-film-row-title">${escHtml(String(r['Name']||''))}</div><div class="lg-film-row-sub">${escHtml(String(r['Cuisine']||''))}${r['Address']?' · '+escHtml(String(r['Address']||'').split(',')[0]):''}</div></div><div class="lg-film-row-score">${ratingDisplayScore(r).toFixed(1)}</div></div>`;
+  _lgRenderedRatings=ratings;
+  const restaurantRow=(r,index,ranked=true)=>`<div class="lg-film-row" role="button" tabindex="0" data-lg-rating-index="${_lgRenderedRatings.indexOf(r)}" onclick="showMyRestaurantRating(Number(this.dataset.lgRatingIndex))"><div class="lg-film-row-rank">${ranked?'#'+(index+1):''}</div><div style="flex:1"><div class="lg-film-row-title">${escHtml(String(r['Name']||''))}</div><div class="lg-film-row-sub">${escHtml(String(r['Cuisine']||''))}${r['Address']?' · '+escHtml(String(r['Address']||'').split(',')[0]):''}</div></div><div class="lg-film-row-score">${ratingDisplayScore(r).toFixed(1)}</div></div>`;
   container.innerHTML=`
-    <div class="stats-section"><div class="stats-section-title" style="border-color:#3a1a1a;color:#8a4a4a">Overview — ${escHtml(currentUser.name)}</div><div class="stats-grid">
+    <div class="stats-section"><div class="stats-section-title">Overview — ${escHtml(displayUserName(currentUser.name))}</div><div class="stats-grid">
       <div class="lg-stat-card"><div class="lg-stat-card-num">${ratings.length}</div><div class="lg-stat-card-lbl">Restaurants Rated</div></div>
       <div class="lg-stat-card"><div class="lg-stat-card-num">${avg.toFixed(1)}</div><div class="lg-stat-card-lbl">Average ${scoreLabel()}</div></div>
       <div class="lg-stat-card"><div class="lg-stat-card-num">${ratingDisplayScore(sorted[0]).toFixed(1)}</div><div class="lg-stat-card-lbl">Highest</div></div>
       <div class="lg-stat-card"><div class="lg-stat-card-num">${ratingDisplayScore(sorted[sorted.length-1]).toFixed(1)}</div><div class="lg-stat-card-lbl">Lowest</div></div>
     </div></div>
-    <div class="stats-section"><div class="stats-section-title" style="border-color:#3a1a1a;color:#8a4a4a">Score Distribution</div>${renderDistributionChart(distributionValues,{restaurant:true})}</div>
-    <div class="stats-section"><div class="stats-section-title" style="border-color:#3a1a1a;color:#8a4a4a">Top 5 Restaurants</div>${top5.map((r,i)=>restaurantRow(r,i)).join('')}
-      ${ratings.length>5?`<button class="view-all-btn" style="border-color:#3a1a1a;color:#8a4a4a" onclick="lgToggleAll(this)">View All ${ratings.length} Ratings ↓</button><div class="all-ratings-wrap" id="lg-all-wrap">${sorted.map((r,i)=>restaurantRow(r,i)).join('')}</div>`:''}
+    <div class="stats-section"><div class="stats-section-title">Score Distribution</div>${renderDistributionChart(distributionValues,{restaurant:true})}</div>
+    <div class="stats-section"><div class="stats-section-title">Top 5 Restaurants</div>${top5.map((r,i)=>restaurantRow(r,i)).join('')}
+      ${ratings.length>5?`<button class="view-all-btn" onclick="lgToggleAll(this)">View All ${ratings.length} Ratings ↓</button><div class="all-ratings-wrap" id="lg-all-wrap">${sorted.map((r,i)=>restaurantRow(r,i)).join('')}</div>`:''}
     </div>
-    <div class="stats-section"><div class="stats-section-title" style="border-color:#3a1a1a;color:#8a4a4a">Recently Visited</div>${recent5.map((r,i)=>restaurantRow(r,i,false)).join('')}</div>
-    <div class="stats-section"><div class="stats-section-title" style="border-color:#3a1a1a;color:#8a4a4a">Food Type Averages</div>
+    <div class="stats-section"><div class="stats-section-title">Recently Visited</div>${recent5.map((r,i)=>restaurantRow(r,i,false)).join('')}</div>
+    <div class="stats-section"><div class="stats-section-title">Food Type Averages</div>
       ${cuisineRankings.length?cuisineRankings.map(function(item,index){ return `<div class="lg-film-row"><div class="lg-film-row-rank">#${index+1}</div><div style="flex:1"><div class="lg-film-row-title">${escHtml(item.cuisine)}</div><div class="lg-film-row-sub">${item.count} ${item.count===1?'rating':'ratings'}</div></div><div class="lg-film-row-score">${item.average.toFixed(1)}</div></div>`; }).join(''):'<div class="stats-empty">No food-type data yet.</div>'}
     </div>
-    <div class="stats-section"><div class="stats-section-title" style="border-color:#3a1a1a;color:#8a4a4a">Category Averages</div><div class="cat-bars">${Object.entries(catAvgs).map(([label,val])=>`<div class="cat-bar-row"><div class="cat-bar-label" style="color:#8a6a6a">${label}</div><div class="grade-bar-track" style="background:#1a0608"><div class="lg-grade-bar-fill" style="width:${val==='—'?0:val}%"></div></div><div class="cat-bar-val" style="color:#C41E3A">${val}</div></div>`).join('')}</div></div>
+    <div class="stats-section"><div class="stats-section-title">Category Averages</div><div class="cat-bars">${Object.entries(catAvgs).map(([label,val])=>`<div class="cat-bar-row"><div class="cat-bar-label">${label}</div><div class="grade-bar-track"><div class="lg-grade-bar-fill" style="width:${val==='—'?0:val}%"></div></div><div class="cat-bar-val">${val}</div></div>`).join('')}</div></div>
     <div class="stats-danger-zone"><button class="delete-rating-btn" onclick="openDeleteRating('restaurant')">Delete a Rating</button></div>`;
+}
+
+function showMyRestaurantRating(index){
+  const rating=_lgRenderedRatings[index];
+  if(!rating) return;
+  const score10=storedNumber(rating['Score /10']) ?? 0;
+  const ratingPlaceId=String(rating['Place ID']||rating.placeId||'');
+  const ratingName=String(rating.Name||rating.name||'').toLowerCase();
+  const ratingAddress=String(rating.Address||rating.address||'').toLowerCase();
+  const group=(_lgStatsData.summary?.rows||[]).find(function(row){
+    const rowPlaceId=String(row['Place ID']||row.placeId||'');
+    if(ratingPlaceId && rowPlaceId && rowPlaceId===ratingPlaceId) return true;
+    return !!ratingName && !!ratingAddress &&
+      String(row.Name||row.name||'').toLowerCase()===ratingName &&
+      String(row.Address||row.address||'').toLowerCase()===ratingAddress;
+  });
+  const others=Object.entries(group?.userScores||{}).filter(function(entry){ return entry[0]!==currentUser?.name; }).map(function(entry){ return displayUserName(entry[0])+' '+Number(entry[1]).toFixed(1); });
+  const categories=[['Food & Taste','Food'],['Value','Value'],['Service','Service'],['Atmosphere','Atmosphere'],['Craving Factor','Craving']].filter(function(entry){ return storedNumber(rating[entry[1]])!==null && Number(rating[entry[1]])>0; }).map(function(entry){ return {label:entry[0],value:Number(rating[entry[1]]).toFixed(1)}; });
+  openRatingDetail({eyebrow:'Your rating',title:String(rating['Name']||''),meta:[rating['Cuisine'],rating['Address'],rating['Date']&&'Visited '+rating['Date']],score:ratingDisplayScore(rating),grade:grade(score10),lines:categories,comment:rating['Overall Notes']||'',secondaryBoxes:[{label:'Google',value:String(rating['Google Rating']||'—')},{label:'Other ratings',value:others.length?others.join(' · '):'No one else has rated it yet'}]});
 }
 function lgToggleAll(btn){
   const wrap = document.getElementById('lg-all-wrap');
