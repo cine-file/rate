@@ -9,6 +9,11 @@
 <link rel="stylesheet" href="assets/styles.css">
 </head>
 <body>
+<datalist id="restaurant-countries">
+  <option value="United States"></option><option value="Canada"></option><option value="Mexico"></option>
+  <option value="United Kingdom"></option><option value="France"></option><option value="Italy"></option>
+  <option value="Spain"></option><option value="Germany"></option><option value="Japan"></option><option value="Australia"></option>
+</datalist>
 
 <!-- ══════════════════════════════════════
      CONFIG
@@ -67,8 +72,8 @@
       </div>
       <div class="home-card restaurant" onclick="startRating('restaurant')">
         <div class="home-card-icon">⭐</div>
-        <div class="home-card-title" style="font-size:22px;color:#F5ECD7">Le Guide</div>
-        <div class="home-card-sub" style="color:#8a4a4a">Rate a restaurant</div>
+        <div class="home-card-title" style="font-size:22px;color:var(--lg-text)">Le Guide</div>
+        <div class="home-card-sub" style="color:var(--lg-muted)">Rate a restaurant</div>
       </div>
       <div class="home-card" onclick="startRating('game')">
         <div class="home-card-icon">🎮</div>
@@ -235,6 +240,7 @@
     <button class="back-btn" style="margin-bottom:24px" onclick="goBackToActiveSearch()">← Back to Search</button>
     <div class="quick-movie-title" id="quick-title"></div>
     <div class="quick-movie-sub" id="quick-sub"></div>
+    <p class="external-ratings-note" data-external-ratings-note hidden></p>
 
     <div class="quick-score-display" id="quick-score-display">5.0</div>
     <div class="quick-score-grade" id="quick-score-grade">F</div>
@@ -274,6 +280,7 @@
       <div>
         <div class="movie-title-big" id="score-title"></div>
         <div class="movie-meta-line" id="score-meta"></div>
+        <p class="external-ratings-note" data-external-ratings-note hidden></p>
       </div>
     </div>
     <div class="grade-legend">
@@ -379,6 +386,7 @@
     <button class="act-btn" onclick="goHome()">Rate Another</button>
   </div>
   <div class="sheet-msg" id="sheet-msg"></div>
+  <p class="external-ratings-note" data-external-ratings-note hidden></p>
 </div>
 
 <!-- ══════════════════════════════════════
@@ -395,16 +403,12 @@
         <label>Search area</label>
         <button type="button" class="restaurant-location-button" onclick="requestRestaurantLocation()">Use my location</button>
       </div>
-      <div class="restaurant-location-grid">
-        <input id="restaurant-rate-city" data-restaurant-location-field="city" type="text" placeholder="City" autocomplete="address-level2"/>
-        <input id="restaurant-rate-region" data-restaurant-location-field="region" type="text" placeholder="State / region" autocomplete="address-level1"/>
-        <input id="restaurant-rate-country" data-restaurant-location-field="country" type="text" placeholder="Country" autocomplete="country-name"/>
-      </div>
+      <div class="restaurant-location-grid" data-restaurant-location-controls></div>
       <div class="restaurant-location-status" data-restaurant-location-status></div>
     </div>
     <div class="search-wrap" style="text-align:left">
       <div class="lg-search-field">
-        <span class="search-icon" style="color:#8a4a4a">🍽️</span>
+        <span class="search-icon" style="color:var(--lg-muted)">🍽️</span>
         <input id="lg-search-input" class="lg-search-input" type="text"
           placeholder="Start typing a restaurant name..." autocomplete="off"/>
         <span class="search-spinner" id="lg-spinner">⟳</span>
@@ -413,7 +417,7 @@
     </div>
     <label class="quick-toggle" style="margin-top:20px">
       <input type="checkbox" id="lg-quick-toggle" onchange="lgToggleQuick(this.checked)" checked/>
-      <span class="quick-toggle-label" style="color:#8a4a4a">⚡ Quick Rating</span>
+      <span class="quick-toggle-label" style="color:var(--lg-muted)">⚡ Quick Rating</span>
     </label>
     <button class="manual-restaurant-launch" type="button" onclick="openManualRestaurant('rate')">Enter a restaurant manually</button>
   </div>
@@ -432,8 +436,8 @@
         <div class="lg-restaurant-meta" id="lg-score-meta"></div>
       </div>
     </div>
-    <div class="grade-legend" style="border-color:#3a1a1a;background:#1a0608">
-      <div class="grade-legend-title" style="color:#8a4a4a">What the grades mean</div>
+    <div class="grade-legend" style="border-color:var(--lg-border);background:var(--lg-panel)">
+      <div class="grade-legend-title" style="color:var(--lg-muted)">What the grades mean</div>
       <div class="gl-row"><span class="gl-grade" style="color:var(--lg-red)">A</span><span class="gl-desc">Exceptional — destination worthy</span></div>
       <div class="gl-row"><span class="gl-grade" style="color:var(--lg-red)">B</span><span class="gl-desc">Very good — would return</span></div>
       <div class="gl-row"><span class="gl-grade" style="color:var(--lg-red)">C</span><span class="gl-desc">Decent — some issues</span></div>
@@ -457,11 +461,11 @@
       <div class="lg-total-grade" id="lg-total-grade">—</div>
     </div>
     <div class="overall-wrap">
-      <label class="overall-lbl" style="color:#8a4a4a">Overall Notes</label>
+      <label class="overall-lbl" style="color:var(--lg-muted)">Overall Notes</label>
       <textarea id="lg-overall-note" class="lg-note-inp overall-note" placeholder="Final thoughts on the restaurant..."></textarea>
     </div>
     <div class="btn-row">
-      <button class="btn-sec" style="border-color:#3a1a1a;color:#8a4a4a" onclick="showScreen('lg-search')">Cancel</button>
+      <button class="btn-sec" style="border-color:var(--lg-border);color:var(--lg-muted)" onclick="showScreen('lg-search')">Cancel</button>
       <button class="lg-btn-pri" onclick="lgGoRound()">Next: Choose Final Score →</button>
     </div>
   </div>
@@ -472,18 +476,18 @@
 ══════════════════════════════════════ -->
 <div id="screen-lg-round" class="screen">
   <div class="round-box lg-round-box">
-    <div class="round-eyebrow" style="color:#8a4a4a">Step 2 of 2 — Final Score</div>
-    <div class="round-title" style="color:#F5ECD7">Choose Your Rating</div>
+    <div class="round-eyebrow" style="color:var(--lg-muted)">Step 2 of 2 — Final Score</div>
+    <div class="round-title" style="color:var(--lg-text)">Choose Your Rating</div>
     <div class="round-movie" id="lg-round-name" style="color:var(--lg-red)"></div>
     <div class="round-raw">
-      <div class="round-raw-lbl" style="color:#8a4a4a">Raw Weighted Score</div>
+      <div class="round-raw-lbl" style="color:var(--lg-muted)">Raw Weighted Score</div>
       <div>
         <span class="round-raw-num" id="lg-round-raw-num" style="color:var(--lg-cream)"></span>
         <span class="round-raw-grade" id="lg-round-raw-grade" style="color:var(--lg-red)"></span>
       </div>
-      <div class="round-raw-sub" style="color:#6a3a3a">out of 100 · Your final /10 score is calculated automatically</div>
+      <div class="round-raw-sub" style="color:var(--lg-muted)">out of 100 · Your final /10 score is calculated automatically</div>
     </div>
-    <p class="round-prompt" style="color:#8a4a4a">Your weighted score is rounded to the nearest tenth:</p>
+    <p class="round-prompt" style="color:var(--lg-muted)">Your weighted score is rounded to the nearest tenth:</p>
     <div class="round-options" id="lg-round-options"></div>
     <button class="lg-round-confirm" id="lg-round-confirm" onclick="lgConfirmRound()" disabled>Generate Rating Card →</button>
   </div>
@@ -499,16 +503,16 @@
     <div class="quick-movie-sub lg-restaurant-meta" id="lg-quick-sub"></div>
     <div class="lg-quick-score-display" id="lg-quick-display">5.0</div>
     <div class="lg-quick-grade" id="lg-quick-grade">F</div>
-    <div class="quick-score-lbl" style="color:#8a4a4a">out of 10</div>
+    <div class="quick-score-lbl" style="color:var(--lg-muted)">out of 10</div>
     <div class="quick-slider-wrap">
       <input type="range" class="lg-quick-slider" id="lg-quick-slider"
         min="0" max="100" value="50" step="1" oninput="lgUpdateQuick(this.value)"/>
     </div>
-    <div class="quick-ticks" style="color:#6a3a3a">
+    <div class="quick-ticks" style="color:var(--lg-muted)">
       <span>0</span><span>2</span><span>4</span><span>6</span><span>8</span><span>10</span>
     </div>
     <div class="quick-note-wrap">
-      <label class="quick-note-lbl" style="color:#8a4a4a">Notes (optional)</label>
+      <label class="quick-note-lbl" style="color:var(--lg-muted)">Notes (optional)</label>
       <textarea id="lg-quick-note" class="lg-note-inp" style="min-height:68px" placeholder="Any thoughts..."></textarea>
     </div>
     <button class="lg-btn-pri" style="width:100%;padding:14px" onclick="lgSubmitQuick()">Generate Rating Card →</button>
@@ -574,8 +578,8 @@
   </div>
 
   <!-- Rank reveal -->
-  <div class="rank-reveal" id="lg-rank-reveal" style="display:none;border-color:#3a1a1a;background:#1a0608">
-    <div class="rank-reveal-title" style="color:#8a4a4a">📊 Your Restaurant Stats</div>
+  <div class="rank-reveal" id="lg-rank-reveal" style="display:none;border-color:var(--lg-border);background:var(--lg-panel)">
+    <div class="rank-reveal-title" style="color:var(--lg-muted)">📊 Your Restaurant Stats</div>
     <div class="rank-stats" id="lg-rank-stats"></div>
   </div>
 
@@ -583,7 +587,7 @@
     <button class="lg-act-btn" onclick="lgGoEditScores()">← Edit Scores</button>
     <button class="lg-act-btn" onclick="lgGoHome()">Rate Another</button>
   </div>
-  <div class="sheet-msg" id="lg-sheet-msg" style="color:#c07070"></div>
+  <div class="sheet-msg" id="lg-sheet-msg" style="color:var(--lg-muted)"></div>
 </div>
 
 <!-- ══════════════════════════════════════
@@ -608,7 +612,7 @@
       <button class="lg-stats-tab" id="lg-tab-h2h" onclick="lgSwitchTab('h2h')">Head to Head</button>
       <button class="lg-stats-tab" id="lg-tab-individual" onclick="lgSwitchTab('individual')">Individual Ratings</button>
     </div>
-    <div id="lg-stats-content"><div class="stats-loading" style="color:#6a3a3a">Loading your restaurant ratings...</div></div>
+    <div id="lg-stats-content"><div class="stats-loading" style="color:var(--lg-muted)">Loading your restaurant ratings...</div></div>
   </div>
 </div>
 
@@ -616,23 +620,23 @@
      LE GUIDE — ALREADY RATED MODAL
 ══════════════════════════════════════ -->
 <div id="lg-already-rated-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:999;align-items:center;justify-content:center;">
-  <div style="background:#1a0608;border:1px solid #8a2a2a;border-radius:3px;padding:40px 32px;max-width:400px;width:90%;text-align:center;">
+  <div style="background:var(--lg-panel);border:1px solid var(--lg-border);border-radius:3px;padding:40px 32px;max-width:400px;width:90%;text-align:center;">
     <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:0.28em;text-transform:uppercase;color:var(--lg-red);margin-bottom:12px;">Already Reviewed</div>
     <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--lg-cream);margin-bottom:6px;" id="lg-ar-name"></div>
-    <div style="font-size:13px;color:#8a4a4a;margin-bottom:24px;font-style:italic;" id="lg-ar-date"></div>
+    <div style="font-size:13px;color:var(--lg-muted);margin-bottom:24px;font-style:italic;" id="lg-ar-date"></div>
     <div style="display:flex;gap:16px;justify-content:center;margin-bottom:20px;">
-      <div style="background:#0d0304;border:2px solid #4a1a1a;border-radius:3px;padding:14px 20px;text-align:center;min-width:90px;">
+      <div style="background:var(--lg-panel-2);border:2px solid var(--lg-border);border-radius:3px;padding:14px 20px;text-align:center;min-width:90px;">
         <div style="font-family:'Bebas Neue',sans-serif;font-size:40px;color:var(--lg-cream);line-height:1;" id="lg-ar-score"></div>
-        <div style="font-family:'Barlow Condensed',sans-serif;font-size:8px;letter-spacing:0.2em;text-transform:uppercase;color:#8a4a4a;margin-top:4px;">Your Score</div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:8px;letter-spacing:0.2em;text-transform:uppercase;color:var(--lg-muted);margin-top:4px;">Your Score</div>
       </div>
-      <div style="background:#0d0304;border:2px solid #4a1a1a;border-radius:3px;padding:14px 20px;text-align:center;min-width:90px;">
+      <div style="background:var(--lg-panel-2);border:2px solid var(--lg-border);border-radius:3px;padding:14px 20px;text-align:center;min-width:90px;">
         <div style="font-family:'Bebas Neue',sans-serif;font-size:40px;color:var(--lg-red);line-height:1;" id="lg-ar-grade"></div>
-        <div style="font-family:'Barlow Condensed',sans-serif;font-size:8px;letter-spacing:0.2em;text-transform:uppercase;color:#8a4a4a;margin-top:4px;">Grade</div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:8px;letter-spacing:0.2em;text-transform:uppercase;color:var(--lg-muted);margin-top:4px;">Grade</div>
       </div>
     </div>
     <div style="display:flex;gap:10px;justify-content:center;">
-      <button onclick="closeLgAlreadyRated()" style="padding:11px 24px;background:transparent;border:1px solid #3a1a1a;border-radius:2px;color:#8a4a4a;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:0.12em;text-transform:uppercase;">← Back</button>
-      <button onclick="lgProceedToRate()" style="padding:11px 24px;background:#3a0a0e;border:1px solid #8a2a2a;border-radius:2px;color:#f0c0c0;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:0.12em;text-transform:uppercase;">Re-review</button>
+      <button onclick="closeLgAlreadyRated()" style="padding:11px 24px;background:transparent;border:1px solid var(--lg-border);border-radius:2px;color:var(--lg-muted);cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:0.12em;text-transform:uppercase;">← Back</button>
+      <button class="lg-rerate-button" onclick="lgProceedToRate()" style="padding:11px 24px;background:var(--lg-panel-2);border:1px solid var(--lg-border);border-radius:2px;color:var(--lg-text);cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:0.12em;text-transform:uppercase;">Re-review</button>
     </div>
   </div>
 </div>
@@ -705,11 +709,7 @@
         <label>Search area</label>
         <button type="button" class="restaurant-location-button" onclick="requestRestaurantLocation()">Use my location</button>
       </div>
-      <div class="restaurant-location-grid">
-        <input id="restaurant-wishlist-city" data-restaurant-location-field="city" type="text" placeholder="City" autocomplete="address-level2"/>
-        <input id="restaurant-wishlist-region" data-restaurant-location-field="region" type="text" placeholder="State / region" autocomplete="address-level1"/>
-        <input id="restaurant-wishlist-country" data-restaurant-location-field="country" type="text" placeholder="Country" autocomplete="country-name"/>
-      </div>
+      <div class="restaurant-location-grid" data-restaurant-location-controls></div>
       <div class="restaurant-location-status" data-restaurant-location-status></div>
     </div>
 
@@ -791,11 +791,7 @@
             <label>Recommendation area</label>
             <button type="button" class="restaurant-location-button" onclick="requestRestaurantLocation()">Use my location</button>
           </div>
-          <div class="restaurant-location-grid">
-            <input id="restaurant-recommendation-city" data-restaurant-location-field="city" type="text" placeholder="City" autocomplete="address-level2"/>
-            <input id="restaurant-recommendation-region" data-restaurant-location-field="region" type="text" placeholder="State / region" autocomplete="address-level1"/>
-            <input id="restaurant-recommendation-country" data-restaurant-location-field="country" type="text" placeholder="Country" autocomplete="country-name"/>
-          </div>
+          <div class="restaurant-location-grid" data-restaurant-location-controls></div>
           <div class="restaurant-location-status" data-restaurant-location-status></div>
         </div>
         <div class="recommend-mode-row"><button class="recommend-mode-btn active" id="restaurant-rec-mode-source" onclick="setGenericRecommendationMode('restaurant','source')">Based on a Restaurant</button><button class="recommend-mode-btn" id="restaurant-rec-mode-taste" onclick="setGenericRecommendationMode('restaurant','taste')">Based on My Taste</button></div>
@@ -819,9 +815,9 @@
     <div class="manual-restaurant-grid">
       <label>Restaurant name<input id="manual-restaurant-name" type="text" autocomplete="organization"></label>
       <label>Street address<input id="manual-restaurant-address" type="text" autocomplete="street-address"></label>
-      <label>City<input id="manual-restaurant-city" type="text" autocomplete="address-level2"></label>
-      <label>State / region<input id="manual-restaurant-region" type="text" autocomplete="address-level1"></label>
-      <label>Country<input id="manual-restaurant-country" type="text" autocomplete="country-name"></label>
+      <label>City <small>e.g. Chicago</small><input id="manual-restaurant-city" type="text" autocomplete="address-level2"></label>
+      <label>State <small>e.g. Illinois</small><select id="manual-restaurant-region" autocomplete="address-level1"></select></label>
+      <label>Country <small>e.g. United States</small><input id="manual-restaurant-country" type="text" list="restaurant-countries" autocomplete="country-name"></label>
       <label>Cuisine<input id="manual-restaurant-cuisine" type="text" placeholder="Optional"></label>
       <label>Price<input id="manual-restaurant-price" type="text" placeholder="Optional, e.g. $$"></label>
       <label>Google rating<input id="manual-restaurant-rating" type="number" min="0" max="5" step="0.1" placeholder="Optional"></label>
@@ -869,7 +865,7 @@
       <div class="config-note" style="margin-top:16px">
         Private values are stored in Apps Script Project Settings, not this public website.
         Required properties: <code>SHEET_ID</code>, <code>ADMIN_PIN</code>, <code>TMDB_API_KEY</code>, and <code>GOOGLE_PLACES_KEY</code>.
-        Optional: <code>OMDB_API_KEY</code>.
+        Books require <code>GOOGLE_BOOKS_API_KEY</code>. Optional: <code>OMDB_API_KEY</code> and <code>GEMINI_API_KEY</code>.
       </div>
     </div>
   </div>
