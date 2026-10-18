@@ -14,7 +14,8 @@ function updateQuickScore(val){
   const score = (Number(val)/10).toFixed(1);
   document.getElementById('quick-score-display').textContent = score;
   document.getElementById('quick-score-grade').textContent = grade(parseFloat(score));
-  const pct = Number(val).toFixed(1);
+  const slider=document.getElementById('quick-slider');
+  const pct = ((Number(val)-Number(slider.min))/(Number(slider.max)-Number(slider.min))*100).toFixed(1);
   document.getElementById('quick-slider').style.setProperty('--pct', pct+'%');
 }
 
@@ -260,10 +261,12 @@ async function apiCall(action, payload = {}){
     body: JSON.stringify({action, ...payload})
   });
   const text = await res.text();
+  if(payload.token && payload.token!==getSessionToken()) throw new Error('The signed-in user changed. Please try again.');
   if(!text || text.trim().startsWith("<")) throw new Error("Backend returned an HTML/error page.");
   const data = JSON.parse(text);
   if(data.error) throw new Error(data.error);
   if(data.ok === false) throw new Error(data.error || "Backend request failed.");
+  if(/^(save.*Rating|addFuture|deleteFuture|delete.*Rating)/.test(action)) wishlistCache.clear();
   return data.result !== undefined ? data.result : data;
 }
 
@@ -336,6 +339,7 @@ function goHome(){
   if(toggle) toggle.checked = true;
   const lgToggle = document.getElementById('lg-quick-toggle');
   if(lgToggle) lgToggle.checked = true;
+  setLgMode(false);
   showScreen("home");
   window.clearTimeout(window.recentActivityLoadTimer);
   window.recentActivityLoadTimer=window.setTimeout(loadRecentActivity,600);
@@ -348,6 +352,32 @@ function showLogin(){
 }
 
 function switchUser(){
+  _ratingsCache=null;
+  _ratingsCacheTime=0;
+  _lgRatingsCache=null;
+  _lgRatingsCacheTime=0;
+  catalogRatingsCache={game:null,book:null};
+  catalogSearchRequest++;
+  recommendationSources=[];
+  recommendationResults=[];
+  recommendationSessionId='';
+  recommendationSeenIds=[];
+  groupRecommendationMembers=[];
+  Object.values(genericRecommendationState).forEach(function(state){state.sources=[];state.results=[];state.sessionId='';state.seen=[];});
+  ['rec-results','tv-rec-results','restaurant-rec-results','rec-source','tv-rec-source','restaurant-rec-source'].forEach(function(id){document.getElementById(id).innerHTML='';});
+  tvRatingsCache=[];
+  wishlistCache.clear();
+  wishlistItems=[];
+  wishlistResults=[];
+  wishlistSearchRequest++;
+  lgSearchRequest++;
+  restaurantLocationRevision++;
+  window.clearTimeout(window.recentActivityLoadTimer);
+  _pendingMovie=null;
+  _lgPendingPlace=null;
+  document.getElementById('already-rated-modal').style.display='none';
+  document.getElementById('lg-already-rated-modal').style.display='none';
+  closeRatingDetail();
   setSavedUser(null);
   sessionToken = null;
   currentUser = null;
@@ -373,7 +403,7 @@ function renderPinScreen(){
     return;
   }
   list.innerHTML = users.map(u=>`
-    <button class="user-btn" data-user="${escHtml(u.name)}" onclick='selectPinUser(${JSON.stringify(u.name)})'>${escHtml(displayUserName(u.name))}</button>`).join("");
+    <button class="user-btn" data-user="${escHtml(u.name)}" onclick="selectPinUser(this.dataset.user)">${escHtml(displayUserName(u.name))}</button>`).join("");
 }
 
 function selectPinUser(name){
@@ -519,6 +549,7 @@ async function loadConfigFields(){
     if(!status.hasAdminPin) missing.push("ADMIN_PIN");
     if(!status.hasTmdbKey) missing.push("TMDB_API_KEY");
     if(!status.hasPlacesKey) missing.push("GOOGLE_PLACES_KEY");
+    if(!status.hasBooksKey) missing.push("GOOGLE_BOOKS_API_KEY (Books)");
     msg.textContent = missing.length ? `Missing script properties: ${missing.join(", ")}` : "Backend is configured.";
     msg.className = missing.length ? "settings-msg err" : "settings-msg";
   }catch(e){
