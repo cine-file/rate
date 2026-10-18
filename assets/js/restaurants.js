@@ -20,10 +20,9 @@ let _lgRenderedRatings = [];
 
 // ── MICHELIN STAR SVG ─────────────────────────────────────────
 function starSVG(filled){
-  const color = filled ? '#C8A45A' : 'rgba(200,164,90,0.25)';
   return `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
     <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
-      fill="${color}" stroke="${filled?'#8B6914':'rgba(200,164,90,0.2)'}" stroke-width="0.5"/>
+      fill="var(--lg-gold)" fill-opacity="${filled?1:0.25}" stroke="var(--lg-gold)" stroke-width="0.5"/>
   </svg>`;
 }
 
@@ -34,14 +33,11 @@ function renderStars(score10){
   const empty = 5 - full - half;
   let html = '';
   for(let i=0;i<full;i++)  html += starSVG(true);
-  if(half) html += starSVG(false).replace('rgba(200,164,90,0.25)','url(#half)');
-  // use half-filled SVG
   if(half){
-    html = html.slice(0, html.lastIndexOf(starSVG(false).replace('rgba(200,164,90,0.25)','url(#half)')));
     html += `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-      <defs><linearGradient id="hg"><stop offset="50%" stop-color="#C8A45A"/><stop offset="50%" stop-color="rgba(200,164,90,0.25)"/></linearGradient></defs>
+      <defs><linearGradient id="hg"><stop offset="50%" stop-color="var(--lg-gold)"/><stop offset="50%" stop-color="var(--lg-gold)" stop-opacity="0.25"/></linearGradient></defs>
       <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
-        fill="url(#hg)" stroke="#8B6914" stroke-width="0.5"/></svg>`;
+        fill="url(#hg)" stroke="var(--lg-gold)" stroke-width="0.5"/></svg>`;
   }
   for(let i=0;i<empty;i++) html += starSVG(false);
   return html;
@@ -72,6 +68,7 @@ function startRating(mode){
     return;
   }
   if(mode === 'restaurant'){
+    activeCategory='restaurant';
     CATS = RESTAURANT_CATS;
     setLgMode(true);
     updateNavUser();
@@ -139,6 +136,7 @@ function lgGoHome(){
 
 // ── LE GUIDE SEARCH ───────────────────────────────────────────
 let lgSearchTimer = null;
+let lgSearchRequest = 0;
 
 document.addEventListener('DOMContentLoaded', ()=>{
   const inp = document.getElementById('lg-search-input');
@@ -146,7 +144,8 @@ document.addEventListener('DOMContentLoaded', ()=>{
     inp.addEventListener('input', function(){
       const q = this.value.trim();
       clearTimeout(lgSearchTimer);
-      if(!q){ closeLgDropdown(); return; }
+      lgSearchRequest++;
+      if(q.length<2){ closeLgDropdown(); document.getElementById('lg-spinner').classList.remove('visible'); return; }
       document.getElementById('lg-spinner').classList.add('visible');
       lgSearchTimer = setTimeout(()=>lgDoSearch(q), 350);
     });
@@ -155,17 +154,25 @@ document.addEventListener('DOMContentLoaded', ()=>{
 });
 
 async function lgDoSearch(q){
+  const request=++lgSearchRequest;
+  document.getElementById('lg-spinner').classList.add('visible');
   try{
     const body = { action:'searchRestaurants', ...restaurantSearchPayload(q) };
     const res = await lgCall(body);
+    if(request!==lgSearchRequest) return;
     if(res && res.results) lgRenderDropdown(res.results);
-  }catch(e){ console.error('Restaurant search failed:', e); }
-  document.getElementById('lg-spinner').classList.remove('visible');
+  }catch(e){
+    if(request!==lgSearchRequest) return;
+    const dd=document.getElementById('lg-dropdown');
+    dd.innerHTML='<div class="stats-empty" role="status">'+escHtml(e.message||'Restaurant search failed. Try again.')+'</div>';
+    dd.classList.add('open');
+  }
+  if(request===lgSearchRequest) document.getElementById('lg-spinner').classList.remove('visible');
 }
 
 function lgRenderDropdown(results){
   const dd = document.getElementById('lg-dropdown');
-  if(!results.length){ dd.classList.remove('open'); return; }
+  if(!results.length){ dd.innerHTML='<div class="stats-empty" role="status">No restaurants found. Try the full name or a nearby city.</div>'; dd.classList.add('open'); return; }
   _lgSearchResults = results.slice();
   dd.innerHTML = _lgSearchResults.map((r,index)=>`
     <button class="lg-drop-item" data-place-index="${index}" type="button">
@@ -179,8 +186,8 @@ function lgRenderDropdown(results){
   dd.querySelectorAll('.lg-drop-item').forEach(function(button){
     button.addEventListener('pointerdown', function(event){
       event.preventDefault();
-      lgPickPlace(_lgSearchResults[Number(button.dataset.placeIndex)]);
     });
+    button.addEventListener('click',function(){ lgPickPlace(_lgSearchResults[Number(button.dataset.placeIndex)]); });
   });
   dd.classList.add('open');
 }
@@ -210,6 +217,7 @@ function openManualRestaurant(mode){
     const input=document.getElementById('manual-restaurant-'+field);
     if(input && area[field]) input.value=area[field];
   });
+  configureRestaurantState(document.getElementById('manual-restaurant-region'),area.country,area.region);
   showScreen('lg-manual');
   setTimeout(function(){ document.getElementById('manual-restaurant-name')?.focus(); },0);
 }
@@ -223,7 +231,7 @@ async function submitManualRestaurant(){
   const name=value('name'), address=value('address'), city=value('city'), region=value('region'), country=value('country');
   const msg=document.getElementById('manual-restaurant-msg');
   if(!name){ msg.textContent='Enter the restaurant name.'; msg.className='settings-msg err'; return; }
-  if(!address && !city && !region && !country){ msg.textContent='Add an address or at least one location field so this restaurant can be identified later.'; msg.className='settings-msg err'; return; }
+  if(!address && !city){ msg.textContent='Add a street address or city to identify this restaurant.'; msg.className='settings-msg err'; return; }
   const place={name:name,address:address,city:[city,region,country].filter(Boolean).join(', '),cuisine:value('cuisine'),price:value('price'),rating:value('rating'),placeId:'',manual:true};
   if(_manualRestaurantMode === 'wishlist'){
     msg.textContent='Saving...'; msg.className='settings-msg';
@@ -260,14 +268,14 @@ function lgLoadPlace(place){
   // Build scorer rows
   document.getElementById('lg-scorer-body').innerHTML = RESTAURANT_CATS.map(c=>`
     <tr>
-      <td class="td-cat" style="color:#c8d0c0">${c.label}</td>
-      <td class="tc td-wt" style="color:#8a4a4a">${Math.round(c.w*100)}%</td>
-      <td class="td-prompt" style="color:#6a3a3a">${c.prompt}</td>
+      <td class="td-cat" style="color:var(--lg-text)">${c.label}</td>
+      <td class="tc td-wt" style="color:var(--lg-muted)">${Math.round(c.w*100)}%</td>
+      <td class="td-prompt" style="color:var(--lg-muted)">${c.prompt}</td>
       <td class="tc">
         <input class="lg-score-inp" id="lg-inp-${c.id}" type="number" min="0" max="100"
           step="0.1" placeholder="—" oninput="lgUpdateTotal()"/>
       </td>
-      <td class="tc td-grade" id="lg-grade-${c.id}" style="color:#4a2a2a">—</td>
+      <td class="tc td-grade" id="lg-grade-${c.id}" style="color:var(--lg-muted)">—</td>
       <td><textarea class="lg-note-inp" id="lg-note-${c.id}" rows="2" placeholder="Optional..."></textarea></td>
     </tr>`).join('');
 
@@ -395,8 +403,8 @@ function lgGenerateCard(){
       <tr>
         <td class="lg-ct-name">${c.label}</td>
         <td class="tc lg-ct-dim">${Math.round(c.w*100)}%</td>
-        <td class="tc lg-ct-score">${lgScores[c.id]||'—'}</td>
-        <td class="tc lg-ct-grade">${lgScores[c.id]?gradeFromRaw(lgScores[c.id]):'—'}</td>
+        <td class="tc lg-ct-score">${lgScores[c.id]??'—'}</td>
+        <td class="tc lg-ct-grade">${lgScores[c.id]!=null?gradeFromRaw(lgScores[c.id]):'—'}</td>
         <td class="lg-ct-note">${escHtml(lgNotes[c.id]||'')}</td>
       </tr>`).join('');
   }
@@ -484,22 +492,25 @@ async function lgLoadRankReveal(){
 let _lgPendingPlace = null;
 
 async function lgCheckAlreadyRated(place){
+  const token=getSessionToken();
+  const isCurrent=()=>token===getSessionToken() && activeCategory==='restaurant';
   _lgPendingPlace = place;
   if(!CONFIG.GAS_URL||!currentUser||!getSessionToken()){ lgLoadPlace(place); return; }
   try{
     const ratings = await lgGetRatings();
-    const existing = (ratings||[]).find(r=>
-      String(r['Name']||'').toLowerCase()===place.name.toLowerCase() &&
-      String(r['Address']||'').toLowerCase()===String(place.address||'').toLowerCase()
-    );
+    if(!isCurrent()) return;
+    const existing = (ratings||[]).find(r=>r['Place ID'] && place.placeId
+      ? String(r['Place ID'])===String(place.placeId)
+      : String(r.Name||'').toLowerCase()===place.name.toLowerCase() &&
+        String(r.Address||r.City||'').toLowerCase()===String(place.address||place.city||'').toLowerCase());
     if(existing){
       document.getElementById('lg-ar-name').textContent = place.name;
       document.getElementById('lg-ar-score').textContent = parseFloat(existing['Score /10']||0).toFixed(1);
-      document.getElementById('lg-ar-grade').textContent = existing['Grade']||'—';
+      document.getElementById('lg-ar-grade').textContent = grade(Number(existing['Score /10']||0));
       document.getElementById('lg-ar-date').textContent  = existing['Date']?`Reviewed on ${existing['Date']}`:'';
       document.getElementById('lg-already-rated-modal').style.display='flex';
     } else { lgLoadPlace(place); }
-  }catch(e){ lgLoadPlace(place); }
+  }catch(e){ if(isCurrent()) lgLoadPlace(place); }
 }
 
 function closeLgAlreadyRated(){
@@ -524,10 +535,10 @@ async function lgGoStats(){
   syncScoreModeButtons();
   const content = document.getElementById('lg-stats-content');
   if(!CONFIG.GAS_URL||!currentUser||!getSessionToken()){
-    content.innerHTML=`<div class="stats-empty" style="color:#6a3a3a">Log in to see your restaurant stats.</div>`;
+    content.innerHTML=`<div class="stats-empty" style="color:var(--lg-muted)">Log in to see your restaurant stats.</div>`;
     return;
   }
-  content.innerHTML=`<div class="stats-loading" style="color:#6a3a3a">Loading...</div>`;
+  content.innerHTML=`<div class="stats-loading" style="color:var(--lg-muted)">Loading...</div>`;
   try{
     const [ratingsData, summaryData] = await Promise.all([
       lgCall({action:'getRestaurantRatings'}),
@@ -537,7 +548,7 @@ async function lgGoStats(){
     populateRestaurantCuisineFilter(_lgStatsData.ratings,_lgStatsData.summary?.rows||[]);
     lgRenderCurrentTab();
   }catch(e){
-    content.innerHTML=`<div class="stats-empty" style="color:#6a3a3a">Could not load data.</div>`;
+    content.innerHTML=`<div class="stats-empty" style="color:var(--lg-muted)">Could not load data.</div>`;
   }
 }
 
@@ -574,7 +585,7 @@ function lgRenderMyStats(){
   const container = document.getElementById('lg-stats-content');
   const ratings   = (_lgStatsData.ratings||[]).filter(function(row){ return rowMatchesCuisine(row,_restaurantCuisine); });
   if(!ratings.length){
-    container.innerHTML=`<div class="stats-empty" style="color:#6a3a3a">No restaurant ratings yet.</div><div class="stats-danger-zone"><button class="delete-rating-btn" onclick="openDeleteRating('restaurant')">Delete a Rating</button></div>`;
+    container.innerHTML=`<div class="stats-empty" style="color:var(--lg-muted)">No restaurant ratings yet.</div><div class="stats-danger-zone"><button class="delete-rating-btn" onclick="openDeleteRating('restaurant')">Delete a Rating</button></div>`;
     return;
   }
   const avg = averageScores(ratings.map(ratingDisplayScore));
