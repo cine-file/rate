@@ -18,6 +18,7 @@ function runAdvancedTvSearch(){
 document.getElementById("search-input").addEventListener("input",function(){
   const q=this.value.trim();
   clearTimeout(searchTimer);
+  catalogSearchRequest++;
   if(!q){closeDropdown();return;}
   document.getElementById("spinner").classList.add("visible");
   searchTimer=setTimeout(()=>doSearch(q),320);
@@ -32,6 +33,8 @@ document.getElementById('movie-year-filter').addEventListener('change',function(
 
 async function doSearch(q,advanced=false){
   if(activeCategory === 'game' || activeCategory === 'book') return catalogSearch(q,advanced);
+  const request=++catalogSearchRequest;
+  const isCurrent=()=>activeCategory==='film' && request===catalogSearchRequest;
   if(!CONFIG.GAS_URL){
     document.getElementById("setup-notice").style.display="block";
     document.getElementById("spinner").classList.remove("visible");
@@ -41,9 +44,11 @@ async function doSearch(q,advanced=false){
   try{
     const year=(document.getElementById('movie-year-filter').value || (advanced ? document.getElementById('movie-advanced-year').value : '')).trim();
     const data = await apiCall("searchMovies", {token:getSessionToken(),query:q,advanced:advanced||!!year,year:year,pages:3});
+    if(!isCurrent()) return;
     document.getElementById("setup-notice").style.display="none";
     renderDropdown((data.results || data || []),advanced);
   }catch(e){
+    if(!isCurrent()) return;
     console.error(e);
     const notice = document.getElementById("setup-notice");
     notice.style.display="block";
@@ -75,8 +80,15 @@ async function pickMovie(id){
   document.getElementById("spinner").classList.add("visible");
   try{
     const movie = await apiCall("getMovieDetails", {token: getSessionToken(), id});
+    if(activeCategory!=='film') return;
     await checkAlreadyRated(movie);
-  }catch(e){ console.error(e); }
+  }catch(e){
+    if(activeCategory==='film'){
+      const dropdown=document.getElementById('dropdown');
+      dropdown.innerHTML='<div class="stats-empty">'+escHtml(e.message||'Could not load this film.')+'</div>';
+      dropdown.classList.add('open');
+    }
+  }
   document.getElementById("spinner").classList.remove("visible");
 }
 
@@ -98,6 +110,7 @@ async function prefetchRatings(){
 }
 
 async function checkAlreadyRated(movie){
+  const token=getSessionToken();
   _pendingMovie = movie;
   if(!CONFIG.GAS_URL || !currentUser){
     loadMovie(movie); return;
@@ -130,19 +143,21 @@ async function checkAlreadyRated(movie){
     document.getElementById("spinner").classList.remove("visible");
   }
 
+  if(token!==getSessionToken() || activeCategory!=='film') return;
   if(!ratings){
     // Could not check — just load the movie, don't block
     loadMovie(movie);
     return;
   }
 
-  const existing = ratings.find(r=>String(r["Title"]||"").toLowerCase()===movie.title.toLowerCase());
+  const existing = ratings.find(r=>r['TMDB ID'] && movie.id
+    ? String(r['TMDB ID'])===String(movie.id)
+    : String(r.Title||'').toLowerCase()===movie.title.toLowerCase() && String(r.Year||'')===String(movie.year||''));
   if(existing){
     document.getElementById("ar-title").textContent = movie.title;
     const sc = parseFloat(existing["Score /10"]||0);
-    const raw100 = parseFloat(existing["Raw /100"]||0);
     document.getElementById("ar-score").textContent = sc.toFixed(1);
-    document.getElementById("ar-grade").textContent = raw100 ? gradeFromRaw(raw100) : existing["Grade"]||"—";
+    document.getElementById("ar-grade").textContent = grade(sc);
     document.getElementById("ar-date").textContent = existing["Date"] ? `Rated on ${existing["Date"]}` : "";
     document.getElementById("already-rated-modal").style.display="flex";
   } else {
@@ -176,6 +191,15 @@ function loadMovie(movie){
   const isGame = activeCategory === 'game';
   const isBook = activeCategory === 'book';
   const catalog = isGame || isBook;
+  document.getElementById('quick-slider').min=isGame?'10':'0';
+  document.querySelectorAll('#screen-quick .quick-tick').forEach(function(tick,index,list){
+    tick.hidden=isGame && index>0 && index<list.length-1;
+    if(index===0) tick.textContent=isGame?'1':'0';
+  });
+  document.querySelectorAll('[data-external-ratings-note]').forEach(function(note){
+    note.textContent=movie.externalRatingsMessage||'';
+    note.hidden=!note.textContent;
+  });
   document.getElementById("search-input").value="";
   document.getElementById('quick-note').placeholder = isTv ? 'Any thoughts on the season or series...' : (isGame ? 'Any thoughts on the game...' : (isBook ? 'Any thoughts on the book...' : 'Any thoughts on the film...'));
   document.getElementById('overall-note').placeholder = isTv ? 'Final thoughts on the season or series...' : (isGame ? 'Final thoughts on the game...' : (isBook ? 'Final thoughts on the book...' : 'Final thoughts on the film...'));
@@ -188,7 +212,7 @@ function loadMovie(movie){
   document.getElementById("score-meta").innerHTML=
     [movie.year,
      movie.director&&`${catalog ? (isBook ? 'By' : 'Creator') : 'Dir.'} ${movie.director}`,
-     (movie.rt&&movie.rt!=="—")&&`RT Audience: ${movie.rt}`,
+     (movie.rt&&movie.rt!=="—")&&`RT: ${movie.rt}`,
      (movie.imdb&&movie.imdb!=="—")&&`IMDb: ${movie.imdb}`,
      movie.externalScore&&`${movie.externalLabel||'Rating'}: ${movie.externalScore}`]
     .filter(Boolean).map(s=>`<span>${escHtml(s)}</span>`).join(" · ");
@@ -201,7 +225,7 @@ function loadMovie(movie){
       <td class="tc td-wt">${Math.round(c.w*100)}%</td>
       <td class="td-prompt">${c.prompt}</td>
       <td class="tc">
-        <input class="score-inp" id="inp-${c.id}" type="number" min="0" max="100"
+        <input class="score-inp" id="inp-${c.id}" type="number" min="${isGame?10:0}" max="100"
           step="0.1" placeholder="—" oninput="updateTotal()"/>
       </td>
       <td class="tc td-grade" id="grade-${c.id}">—</td>
@@ -242,6 +266,10 @@ function updateTotal(){
 
 // ── ROUNDING SCREEN ───────────────────────────────────────────
 function goRound(){
+  if(activeCategory==='game'){
+    const invalid=CATS.map(c=>document.getElementById('inp-'+c.id)).find(input=>!input.value || !input.checkValidity());
+    if(invalid){invalid.required=true;invalid.reportValidity();return;}
+  }
   CATS.forEach(c=>{
     scores[c.id]=Number(document.getElementById("inp-"+c.id)?.value||0);
     notes[c.id] =document.getElementById("note-"+c.id)?.value||"";
@@ -278,7 +306,7 @@ function generateCard(){
 
   document.getElementById("card-title").textContent=currentMovie.title;
   document.getElementById("card-sub").textContent=
-    [currentMovie.year,currentMovie.director&&`Directed by ${currentMovie.director}`].filter(Boolean).join(" · ");
+    [currentMovie.year,currentMovie.director&&`${activeCategory==='book'?'By':(activeCategory==='game'?'Developer':'Directed by')} ${currentMovie.director}`].filter(Boolean).join(" · ");
 
   // Score boxes: /10 score (big), raw/100, grade, RT, IMDb
   document.getElementById("score-boxes").innerHTML=`
@@ -303,7 +331,7 @@ function generateCard(){
         </svg>
       </div>
       <div class="sbox-rt-num">${escHtml(currentMovie.rt)}</div>
-      <div class="sbox-lbl">RT Audience</div>
+      <div class="sbox-lbl">RT Critic Score</div>
     </div>`:""}
     ${(currentMovie.imdb&&currentMovie.imdb!=="")?`
     <div class="sbox">
@@ -316,7 +344,7 @@ function generateCard(){
       <div class="sbox-rt-num">${escHtml(currentMovie.imdb)}</div>
       <div class="sbox-lbl">IMDb Rating</div>
     </div>`:""}
-    ${currentMovie.externalScore?`<div class="sbox"><div class="sbox-rt-num">${escHtml(currentMovie.externalScore)}</div><div class="sbox-lbl">${escHtml(currentMovie.externalLabel||'External Rating')}</div>${currentMovie.externalCount?`<div class="sbox-lbl">${escHtml(currentMovie.externalCount)}</div>`:''}</div>`:""}
+    ${currentMovie.externalScore?`<div class="sbox"><div class="sbox-rt-num">${escHtml(currentMovie.externalScore)}</div><div class="sbox-lbl">${escHtml(currentMovie.externalLabel||'External Rating')}</div>${currentMovie.externalSummary?`<div class="sbox-lbl">${escHtml(currentMovie.externalSummary)}</div>`:''}${currentMovie.externalCount?`<div class="sbox-lbl">${escHtml(currentMovie.externalCount)}</div>`:''}</div>`:""}
     ${currentMovie.poster?`<img class="card-poster" src="${escHtml(currentMovie.posterUrl || `https://image.tmdb.org/t/p/w185${currentMovie.poster}`)}" alt="${escHtml(currentMovie.title)}">`:""}
   `;
 
@@ -331,8 +359,8 @@ function generateCard(){
       <tr>
         <td class="ct-name">${c.label}</td>
         <td class="tc ct-dim">${Math.round(c.w*100)}%</td>
-        <td class="tc ct-score">${scores[c.id]||"—"}</td>
-        <td class="tc ct-grade">${scores[c.id]?gradeFromRaw(scores[c.id]):"—"}</td>
+        <td class="tc ct-score">${scores[c.id]??"—"}</td>
+        <td class="tc ct-grade">${scores[c.id]!=null?gradeFromRaw(scores[c.id]):"—"}</td>
         <td class="ct-note">${escHtml(notes[c.id]||"")}</td>
       </tr>`).join("");
   }
@@ -681,7 +709,7 @@ function showMyRatedFilm(title){
     score, grade:grade(score10), lines, comment:rating['Overall Notes'] || '',
     secondaryBoxes:[
       {label:'IMDb',value:String(rating['IMDb']||'—')},
-      {label:'RT Audience',value:String(rating['RT Audience']||'—')},
+      {label:'RT Score',value:String(rating['RT Audience']||'—')},
       {label:'Other ratings',value:others.length?others.join(' · '):'No one else has rated it yet'}
     ]
   });
@@ -712,7 +740,7 @@ function showGroupFilm(title){
   if(mine!=null) lines.push({label:'Your rating',value:Number(mine).toFixed(1)});
   lines.push({label:'Group average',value:avg.toFixed(1)});
   if(row.imdb) lines.push({label:'IMDb',value:String(row.imdb)});
-  if(row.rt) lines.push({label:'RT Audience',value:String(row.rt)});
+  if(row.rt) lines.push({label:'RT Score',value:String(row.rt)});
   Object.keys(row.userScores||{}).sort().forEach(name=>{
     if(name!==currentUser?.name){
       const value=summaryUserDisplayScore(row,name);
