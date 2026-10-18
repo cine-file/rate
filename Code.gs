@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 //  CINE-FILE — Google Apps Script
-//  Version: 2026.08.30-catalog-tv-derived.17
+//  Version: 2026.10.18-search-and-theme.18
 //  Runtime: GitHub Pages frontend + Apps Script JSON backend
 //
 //  Version notes:
@@ -21,11 +21,13 @@
 //  - restaurant-location-performance.16: adds voluntary city/state/country restaurant filtering, location-aware restaurant recommendations, cached searches, and batched recommendation history writes.
 //  - catalog-tv-derived.17: adds Steam games, Google Books, manual Le Guide entries,
 //    display-only user aliases, and season-derived TV overall statistics.
+//  - search-and-theme.18: adds US state filters, Places New with legacy fallback,
+//    cached catalog/OMDb lookups, explicit provider errors, and safer rating/wishlist matching.
 //
 //  Original by friend, restaurant functions added by Claude
 // ─────────────────────────────────────────────────────────────
 
-const BACKEND_VERSION = '2026.08.30-catalog-tv-derived.17';
+const BACKEND_VERSION = '2026.10.18-search-and-theme.18';
 const SESSION_TTL_SECONDS = 6 * 60 * 60;
 const LOGIN_RATE_WINDOW_SECONDS = 15 * 60;
 const LOGIN_RATE_MAX_ATTEMPTS = 8;
@@ -54,7 +56,7 @@ const RESTAURANT_RECOMMENDATION_FEEDBACK_SHEET_NAME = 'Recommendation-Feedback-R
 const RECENT_ACTIVITY_SHEET_NAME = 'Recent-Activity';
 const RECENT_ACTIVITY_SNAPSHOT_PROPERTY = 'RECENT_ACTIVITY_SNAPSHOT_V14';
 
-const FILM_SUMMARY_BASE_COLUMNS = ['Title','Year','Genre','Director','Movie length','RT Audience','IMDb'];
+const FILM_SUMMARY_BASE_COLUMNS = ['Title','Year','Genre','Director','Movie length','RT Score','IMDb'];
 const FILM_SUMMARY_AVERAGE_COLUMN = 'Average Rating';
 const FILM_SUMMARY_USER_ORDER = ['Michael','Megan','Stephen','Hannah','Chace','Natasha'];
 // Canonical names remain in Users and every database row. This only controls
@@ -345,13 +347,56 @@ function jsonOut_(data) {
 }
 
 function fetchJson_(url) {
-  var res = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+  var res;
+  try { res = UrlFetchApp.fetch(url, { muteHttpExceptions: true }); }
+  catch(e) { throw new Error('The external lookup service could not be reached. Please try again shortly.'); }
   var code = res.getResponseCode();
   var body = res.getContentText();
   if (code < 200 || code >= 300) {
-    throw new Error('External API request failed (' + code + '): ' + body.slice(0, 180));
+    throw new Error('External lookup failed (HTTP ' + code + '). Try again shortly; the admin can check the provider API key and quota.');
   }
   return JSON.parse(body);
+}
+
+function cachedLookup_(namespace, identity, seconds, lookup) {
+  var cache=CacheService.getScriptCache();
+  var key=restaurantSearchCacheKey_(namespace+'|'+identity);
+  var cached=cache.get(key);
+  if(cached) return JSON.parse(cached);
+  var value=lookup();
+  try { cache.put(key,JSON.stringify(value),seconds); } catch(e) {}
+  return value;
+}
+
+function numericExternalScore_(value,max,percent) {
+  var text=String(value==null?'':value).trim();
+  if(!/^\d+(?:\.\d+)?%?$/.test(text)) return null;
+  var number=Number(text.replace('%',''));
+  return number>=0 && number<=max ? String(number)+(percent?'%':'') : null;
+}
+
+function movieExternalRatings_(movie) {
+  var key=getOmdbKey();
+  if(!key) return {rt:null,imdb:null,externalRatingsStatus:'not_configured',externalRatingsMessage:'IMDb / RT unavailable: the admin needs to configure OMDB_API_KEY.'};
+  var imdbId=/^tt\d+$/.test(String(movie.imdb_id||'')) ? movie.imdb_id : '';
+  var year=String(movie.release_date||'').slice(0,4);
+  var identity=imdbId || (movie.title+'|'+year);
+  try {
+    var result=cachedLookup_('omdb-v2',identity+'|'+key,21600,function(){
+      var query=imdbId ? '&i='+encodeURIComponent(imdbId) : '&t='+encodeURIComponent(movie.title)+'&y='+encodeURIComponent(year);
+      var data=fetchJson_('https://www.omdbapi.com/?apikey='+encodeURIComponent(key)+query+'&type=movie');
+      if(data.Response==='False') {
+        if(/not found/i.test(data.Error||'')) return {rt:null,imdb:null,externalRatingsStatus:'not_found'};
+        throw new Error('OMDb rejected the request.');
+      }
+      var rt=(data.Ratings||[]).filter(function(r){return r.Source==='Rotten Tomatoes';})[0];
+      return {rt:numericExternalScore_(rt&&rt.Value,100,true),imdb:numericExternalScore_(data.imdbRating,10,false),externalRatingsStatus:'ok'};
+    });
+    if(!result.rt || !result.imdb) result.externalRatingsMessage='OMDb does not currently provide '+(!result.rt&&!result.imdb?'IMDb or RT scores':(!result.rt?'an RT score':'an IMDb score'))+' for this film.';
+    return result;
+  } catch(e) {
+    return {rt:null,imdb:null,externalRatingsStatus:'unavailable',externalRatingsMessage:'IMDb / RT lookup is temporarily unavailable. Your rating can still be saved; the admin can check the OMDb key and quota.'};
+  }
 }
 
 // ── ROUTING ───────────────────────────────────────────────────
@@ -399,8 +444,8 @@ function doPost(e) {
     if (action === 'getRatings')             return doGetRatings_(username);
     if (action === 'getSummary')             return doGetSummary_();
     if (action === 'getFutureFilms')         return doGetFutureFilms_(username);
-    if (action === 'addFutureFilm')          return doAddFutureFilm_(d.payload || d, username);
-    if (action === 'deleteFutureFilm')       return doDeleteFutureFilm_(d.payload || d, username);
+    if (action === 'addFutureFilm')          return withScriptLock_(function(){return doAddFutureFilm_(d.payload || d, username);});
+    if (action === 'deleteFutureFilm')       return withScriptLock_(function(){return doDeleteFutureFilm_(d.payload || d, username);});
     if (action === 'getRecommendationSources') return doGetRecommendationSources_(username);
     if (action === 'generateFilmRecommendations') return doGenerateFilmRecommendations_(d.payload || d, username);
     if (action === 'replaceFilmRecommendation') return doReplaceFilmRecommendation_(d.payload || d, username);
@@ -419,31 +464,31 @@ function doPost(e) {
     if (action === 'getTvRatings')            return doGetTvRatings_(username);
     if (action === 'getTvSummary')            return doGetTvSummary_();
     if (action === 'getFutureTv')             return doGetFutureTv_(username);
-    if (action === 'addFutureTv')             return doAddFutureTv_(d.payload || d, username);
-    if (action === 'deleteFutureTv')          return doDeleteFutureTv_(d.payload || d, username);
+    if (action === 'addFutureTv')             return withScriptLock_(function(){return doAddFutureTv_(d.payload || d, username);});
+    if (action === 'deleteFutureTv')          return withScriptLock_(function(){return doDeleteFutureTv_(d.payload || d, username);});
     if (action === 'searchGames')            return doSearchGames_(d);
     if (action === 'getGameDetails')         return doGetGameDetails_(d);
     if (action === 'saveGameRating')         return doSaveCatalogRating_(d.payload || d, username, 'game');
     if (action === 'getGameRatings')         return doGetCatalogRatings_(username, 'game');
     if (action === 'getGameSummary')         return doGetCatalogSummary_('game');
     if (action === 'getFutureGames')         return doGetFutureCatalog_(username, 'game');
-    if (action === 'addFutureGame')          return doAddFutureCatalog_(d.payload || d, username, 'game');
-    if (action === 'deleteFutureGame')       return doDeleteFutureCatalog_(d.payload || d, username, 'game');
+    if (action === 'addFutureGame')          return withScriptLock_(function(){return doAddFutureCatalog_(d.payload || d, username, 'game');});
+    if (action === 'deleteFutureGame')       return withScriptLock_(function(){return doDeleteFutureCatalog_(d.payload || d, username, 'game');});
     if (action === 'searchBooks')            return doSearchBooks_(d);
     if (action === 'getBookDetails')         return doGetBookDetails_(d);
     if (action === 'saveBookRating')         return doSaveCatalogRating_(d.payload || d, username, 'book');
     if (action === 'getBookRatings')         return doGetCatalogRatings_(username, 'book');
     if (action === 'getBookSummary')         return doGetCatalogSummary_('book');
     if (action === 'getFutureBooks')         return doGetFutureCatalog_(username, 'book');
-    if (action === 'addFutureBook')          return doAddFutureCatalog_(d.payload || d, username, 'book');
-    if (action === 'deleteFutureBook')       return doDeleteFutureCatalog_(d.payload || d, username, 'book');
+    if (action === 'addFutureBook')          return withScriptLock_(function(){return doAddFutureCatalog_(d.payload || d, username, 'book');});
+    if (action === 'deleteFutureBook')       return withScriptLock_(function(){return doDeleteFutureCatalog_(d.payload || d, username, 'book');});
     if (action === 'searchRestaurants')      return doSearchRestaurants_(d);
     if (action === 'saveRestaurantRating')   return doSaveRestaurantRating_(d.payload || d, username);
     if (action === 'getRestaurantRatings')   return doGetRestaurantRatings_(username);
     if (action === 'getRestaurantSummary')   return doGetRestaurantSummary_();
     if (action === 'getFutureRestaurants')   return doGetFutureRestaurants_(username);
-    if (action === 'addFutureRestaurant')    return doAddFutureRestaurant_(d.payload || d, username);
-    if (action === 'deleteFutureRestaurant') return doDeleteFutureRestaurant_(d.payload || d, username);
+    if (action === 'addFutureRestaurant')    return withScriptLock_(function(){return doAddFutureRestaurant_(d.payload || d, username);});
+    if (action === 'deleteFutureRestaurant') return withScriptLock_(function(){return doDeleteFutureRestaurant_(d.payload || d, username);});
     if (action === 'reverseGeocode')        return doReverseGeocode_(d);
     if (action === 'deleteRating')             return doDeleteRating_(d.payload || d, username);
     if (action === 'deleteTvRating')           return doDeleteTvRating_(d.payload || d, username);
@@ -548,6 +593,7 @@ function doGetDeploymentStatus_(d) {
     hasAdminPin: !!String(props.ADMIN_PIN || '').trim(),
     hasTmdbKey: !!String(props.TMDB_API_KEY || '').trim(),
     hasOmdbKey: !!String(props.OMDB_API_KEY || '').trim(),
+    hasBooksKey: !!String(props.GOOGLE_BOOKS_API_KEY || '').trim(),
     hasPlacesKey: !!String(props.GOOGLE_PLACES_KEY || '').trim()
   });
 }
@@ -647,24 +693,16 @@ function doGetMovieDetails_(d) {
     var dir = data.credits.crew.filter(function(c){ return c.job === 'Director'; })[0];
     if (dir) director = dir.name;
   }
-  var rt = null, imdb = null;
-  try {
-    if (!getOmdbKey()) throw new Error('OMDB key not configured.');
-    var oUrl  = 'https://www.omdbapi.com/?apikey=' + getOmdbKey() +
-                '&t=' + encodeURIComponent(data.title) +
-                '&y=' + (data.release_date || '').slice(0, 4) + '&tomatoes=true';
-    var oData = fetchJson_(oUrl);
-    var rtEntry = (oData.Ratings || []).filter(function(r){ return r.Source === 'Rotten Tomatoes'; })[0];
-    rt   = rtEntry ? rtEntry.Value : (oData.tomatoUserMeter ? oData.tomatoUserMeter + '%' : null);
-    imdb = (oData.imdbRating && oData.imdbRating !== 'N/A') ? oData.imdbRating : null;
-  } catch(e) {}
+  var external = movieExternalRatings_(data);
   return jsonOut_({
     id:          data.id,
     title:       data.title,
     year:        (data.release_date || '').slice(0, 4),
     director:    director,
-    rt:          rt,
-    imdb:        imdb,
+    rt:          external.rt,
+    imdb:        external.imdb,
+    externalRatingsStatus: external.externalRatingsStatus,
+    externalRatingsMessage: external.externalRatingsMessage || '',
     poster:      data.poster_path || '',
     poster_path: data.poster_path || '',
     genres:      (data.genres || []).map(function(g){ return g.name; }),
@@ -864,6 +902,12 @@ function futureRestaurantPayloadToSheetRow_(d, username, existing) {
 }
 
 function categoryRowsForPayload_(tab, header, rowObj, idField, nameField, detailField) {
+  if (idField === 'placeId') {
+    if (!restaurantMatches_(rowObj, rowObj)) return [];
+    return findExistingRows_(tab, header, rowObj, function(r) {
+      return restaurantMatches_(rowObj, r) ? 'match' : 'different';
+    });
+  }
   var rows = findExistingRows_(tab, header, rowObj, function(r) {
     return categoryKey_(r.user, r[idField], r[nameField], r[detailField]);
   });
@@ -873,6 +917,15 @@ function categoryRowsForPayload_(tab, header, rowObj, idField, nameField, detail
     });
   }
   return rows;
+}
+
+function restaurantMatches_(target, row) {
+  if (normalizeKeyPart_(target.user) !== normalizeKeyPart_(row.user)) return false;
+  var targetId = String(target.placeId || '').trim(), rowId = String(row.placeId || '').trim();
+  if (targetId && rowId) return targetId === rowId;
+  var targetLocation = normalizeKeyPart_(target.address || target.city);
+  var rowLocation = normalizeKeyPart_(row.address || row.city);
+  return !!targetLocation && targetLocation === rowLocation && normalizeKeyPart_(target.name) === normalizeKeyPart_(row.name);
 }
 
 function userHasRatedFilm_(rowObj, username) {
@@ -894,7 +947,8 @@ function userHasRatedRestaurant_(rowObj, username) {
     user: username,
     placeId: rowObj.placeId,
     name: rowObj.name,
-    address: rowObj.address
+    address: rowObj.address,
+    city: rowObj.city
   };
   return categoryRowsForPayload_(tab, RESTAURANTS_HEADER, candidate, 'placeId', 'name', 'address').length > 0;
 }
@@ -920,7 +974,8 @@ function removeFutureRestaurant_(rowObj, username) {
     user: username,
     placeId: rowObj.placeId,
     name: rowObj.name,
-    address: rowObj.address
+    address: rowObj.address,
+    city: rowObj.city
   };
   categoryRowsForPayload_(tab, FUTURE_RESTAURANTS_HEADER, candidate, 'placeId', 'name', 'address')
     .sort(function(a, b){ return b - a; })
@@ -1103,25 +1158,25 @@ function filmPayloadToSheetRow_(d, username, existing) {
     director: d.director || existing.director || '',
     rtAudience: d.rt || d.rtAudience || existing.rtAudience || '',
     imdb: d.imdb || existing.imdb || '',
-    score10: d.score10 || existing.score10 || '',
-    raw100: d.score100 || d.raw100 || existing.raw100 || '',
+    score10: d.score10 ?? existing.score10 ?? '',
+    raw100: d.score100 ?? d.raw100 ?? existing.raw100 ?? '',
     grade: d.grade || existing.grade || '',
-    plot: d.plot || '',
+    plot: d.plot ?? '',
     plotGrade: d.plotGrade || '',
     plotNotes: d.plotNotes || '',
-    entertainment: d.entertainment || '',
+    entertainment: d.entertainment ?? '',
     entGrade: d.entGrade || '',
     entNotes: d.entNotes || '',
-    acting: d.acting || '',
+    acting: d.acting ?? '',
     actingGrade: d.actingGrade || '',
     actingNotes: d.actingNotes || '',
-    visuals: d.visuals || '',
+    visuals: d.visuals ?? '',
     visualsGrade: d.visualsGrade || '',
     visualsNotes: d.visualsNotes || '',
-    pacing: d.pacing || '',
+    pacing: d.pacing ?? '',
     pacingGrade: d.pacingGrade || '',
     pacingNotes: d.pacingNotes || '',
-    emotional: d.emotional || '',
+    emotional: d.emotional ?? '',
     emotionalGrade: d.emotionalGrade || '',
     emotionalNotes: d.emotionalNotes || '',
     overallNotes: d.notes || d.overallNotes || '',
@@ -1407,15 +1462,15 @@ function tvPayloadToSheetRow_(d, username, existing) {
     imdb: d.imdb || existing.imdb || '',
     tmdbTvId: d.tmdbTvId || d.id || existing.tmdbTvId || '',
     posterPath: d.posterPath || d.poster || d.poster_path || existing.posterPath || '',
-    score10: d.score10 || existing.score10 || '',
-    raw100: d.score100 || d.raw100 || existing.raw100 || '',
+    score10: d.score10 ?? existing.score10 ?? '',
+    raw100: d.score100 ?? d.raw100 ?? existing.raw100 ?? '',
     grade: d.grade || existing.grade || '',
-    plot: d.plot || '', plotGrade: d.plotGrade || '', plotNotes: d.plotNotes || '',
-    entertainment: d.entertainment || '', entGrade: d.entGrade || '', entNotes: d.entNotes || '',
-    acting: d.acting || '', actingGrade: d.actingGrade || '', actingNotes: d.actingNotes || '',
-    visuals: d.visuals || '', visualsGrade: d.visualsGrade || '', visualsNotes: d.visualsNotes || '',
-    pacing: d.pacing || '', pacingGrade: d.pacingGrade || '', pacingNotes: d.pacingNotes || '',
-    emotional: d.emotional || '', emotionalGrade: d.emotionalGrade || '', emotionalNotes: d.emotionalNotes || '',
+    plot: d.plot ?? '', plotGrade: d.plotGrade || '', plotNotes: d.plotNotes || '',
+    entertainment: d.entertainment ?? '', entGrade: d.entGrade || '', entNotes: d.entNotes || '',
+    acting: d.acting ?? '', actingGrade: d.actingGrade || '', actingNotes: d.actingNotes || '',
+    visuals: d.visuals ?? '', visualsGrade: d.visualsGrade || '', visualsNotes: d.visualsNotes || '',
+    pacing: d.pacing ?? '', pacingGrade: d.pacingGrade || '', pacingNotes: d.pacingNotes || '',
+    emotional: d.emotional ?? '', emotionalGrade: d.emotionalGrade || '', emotionalNotes: d.emotionalNotes || '',
     overallNotes: d.notes || d.overallNotes || '',
     createdAt: existing.createdAt || now,
     updatedAt: now
@@ -1658,39 +1713,94 @@ function restaurantSearchCacheKey_(value) {
   return 'restaurant_search_' + Utilities.base64EncodeWebSafe(digest).replace(/=+$/,'').slice(0, 40);
 }
 
+function validCoordinate_(value,max) {
+  if(value==null || String(value).trim()==='') return null;
+  var number=Number(value);
+  return isFinite(number) && Math.abs(number)<=max ? number : null;
+}
+
 function restaurantSearchArea_(d) {
+  var country=String(d.country||'United States').trim().slice(0,80);
+  if(/^(us|usa|u\.s\.?a?\.?|united states(?: of america)?)$/i.test(country)) country='United States';
   return {
     city:String(d.city || '').trim().slice(0,80),
-    region:String(d.region || '').trim().slice(0,80),
-    country:String(d.country || '').trim().slice(0,80),
-    lat:Number(d.lat),
-    lng:Number(d.lng)
+    region:country==='United States' ? String(d.region || '').trim().replace(/^N\/A$/i,'').slice(0,80) : '',
+    country:country,
+    lat:validCoordinate_(d.lat,90),
+    lng:validCoordinate_(d.lng,180)
   };
 }
 
 function restaurantSearchQuery_(query, area) {
-  return [String(query || '').trim(), 'restaurant', area.city, area.region, area.country]
+  return [String(query || '').trim(), area.city, area.region, area.country]
     .filter(function(part){ return !!part; }).join(' ');
+}
+
+function placesConfigurationError_() {
+  return new Error('Google Places could not search. Ask the admin to check GOOGLE_PLACES_KEY, billing, API restrictions, and whether Places API (New) or Places API is enabled.');
+}
+
+function placesNewRequest_(query,area,key) {
+  var body={textQuery:restaurantSearchQuery_(query,area),languageCode:'en',pageSize:8,includedType:'restaurant',strictTypeFiltering:false};
+  if(area.country==='United States') body.regionCode='US';
+  if(area.lat!==null && area.lng!==null) body.locationBias={circle:{center:{latitude:area.lat,longitude:area.lng},radius:50000}};
+  return {url:'https://places.googleapis.com/v1/places:searchText',
+    method:'post',contentType:'application/json',muteHttpExceptions:true,
+    headers:{'X-Goog-Api-Key':key,'X-Goog-FieldMask':'places.id,places.displayName,places.formattedAddress,places.addressComponents,places.primaryTypeDisplayName,places.rating,places.priceLevel'},
+    payload:JSON.stringify(body)
+  };
+}
+
+function searchPlacesNew_(query,area,key) {
+  var request=placesNewRequest_(query,area,key);
+  return placesNewResults_(UrlFetchApp.fetch(request.url,request));
+}
+
+function placesNewResults_(response) {
+  var code=response.getResponseCode();
+  if(code===403 || code===404) return null; // Existing projects may only have the legacy Places API enabled.
+  if(code===429) throw new Error('Google Places quota is temporarily exhausted. Try again later or ask the admin to check the quota.');
+  if(code!==200) throw placesConfigurationError_();
+  var data=JSON.parse(response.getContentText());
+  return (data.places||[]).map(function(place){
+    var city=(place.addressComponents||[]).filter(function(c){return (c.types||[]).indexOf('locality')!==-1 || (c.types||[]).indexOf('postal_town')!==-1;})[0];
+    var prices={PRICE_LEVEL_FREE:'',PRICE_LEVEL_INEXPENSIVE:'$',PRICE_LEVEL_MODERATE:'$$',PRICE_LEVEL_EXPENSIVE:'$$$',PRICE_LEVEL_VERY_EXPENSIVE:'$$$$'};
+    return {placeId:place.id,name:(place.displayName||{}).text||'',address:place.formattedAddress||'',city:city?city.longText:'',cuisine:(place.primaryTypeDisplayName||{}).text||'',price:prices[place.priceLevel]||'',rating:place.rating==null?'':String(place.rating),photo:''};
+  });
 }
 
 function doSearchRestaurants_(d) {
   var q = String(d.query || '').trim();
-  if (!q) return jsonOut_({ results: [] });
+  if (q.length<2) return jsonOut_({ results: [] });
   var area = restaurantSearchArea_(d);
   var key = getPlacesKey();
   var cache = CacheService.getScriptCache();
-  var cacheKey = restaurantSearchCacheKey_(JSON.stringify({q:q,area:area}));
+  var mode=String(getScriptProps().getProperty('PLACES_API_MODE')||'auto').trim().toLowerCase();
+  var cacheKey = restaurantSearchCacheKey_(JSON.stringify({version:2,q:q.toLowerCase(),area:area,mode:mode,key:key}));
   var cached = cache.get(cacheKey);
   if (cached) return jsonOut_(JSON.parse(cached));
+
+  var capabilityKey=restaurantSearchCacheKey_('places-capability|'+key);
+  if(mode!=='legacy' && cache.get(capabilityKey)!=='legacy'){
+    var modern=searchPlacesNew_(q,area,key);
+    if(modern!==null){
+      var modernResult={results:modern};
+      cache.put(cacheKey,JSON.stringify(modernResult),120);
+      return jsonOut_(modernResult);
+    }
+    cache.put(capabilityKey,'legacy',600);
+  }
 
   var url = 'https://maps.googleapis.com/maps/api/place/textsearch/json?' +
             'query=' + encodeURIComponent(restaurantSearchQuery_(q, area)) +
             '&type=restaurant&key=' + encodeURIComponent(key);
-  if (isFinite(area.lat) && isFinite(area.lng)) url += '&location=' + area.lat + ',' + area.lng + '&radius=50000';
+  if (area.lat!==null && area.lng!==null) url += '&location=' + area.lat + ',' + area.lng + '&radius=50000';
+  if (area.country==='United States') url+='&region=us';
 
   var data = fetchJson_(url);
   if (data.status && data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
-    throw new Error('Google Places request failed: ' + data.status + (data.error_message ? ' - ' + data.error_message : ''));
+    if(data.status==='OVER_QUERY_LIMIT') throw new Error('Google Places quota is temporarily exhausted. Try again later or ask the admin to check the quota.');
+    throw placesConfigurationError_();
   }
 
   var results = (data.results || []).slice(0, 8).map(function(r) {
@@ -1723,8 +1833,8 @@ function doSearchRestaurants_(d) {
 }
 
 function doReverseGeocode_(d) {
-  var lat = Number(d.lat), lng = Number(d.lng);
-  if (!isFinite(lat) || !isFinite(lng)) throw new Error('A valid location is required.');
+  var lat = validCoordinate_(d.lat,90), lng = validCoordinate_(d.lng,180);
+  if (lat===null || lng===null) throw new Error('A valid location is required.');
   var url = 'https://maps.googleapis.com/maps/api/geocode/json?latlng=' + encodeURIComponent(lat + ',' + lng) + '&key=' + encodeURIComponent(getPlacesKey());
   var data = fetchJson_(url);
   if (data.status !== 'OK' || !data.results || !data.results.length) {
@@ -1787,19 +1897,19 @@ function restaurantPayloadToSheetRow_(d, username, existing) {
     cuisine: d.cuisine || existing.cuisine || '',
     price: d.price || existing.price || '',
     googleRating: d.googleRating || existing.googleRating || '',
-    score10: d.score10 || existing.score10 || '',
-    raw100: d.score100 || d.raw100 || existing.raw100 || '',
+    score10: d.score10 ?? existing.score10 ?? '',
+    raw100: d.score100 ?? d.raw100 ?? existing.raw100 ?? '',
     grade: d.grade || existing.grade || '',
     stars: d.stars || existing.stars || '',
-    food: d.food || '',
+    food: d.food ?? '',
     foodGrade: d.foodGrade || '',
-    value: d.value || '',
+    value: d.value ?? '',
     valueGrade: d.valueGrade || '',
-    service: d.service || '',
+    service: d.service ?? '',
     serviceGrade: d.serviceGrade || '',
-    atmosphere: d.atmosphere || '',
+    atmosphere: d.atmosphere ?? '',
     atmosphereGrade: d.atmosphereGrade || '',
-    craving: d.craving || '',
+    craving: d.craving ?? '',
     cravingGrade: d.cravingGrade || '',
     overallNotes: d.notes || d.overallNotes || '',
     placeId: placeId,
@@ -1813,14 +1923,7 @@ function doSaveRestaurantRating_(d, username) {
   return withScriptLock_(function() {
     var tab = getOrCreateSheet_(RESTAURANTS_SHEET_NAME, RESTAURANTS_HEADER);
     var rowObj = restaurantPayloadToSheetRow_(d, username, {});
-    var existingRows = findExistingRows_(tab, RESTAURANTS_HEADER, rowObj, function(r) {
-      return categoryKey_(r.user, r.placeId, r.name, r.address);
-    });
-    if (!existingRows.length) {
-      existingRows = findExistingRows_(tab, RESTAURANTS_HEADER, rowObj, function(r) {
-        return categoryKey_(r.user, '', r.name, r.address);
-      });
-    }
+    var existingRows = categoryRowsForPayload_(tab, RESTAURANTS_HEADER, rowObj, 'placeId', 'name', 'address');
     var existingRow = existingRows.length ? existingRows[0] : -1;
     if (existingRow > -1) {
       var existingObj = objectAtSheetRow_(tab, existingRow);
@@ -1970,13 +2073,9 @@ function doDeleteTvRating_(d, username) {
 function doDeleteRestaurantRating_(d, username) {
   return withScriptLock_(function() {
     requireDeletePin_(d, username);
-    var target = { user: username, placeId: d.placeId, name: d.name, address: d.address };
-    var key = categoryKey_(target.user, target.placeId, target.name, target.address);
-    var fallback = categoryKey_(target.user, '', target.name, target.address);
+    var target = { user: username, placeId: d.placeId, name: d.name, address: d.address, city: d.city };
     var deleted = deleteMatchingRows_(getExistingSheet_(RESTAURANTS_SHEET_NAME), RESTAURANTS_HEADER, function(row) {
-      var rowKey = categoryKey_(row.user, row.placeId, row.name, row.address);
-      var rowFallback = categoryKey_(row.user, '', row.name, row.address);
-      return rowKey === key || rowFallback === fallback;
+      return restaurantMatches_(target, row);
     });
     if (!deleted) return jsonOut_({ ok: false, error: 'Rating not found.' });
     removeRecentActivity_(recentActivityKey_('restaurant', username, target.placeId, String(target.name || '') + '|' + String(target.address || '')));
@@ -2012,8 +2111,8 @@ function catalogPayloadToSheetRow_(d, username, existing, kind) {
     externalCount: d.externalCount || d['External Rating Count'] || existing.externalCount || '',
     sourceId: d.sourceId || d['Source ID'] || d.id || existing.sourceId || '',
     posterUrl: d.posterUrl || d['Poster URL'] || existing.posterUrl || '',
-    score10: d.score10 === 0 ? 0 : (d.score10 || existing.score10 || ''),
-    raw100: d.score100 === 0 ? 0 : (d.score100 || d.raw100 || existing.raw100 || ''),
+    score10: d.score10 ?? existing.score10 ?? '',
+    raw100: d.score100 ?? d.raw100 ?? existing.raw100 ?? '',
     grade: d.grade || existing.grade || '',
     overallNotes: d.notes || d.overallNotes || '',
     createdAt: existing.createdAt || now,
@@ -2042,7 +2141,17 @@ function catalogToApiRow_(r) {
   return row;
 }
 
+function gradeForScore10_(score) {
+  var thresholds=[[10,'S'],[9.5,'A+'],[9,'A'],[8.5,'A-'],[8,'B+'],[7.5,'B'],[7,'B-'],[6.5,'C+'],[6,'C'],[5.5,'C-'],[5,'D+'],[4.5,'D'],[4,'D-']];
+  for(var i=0;i<thresholds.length;i++) if(score>=thresholds[i][0]) return thresholds[i][1];
+  return 'F';
+}
+
 function doSaveCatalogRating_(d, username, kind) {
+  var score=Number(d.score10), minimum=kind==='game'?1:0;
+  if(d.score10==null || String(d.score10).trim()==='' || !isFinite(score) || score<minimum || score>10) throw new Error('Enter a score between '+minimum+' and 10.');
+  d.score10=Math.round(score*10)/10;
+  d.grade=gradeForScore10_(d.score10);
   return withScriptLock_(function() {
     var config = catalogConfig_(kind);
     var tab = getOrCreateSheet_(config.database, CATALOG_HEADER);
@@ -2103,7 +2212,7 @@ function rebuildCatalogSummary_(kind) {
     grouped[key].externalScore=grouped[key].externalScore || r.externalScore || '';
     var score=parseFloat(r.score10); if(!isNaN(score) && r.user) grouped[key].byUser[String(r.user)]=score;
   });
-  var header=['Title','Year','Genre','Creator',config.externalLabel].concat(users).concat([FILM_SUMMARY_AVERAGE_COLUMN]);
+  var header=['Title','Year','Genre','Creator',config.externalLabel].concat(users.map(summaryDisplayName_)).concat([FILM_SUMMARY_AVERAGE_COLUMN]);
   var rows=Object.keys(grouped).map(function(key){
     var group=grouped[key];
     var scores=users.map(function(user){ return group.byUser[user] === undefined ? '' : Number(group.byUser[user]); });
@@ -2179,7 +2288,7 @@ function numberLabel_(value) {
 function doSearchGames_(d) {
   var query=String(d.query||'').trim();
   if(!query) return jsonOut_({results:[]});
-  var data=fetchJson_('https://store.steampowered.com/api/storesearch/?term='+encodeURIComponent(query)+'&l=english&cc=us');
+  var data=cachedLookup_('steam-search',query.toLowerCase(),300,function(){return fetchJson_('https://store.steampowered.com/api/storesearch/?term='+encodeURIComponent(query)+'&l=english&cc=us');});
   var results=(data.items||[]).filter(function(item){ return item && item.id && item.name; }).slice(0,12).map(function(item){
     return {id:String(item.id),title:item.name,year:String(item.release?.date||'').match(/(\d{4})/)?.[1]||'',posterUrl:item.tiny_image||item.header_image||'',creator:''};
   });
@@ -2187,12 +2296,16 @@ function doSearchGames_(d) {
 }
 
 function doGetGameDetails_(d) {
-  var id=String(d.id||'').replace(/\D/g,'');
-  if(!id) throw new Error('A Steam game ID is required.');
-  var details=fetchJson_('https://store.steampowered.com/api/appdetails?appids='+encodeURIComponent(id)+'&l=english&cc=us');
+  var id=String(d.id||'');
+  if(!/^\d+$/.test(id)) throw new Error('A Steam game ID is required.');
+  var details=cachedLookup_('steam-details',id,3600,function(){return fetchJson_('https://store.steampowered.com/api/appdetails?appids='+encodeURIComponent(id)+'&l=english&cc=us');});
   var wrapper=details[id]; if(!wrapper || !wrapper.success || !wrapper.data) throw new Error('Steam could not load this game.');
   var game=wrapper.data, review={};
-  try { review=fetchJson_('https://store.steampowered.com/appreviews/'+encodeURIComponent(id)+'?json=1&filter=summary&language=all&purchase_type=all').query_summary || {}; } catch(e) {}
+  try { review=cachedLookup_('steam-reviews',id,3600,function(){
+    var response=fetchJson_('https://store.steampowered.com/appreviews/'+encodeURIComponent(id)+'?json=1&filter=all&language=all&purchase_type=steam&num_per_page=0');
+    if(response.success!==1) throw new Error('Steam reviews are unavailable.');
+    return response.query_summary||{};
+  }); } catch(e) {}
   var total=Number(review.total_reviews||0), positive=Number(review.total_positive||0);
   var percent=total ? Math.round((positive/total)*100) : '';
   return jsonOut_({id:id,title:game.name||'',year:String(game.release_date?.date||'').match(/(\d{4})/)?.[1]||'',director:(game.developers||[]).join(', '),genres:(game.genres||[]).map(function(item){ return item.description; }),posterUrl:game.header_image||game.capsule_image||'',externalScore:percent!==''?percent+'% positive':'',externalLabel:'Steam',externalCount:total?numberLabel_(total)+' reviews':'',externalSummary:review.review_score_desc||''});
@@ -2201,16 +2314,50 @@ function doGetGameDetails_(d) {
 function doSearchBooks_(d) {
   var query=String(d.query||'').trim();
   if(!query) return jsonOut_({results:[]});
-  var data=fetchJson_('https://www.googleapis.com/books/v1/volumes?q=intitle:'+encodeURIComponent(query)+'&maxResults=12&printType=books');
+  var data=cachedLookup_('books-search',query.toLowerCase(),300,function(){return fetchJson_(googleBooksUrl_('?q='+encodeURIComponent(query)+'&maxResults=12&printType=books'));});
   var results=(data.items||[]).map(function(item){ var info=item.volumeInfo||{}; return {id:item.id,title:info.title||'',year:String(info.publishedDate||'').match(/(\d{4})/)?.[1]||'',creator:(info.authors||[]).join(', '),posterUrl:(info.imageLinks||{}).thumbnail?.replace(/^http:/,'https:')||''}; }).filter(function(item){ return item.id && item.title; });
   return jsonOut_({results:results});
 }
 
 function doGetBookDetails_(d) {
   var id=String(d.id||'').trim(); if(!id) throw new Error('A Google Books ID is required.');
-  var data=fetchJson_('https://www.googleapis.com/books/v1/volumes/'+encodeURIComponent(id));
+  var data=cachedLookup_('books-details',id,3600,function(){return fetchJson_(googleBooksUrl_('/'+encodeURIComponent(id)));});
   var info=data.volumeInfo||{}, average=info.averageRating;
   return jsonOut_({id:data.id||id,title:info.title||'',year:String(info.publishedDate||'').match(/(\d{4})/)?.[1]||'',director:(info.authors||[]).join(', '),genres:info.categories||[],posterUrl:(info.imageLinks||{}).thumbnail?.replace(/^http:/,'https:')||'',externalScore:average===undefined||average===null?'':String(average)+'/5',externalLabel:'Google Books',externalCount:info.ratingsCount?numberLabel_(info.ratingsCount)+' ratings':''});
+}
+
+function googleBooksUrl_(path) {
+  var url='https://www.googleapis.com/books/v1/volumes'+path;
+  var key=String(getScriptProps().getProperty('GOOGLE_BOOKS_API_KEY')||'').trim();
+  if(!key) throw new Error('Book search needs GOOGLE_BOOKS_API_KEY in Apps Script Properties, with Books API enabled.');
+  return url+(url.indexOf('?')===-1?'?':'&')+'key='+encodeURIComponent(key);
+}
+
+// Run manually in the Apps Script editor. Reads provider APIs; never edits Sheets.
+function checkExternalLookupServices() {
+  var report = { version: BACKEND_VERSION, checks: {} };
+  function check(name, lookup) {
+    try { report.checks[name] = lookup(); }
+    catch(e) { report.checks[name] = {ok:false, message:'Lookup failed. Check the provider key, enabled API, billing and quota.'}; }
+  }
+  check('films', function() {
+    var movie = JSON.parse(doGetMovieDetails_({id:807}).getContent());
+    return {ok:!!movie.id, imdbAvailable:!!movie.imdb, rtAvailable:!!movie.rt, externalStatus:movie.externalRatingsStatus, message:movie.externalRatingsMessage};
+  });
+  check('restaurants', function() {
+    var data = JSON.parse(doSearchRestaurants_({query:'Lou Malnati',city:'Chicago',region:'IL',country:'United States'}).getContent());
+    return {ok:data.results.length>0, resultCount:data.results.length};
+  });
+  check('games', function() {
+    var game = JSON.parse(doGetGameDetails_({id:'620'}).getContent());
+    return {ok:!!game.title, externalScoreAvailable:!!game.externalScore};
+  });
+  check('books', function() {
+    var data = JSON.parse(doSearchBooks_({query:'intitle:the hobbit inauthor:tolkien'}).getContent());
+    return {ok:data.results.length>0, resultCount:data.results.length};
+  });
+  console.log(JSON.stringify(report, null, 2));
+  return report;
 }
 
 function setupActiveSheetTabs() {
@@ -2765,14 +2912,33 @@ function doGenerateRestaurantRecommendations_(payload, username) {
   if (!ai.items) throw new Error(ai.diagnostic.error || 'Restaurant recommendations could not be generated.');
 
   var candidates = ai.items.slice(0, 12), key = getPlacesKey();
-  var requests = candidates.map(function(item) {
-    var itemLocation = item.city ? [item.city, payload.region, payload.country].filter(Boolean).join(', ') : defaultLocation;
-    return {url:'https://maps.googleapis.com/maps/api/place/textsearch/json?query='+encodeURIComponent(item.name+' restaurant '+itemLocation)+'&type=restaurant&key='+encodeURIComponent(key),muteHttpExceptions:true};
-  });
-  var responses = UrlFetchApp.fetchAll(requests), seen = {}, valid = [];
+  var cache=CacheService.getScriptCache(), capabilityKey=restaurantSearchCacheKey_('places-capability|'+key);
+  var useNew=String(getScriptProps().getProperty('PLACES_API_MODE')||'auto').trim().toLowerCase()!=='legacy' && cache.get(capabilityKey)!=='legacy';
+  function recommendationRequests(modern){
+    return candidates.map(function(item){
+      var area=restaurantSearchArea_({city:payload.city||item.city||'',region:payload.region,country:payload.country});
+      if(modern) return placesNewRequest_(item.name,area,key);
+      return {url:'https://maps.googleapis.com/maps/api/place/textsearch/json?query='+encodeURIComponent(restaurantSearchQuery_(item.name,area))+'&type=restaurant&key='+encodeURIComponent(key),muteHttpExceptions:true};
+    });
+  }
+  var responses=UrlFetchApp.fetchAll(recommendationRequests(useNew));
+  if(useNew && responses.some(function(response){return response.getResponseCode()===403 || response.getResponseCode()===404;})){
+    useNew=false;
+    cache.put(capabilityKey,'legacy',600);
+    responses=UrlFetchApp.fetchAll(recommendationRequests(false));
+  }
+  var seen = {}, valid = [];
   responses.forEach(function(response, index) {
     if (response.getResponseCode() < 200 || response.getResponseCode() >= 300) return;
-    var data = JSON.parse(response.getContentText()), match = (data.results || [])[0];
+    var match;
+    if(useNew){
+      var place=placesNewResults_(response)[0];
+      if(place) match={place_id:place.placeId,name:place.name,formatted_address:place.address,city:place.city,cuisine:place.cuisine,price:place.price,rating:place.rating};
+    }else{
+      var data = JSON.parse(response.getContentText());
+      if(data.status==='REQUEST_DENIED') throw placesConfigurationError_();
+      match=(data.results||[])[0];
+    }
     if (!match) return;
     var placeId = String(match.place_id);
     if (seen[placeId] || excludedIds[placeId]) return;
@@ -2781,8 +2947,8 @@ function doGenerateRestaurantRecommendations_(payload, username) {
     seen[placeId] = true;
     var parts = String(match.formatted_address || '').split(',');
     valid.push({
-      placeId:placeId,name:match.name,address:match.formatted_address || '',city:parts.length > 1 ? parts[parts.length - 2].trim() : defaultLocation,
-      cuisine:'',price:match.price_level === undefined ? '' : ['', '$', '$$', '$$$', '$$$$'][match.price_level],googleRating:match.rating || '',photo:'',
+      placeId:placeId,name:match.name,address:match.formatted_address || '',city:match.city || (parts.length > 1 ? parts[parts.length - 2].trim() : defaultLocation),
+      cuisine:match.cuisine||'',price:match.price || (match.price_level === undefined ? '' : ['', '$', '$$', '$$$', '$$$$'][match.price_level]),googleRating:match.rating || '',photo:'',
       role:candidates[index].role || recommendationRole_(valid.length, payload.style),explanation:candidates[index].explanation || '',
       ratedScore:states.rated[placeId] ? Number(states.rated[placeId].score10 || 0) : '',wishlisted:!!states.wished[placeId]
     });
