@@ -13,6 +13,8 @@ function wishlistUserCacheKey(){
 }
 
 function goWishlist(mode){
+  wishlistSearchRequest++;
+  clearTimeout(wishlistSearchTimer);
   wishlistMode = ['film','restaurant','tv','game','book'].includes(mode) ? mode : 'film';
   showScreen('wishlist');
   renderWishlistMode();
@@ -62,11 +64,12 @@ async function loadWishlist(force){
     const catalog=catalogConfig(wishlistMode);
     const action = wishlistMode === 'film' ? 'getFutureFilms' : (wishlistMode === 'tv' ? 'getFutureTv' : (catalog ? catalog.futureGetAction : 'getFutureRestaurants'));
     const data = await apiCall(action, {token:getSessionToken()});
+    if(cacheKey!==wishlistUserCacheKey()) return;
     wishlistItems = Array.isArray(data) ? data : [];
     wishlistCache.set(cacheKey, {items:wishlistItems, savedAt:Date.now()});
     renderWishlistItems();
   }catch(e){
-    list.innerHTML = '<div class="stats-empty">Could not load your wishlist.</div>';
+    if(cacheKey===wishlistUserCacheKey()) list.innerHTML = '<div class="stats-empty">'+escHtml(e.message||'Could not load your wishlist.')+'</div>';
   }
 }
 
@@ -114,8 +117,8 @@ async function removeWishlistItem(index){
 async function searchWishlist(query){
   const dropdown = document.getElementById('wishlist-dropdown');
   const spinner = document.getElementById('wishlist-spinner');
-  if(!query){ dropdown.classList.remove('open'); return; }
   const request = ++wishlistSearchRequest;
+  if(query.length<2){ dropdown.classList.remove('open'); spinner.classList.remove('visible'); return; }
   const location = wishlistMode === 'restaurant' ? restaurantSearchPayload(query) : null;
   const year=(wishlistMode==='film'||wishlistMode==='tv') ? String(document.getElementById('wishlist-year-filter')?.value||'').trim() : '';
   const cacheKey = wishlistMode + '|' + query.toLowerCase() + '|' + year + '|' + JSON.stringify(location || {});
@@ -123,6 +126,7 @@ async function searchWishlist(query){
   if(cached && Date.now() - cached.savedAt < 120000){
     wishlistResults = cached.items;
     renderWishlistResults();
+    spinner.classList.remove('visible');
     return;
   }
   spinner.classList.add('visible');
@@ -135,7 +139,9 @@ async function searchWishlist(query){
     wishlistSearchCache.set(cacheKey, {items:wishlistResults, savedAt:Date.now()});
     renderWishlistResults();
   }catch(e){
-    dropdown.classList.remove('open');
+    if(request!==wishlistSearchRequest) return;
+    dropdown.innerHTML='<div class="stats-empty" role="status">'+escHtml(e.message||'Search failed. Please try again.')+'</div>';
+    dropdown.classList.add('open');
   }
   if(request === wishlistSearchRequest) spinner.classList.remove('visible');
 }
@@ -145,7 +151,7 @@ function renderWishlistResults(){
   const films = wishlistMode === 'film';
   const tv = wishlistMode === 'tv';
   const catalog=catalogConfig(wishlistMode);
-  if(!wishlistResults.length){ dropdown.classList.remove('open'); return; }
+  if(!wishlistResults.length){ dropdown.innerHTML='<div class="stats-empty" role="status">No matches found. Try a fuller name or adjust the filters.</div>'; dropdown.classList.add('open'); return; }
   dropdown.innerHTML = wishlistResults.map(function(item, index){
     const title = films ? item.title : (tv ? item.name : (catalog ? item.title : item.name));
     const meta = films ? (item.year || String(item.release_date || '').slice(0,4)) : (tv ? item.year : (catalog ? [item.year,item.creator].filter(Boolean).join(' · ') : [item.cuisine, item.address].filter(Boolean).join(' · ')));
@@ -191,7 +197,8 @@ async function addWishlistResult(index, button){
 document.getElementById('wishlist-search-input').addEventListener('input', function(){
   const query = this.value.trim();
   clearTimeout(wishlistSearchTimer);
-  if(!query){ document.getElementById('wishlist-dropdown').classList.remove('open'); return; }
+  wishlistSearchRequest++;
+  if(query.length<2){ document.getElementById('wishlist-dropdown').classList.remove('open'); document.getElementById('wishlist-spinner').classList.remove('visible'); return; }
   wishlistSearchTimer = setTimeout(function(){ searchWishlist(query); }, 320);
 });
 document.getElementById('wishlist-search-input').addEventListener('blur', function(){
