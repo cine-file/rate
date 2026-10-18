@@ -16,7 +16,7 @@ const CATALOG_CONFIG = {
   }
 };
 
-let catalogSearchTimer=null;
+let catalogSearchRequest=0;
 let catalogRatingsCache={game:null,book:null};
 let catalogStatsKind='game';
 let catalogStatsTab='my';
@@ -24,12 +24,16 @@ let catalogStatsData={ratings:[],summary:{rows:[]}};
 let _catalogRenderedRatings=[];
 
 function catalogConfig(kind=activeCategory){ return CATALOG_CONFIG[kind] || null; }
-function isCatalogCategory(kind=activeCategory){ return !!catalogConfig(kind); }
 
 function startCatalogRating(kind){
   const config=catalogConfig(kind);
   if(!config) return;
   activeCategory=kind;
+  clearTimeout(searchTimer);
+  catalogSearchRequest++;
+  document.getElementById('search-input').value='';
+  document.getElementById('dropdown').classList.remove('open');
+  document.getElementById('setup-notice').style.display='none';
   CATS=config.cats;
   quickMode=true;
   document.getElementById('quick-mode-toggle').checked=true;
@@ -49,17 +53,21 @@ function startCatalogRating(kind){
 async function catalogSearch(query){
   const config=catalogConfig();
   if(!config) return;
+  const kind=activeCategory,request=++catalogSearchRequest;
+  const isCurrent=()=>activeCategory===kind && request===catalogSearchRequest;
   const spinner=document.getElementById('spinner');
   spinner.classList.add('visible');
   try{
     const data=await apiCall(config.searchAction,{token:getSessionToken(),query:query});
+    if(!isCurrent()) return;
     renderCatalogDropdown(data.results||[]);
   }catch(error){
+    if(!isCurrent()) return;
     const dropdown=document.getElementById('dropdown');
-    dropdown.innerHTML='<div class="stats-empty">Could not search '+config.plural.toLowerCase()+'. Try again shortly.</div>';
+    dropdown.innerHTML='<div class="stats-empty">'+escHtml(error.message||'Could not search '+config.plural.toLowerCase()+'. Try again shortly.')+'</div>';
     dropdown.classList.add('open');
   }
-  spinner.classList.remove('visible');
+  if(isCurrent()) spinner.classList.remove('visible');
 }
 
 function renderCatalogDropdown(items){
@@ -69,7 +77,9 @@ function renderCatalogDropdown(items){
     return '<button class="drop-item" type="button" data-catalog-index="'+index+'"><div class="drop-poster">'+(item.posterUrl?'<img class="drop-poster" src="'+escHtml(item.posterUrl)+'" alt="">':'')+'</div><div><div class="drop-title">'+escHtml(item.title||'')+'</div><div class="drop-year">'+escHtml(item.year||'')+(item.creator?' · '+escHtml(item.creator):'')+'</div></div></button>';
   }).join('');
   items.forEach(function(item,index){
-    dropdown.querySelector('[data-catalog-index="'+index+'"]').addEventListener('pointerdown',function(event){ event.preventDefault(); pickCatalogItem(item.id); });
+    const button=dropdown.querySelector('[data-catalog-index="'+index+'"]');
+    button.addEventListener('pointerdown',function(event){ event.preventDefault(); });
+    button.addEventListener('click',function(){ pickCatalogItem(item.id); });
   });
   dropdown.classList.add('open');
 }
@@ -79,22 +89,32 @@ async function pickCatalogItem(id){
   if(!config) return;
   document.getElementById('dropdown').classList.remove('open');
   document.getElementById('spinner').classList.add('visible');
+  const kind=activeCategory;
   try{
     const item=await apiCall(config.detailsAction,{token:getSessionToken(),id:id});
+    if(activeCategory!==kind) return;
     item.catalogKind=activeCategory;
     item.poster=item.posterUrl ? 'catalog' : '';
     await checkCatalogAlreadyRated(item);
-  }catch(error){ console.error(error); }
+  }catch(error){
+    if(activeCategory===kind){
+      const dropdown=document.getElementById('dropdown');
+      dropdown.innerHTML='<div class="stats-empty">'+escHtml(error.message||'Could not load this item.')+'</div>';
+      dropdown.classList.add('open');
+    }
+  }
   document.getElementById('spinner').classList.remove('visible');
 }
 
 async function checkCatalogAlreadyRated(item){
   const config=catalogConfig();
+  const kind=activeCategory,token=getSessionToken();
   _pendingMovie=item;
   let ratings=catalogRatingsCache[activeCategory];
   if(!ratings){
-    try{ ratings=await apiCall(config.ratingsAction,{token:getSessionToken()}); catalogRatingsCache[activeCategory]=Array.isArray(ratings)?ratings:[]; }catch(error){ ratings=[]; }
+    try{ ratings=await apiCall(config.ratingsAction,{token:token}); catalogRatingsCache[kind]=Array.isArray(ratings)?ratings:[]; }catch(error){ ratings=[]; }
   }
+  if(activeCategory!==kind || token!==getSessionToken()) return;
   const existing=(ratings||[]).find(function(row){ return String(row['Source ID']||'')===String(item.id||'') || (String(row.Title||'').toLowerCase()===String(item.title||'').toLowerCase() && String(row.Year||'')===String(item.year||'')); });
   if(!existing){ loadMovie(item); return; }
   document.getElementById('ar-title').textContent=item.title;
@@ -114,7 +134,7 @@ async function pushCatalogToSheets(raw100,ratingGrade,overallNote,today){
   };
   config.cats.forEach(function(category,index){
     const key='category'+(index+1);
-    payload[key]=quickMode?'':(scores[category.id]||'');
+    payload[key]=quickMode?'':(scores[category.id]??'');
     payload[key+'Grade']=quickMode?'':gradeFromRaw(scores[category.id]||0);
     payload[key+'Notes']=quickMode?'':(notes[category.id]||'');
   });
