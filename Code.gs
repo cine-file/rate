@@ -2314,23 +2314,34 @@ function doGetGameDetails_(d) {
 function doSearchBooks_(d) {
   var query=String(d.query||'').trim();
   if(!query) return jsonOut_({results:[]});
-  var data=cachedLookup_('books-search',query.toLowerCase(),300,function(){return fetchJson_(googleBooksUrl_('?q='+encodeURIComponent(query)+'&maxResults=12&printType=books'));});
+  var data=cachedLookup_('books-search',query.toLowerCase(),300,function(){return fetchGoogleBooksWithRetry_(googleBooksUrl_('?q='+encodeURIComponent(query)+'&maxResults=12&printType=books'));});
   var results=(data.items||[]).map(function(item){ var info=item.volumeInfo||{}; return {id:item.id,title:info.title||'',year:String(info.publishedDate||'').match(/(\d{4})/)?.[1]||'',creator:(info.authors||[]).join(', '),posterUrl:(info.imageLinks||{}).thumbnail?.replace(/^http:/,'https:')||''}; }).filter(function(item){ return item.id && item.title; });
   return jsonOut_({results:results});
 }
 
 function doGetBookDetails_(d) {
   var id=String(d.id||'').trim(); if(!id) throw new Error('A Google Books ID is required.');
-  var data=cachedLookup_('books-details',id,3600,function(){return fetchJson_(googleBooksUrl_('/'+encodeURIComponent(id)));});
+  var data=cachedLookup_('books-details',id,3600,function(){return fetchGoogleBooksWithRetry_(googleBooksUrl_('/'+encodeURIComponent(id)));});
   var info=data.volumeInfo||{}, average=info.averageRating;
   return jsonOut_({id:data.id||id,title:info.title||'',year:String(info.publishedDate||'').match(/(\d{4})/)?.[1]||'',director:(info.authors||[]).join(', '),genres:info.categories||[],posterUrl:(info.imageLinks||{}).thumbnail?.replace(/^http:/,'https:')||'',externalScore:average===undefined||average===null?'':String(average)+'/5',externalLabel:'Google Books',externalCount:info.ratingsCount?numberLabel_(info.ratingsCount)+' ratings':''});
 }
 
 function googleBooksUrl_(path) {
-  var url='https://www.googleapis.com/books/v1/volumes'+path;
-  var key=String(getScriptProps().getProperty('GOOGLE_BOOKS_API_KEY')||'').trim();
-  if(!key) throw new Error('Book search needs GOOGLE_BOOKS_API_KEY in Apps Script Properties, with Books API enabled.');
-  return url+(url.indexOf('?')===-1?'?':'&')+'key='+encodeURIComponent(key);
+  var url = 'https://www.googleapis.com/books/v1/volumes' + path;
+  var key = String(getScriptProps()
+    .getProperty('GOOGLE_BOOKS_API_KEY') || '').trim();
+
+  if (!key) {
+    throw new Error(
+      'Book search needs GOOGLE_BOOKS_API_KEY in Apps Script Properties.'
+    );
+  }
+
+  var separator = url.indexOf('?') === -1 ? '?' : '&';
+
+  return url + separator
+    + 'country=US'
+    + '&key=' + encodeURIComponent(key);
 }
 
 // Run manually in the Apps Script editor. Reads provider APIs; never edits Sheets.
@@ -2338,7 +2349,7 @@ function checkExternalLookupServices() {
   var report = { version: BACKEND_VERSION, checks: {} };
   function check(name, lookup) {
     try { report.checks[name] = lookup(); }
-    catch(e) { report.checks[name] = {ok:false, message:'Lookup failed. Check the provider key, enabled API, billing and quota.'}; }
+    catch(e) { report.checks[name] = {ok:false, message:String(e && e.message || e)}; }
   }
   check('films', function() {
     var movie = JSON.parse(doGetMovieDetails_({id:807}).getContent());
@@ -2963,3 +2974,159 @@ function doGenerateRestaurantRecommendations_(payload, username) {
 function doGetRestaurantRecommendationSourcesData_(username,placeId){return sheetObjects_(getExistingSheet_(RESTAURANTS_SHEET_NAME),RESTAURANTS_HEADER).filter(function(r){return String(r.user||'').toLowerCase()===String(username||'').toLowerCase()&&String(r.placeId||'')===String(placeId||'');})[0]||null;}
 function mostCommonCity_(history){var c={};(history||[]).forEach(function(r){if(r.city)c[r.city]=(c[r.city]||0)+1;});return Object.keys(c).sort(function(a,b){return c[b]-c[a];})[0]||'';}
 function doReplaceGenericRecommendation_(payload,username,kind){var id=String(payload.recommendationId||'');if(!id)throw new Error('Recommendation session is missing.');var cache=CacheService.getScriptCache(),key='generic_rec_'+kind+'_'+id,raw=cache.get(key),arr=raw?JSON.parse(raw):[];if(!arr.length)return jsonOut_({exhausted:true});doRecordGenericRecommendationFeedback_({recommendationId:id,recommendedId:payload.currentId||'',action:payload.action||'replaced'},username,kind);var next=arr.shift();cache.put(key,JSON.stringify(arr),21600);return jsonOut_({recommendation:next,remainingBackups:arr.length,exhausted:false});}
+function testGoogleBooksConnection() {
+  const key = PropertiesService.getScriptProperties()
+    .getProperty('GOOGLE_BOOKS_API_KEY');
+
+  const base = 'https://www.googleapis.com/books/v1/volumes';
+
+  const tests = {
+    'Standard': '?q=harry+potter&maxResults=1',
+    'With country': '?q=harry+potter&maxResults=1&country=US',
+    'Without API key': '?q=harry+potter&maxResults=1'
+  };
+
+  Object.keys(tests).forEach(function(name) {
+    const url = base + tests[name] +
+      (name === 'Without API key' ? '' : '&key=' + encodeURIComponent(key));
+
+    const response = UrlFetchApp.fetch(url, {
+      muteHttpExceptions: true
+    });
+
+    Logger.log(name + ': HTTP ' + response.getResponseCode());
+    Logger.log(response.getContentText().slice(0, 500));
+  });
+}
+function testBooksQueries() {
+  const key = PropertiesService.getScriptProperties()
+    .getProperty('GOOGLE_BOOKS_API_KEY');
+
+  const queries = [
+    'harry potter',
+    'the hobbit',
+    'intitle:the hobbit inauthor:tolkien'
+  ];
+
+  queries.forEach(function(query) {
+    const url = 'https://www.googleapis.com/books/v1/volumes'
+      + '?q=' + encodeURIComponent(query)
+      + '&maxResults=12'
+      + '&printType=books'
+      + '&country=US'
+      + '&key=' + encodeURIComponent(key);
+
+    const response = UrlFetchApp.fetch(url, {
+      muteHttpExceptions: true
+    });
+
+    Logger.log(query + ': HTTP ' + response.getResponseCode());
+
+    if (response.getResponseCode() !== 200) {
+      Logger.log(response.getContentText().slice(0, 500));
+    }
+  });
+}
+
+// Diagnostic: tests the exact URL builder used by Cine-File without logging the API key.
+function testActualBooksUrl() {
+  var url = googleBooksUrl_(
+    '?q=' + encodeURIComponent('intitle:the hobbit inauthor:tolkien')
+    + '&maxResults=12&printType=books'
+  );
+  var response = UrlFetchApp.fetch(url, {muteHttpExceptions: true});
+  Logger.log('HTTP: ' + response.getResponseCode());
+  Logger.log('Response: ' + response.getContentText().slice(0, 500));
+}
+function fetchGoogleBooksWithRetry_(url) {
+  var delays = [500, 1500, 3000];
+
+  for (var attempt = 0; attempt <= delays.length; attempt++) {
+    var response = UrlFetchApp.fetch(url, {
+      muteHttpExceptions: true
+    });
+
+    var status = response.getResponseCode();
+
+    if (status >= 200 && status < 300) {
+      return JSON.parse(response.getContentText());
+    }
+
+    if ((status !== 503 && status !== 502 && status !== 504)
+        || attempt === delays.length) {
+      throw new Error(
+        'Google Books lookup failed (HTTP ' + status + '): ' +
+        response.getContentText().slice(0, 300)
+      );
+    }
+
+    Utilities.sleep(delays[attempt]);
+  }
+}
+function diagnoseGoogleBooks503() {
+  var key = getProp_('GOOGLE_BOOKS_API_KEY');
+  var base = 'https://www.googleapis.com/books/v1/volumes';
+
+  var tests = [
+    ['Basic', '?q=harry+potter&country=US'],
+    ['Full parameters', '?q=harry+potter&maxResults=12&printType=books&country=US'],
+    ['Advanced query', '?q=' + encodeURIComponent('intitle:the hobbit inauthor:tolkien') + '&maxResults=12&printType=books&country=US'],
+    ['Actual URL builder', null]
+  ];
+
+  tests.forEach(function(test) {
+    var url = test[1] === null
+      ? googleBooksUrl_(
+          '?q=' + encodeURIComponent('intitle:the hobbit inauthor:tolkien') +
+          '&maxResults=12&printType=books'
+        )
+      : base + test[1] + '&key=' + encodeURIComponent(key);
+
+    try {
+      var response = UrlFetchApp.fetch(url, {
+        muteHttpExceptions: true
+      });
+
+      Logger.log(test[0] + ': HTTP ' + response.getResponseCode());
+    } catch (e) {
+      Logger.log(test[0] + ': ' + e.message);
+    }
+  });
+}
+function testCineFileBooksDirectly() {
+  try {
+    var response = doSearchBooks_({
+      query: 'intitle:the hobbit inauthor:tolkien'
+    });
+
+    var data = JSON.parse(response.getContent());
+
+    Logger.log('Result count: ' + (data.results || []).length);
+    Logger.log('First book: ' + JSON.stringify(
+      (data.results || [])[0] || null
+    ));
+  } catch (e) {
+    Logger.log('Error: ' + e.message);
+  }
+}
+function diagnoseBooksResponse() {
+  var query = 'intitle:the hobbit inauthor:tolkien';
+
+  var url = googleBooksUrl_(
+    '?q=' + encodeURIComponent(query) +
+    '&maxResults=12&printType=books'
+  );
+
+  var response = UrlFetchApp.fetch(url, {
+    muteHttpExceptions: true
+  });
+
+  var data = JSON.parse(response.getContentText());
+
+  Logger.log('HTTP Status: ' + response.getResponseCode());
+  Logger.log('Total Items: ' + data.totalItems);
+  Logger.log('Items Array Length: ' +
+    (data.items ? data.items.length : 'MISSING'));
+  Logger.log('First Book ID: ' +
+    (data.items && data.items[0] ? data.items[0].id : 'NONE'));
+}
