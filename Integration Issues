@@ -1,0 +1,95 @@
+## Cine-File — Google Books & Google Places Integration Issues
+
+**Current backend version:** `2026.10.18-search-and-theme.18`
+
+**Architecture:** GitHub Pages frontend + Google Apps Script backend + Google Sheets database.
+
+We recently added Books and Games to Cine-File, but the Google Books and Google Places integrations are currently failing. Films and Games are working.
+
+### 1. Google Books — Intermittent HTTP 503 Errors
+
+**Current status:** Unreliable / effectively nonfunctional.
+
+The Google Books API is configured with a valid API key stored in Apps Script Properties as `GOOGLE_BOOKS_API_KEY`.
+
+We confirmed the following:
+
+- Google Books API is enabled in Google Cloud.
+- The API key is restricted to Books API.
+- Application restrictions are set to None.
+- The Apps Script property matches the correct API key.
+- Standard requests initially returned HTTP 403 with `unknownLocation`.
+- Adding `country=US` resolved the geographic restriction error in some tests.
+- Multiple direct test requests returned HTTP 200 with valid book data.
+- However, repeated requests using the same parameters intermittently return HTTP 503 with `backendFailed`.
+- Even with automatic retries, the backend can fail consistently.
+- Removing duplicate `country=US` parameters did not resolve the issue.
+
+**Relevant functions:**
+
+- `doSearchBooks_()`
+- `doGetBookDetails_()`
+- `googleBooksUrl_()`
+- `fetchGoogleBooksWithRetry_()`
+- `checkExternalLookupServices()`
+
+**Required changes:**
+
+1. Investigate the Google Books API request handling and ensure query parameters are constructed correctly.
+2. Retain bounded retry handling for temporary 502/503/504 responses.
+3. Implement a reliable fallback using the Open Library API when Google Books fails.
+4. Normalize Open Library results to the existing book-data structure so the frontend doesn't need significant changes.
+5. Preserve the existing Google Sheets rating, wishlist, summary, and search workflows.
+6. Cache successful requests and add secure, useful server-side error logging.
+7. Test both book searches and book-details lookups, including selecting a result and saving a rating.
+
+**Preferred solution:** Google Books as the primary provider, Open Library as an automatic fallback. If Google Books remains unreliable, consider making Open Library the primary provider.
+
+### 2. Restaurants — Google Places Lookup Failing
+
+**Current status:** Not working.
+
+The diagnostic returns:
+
+`Google Places could not search. Ask the admin to check GOOGLE_PLACES_KEY, billing, API restrictions, and whether Places API (New) or Places API is enabled.`
+
+The current code supports Google Places API (New) with a legacy fallback, but we haven't identified the exact reason the lookup is failing.
+
+**Relevant functions:**
+
+- `doSearchRestaurants_()`
+- `placesNewRequest_()`
+- `placesNewResults_()`
+- `placesConfigurationError_()`
+- `checkExternalLookupServices()`
+
+**Required changes:**
+
+1. Inspect and log the actual Google Places HTTP status and provider error response securely.
+2. Verify `GOOGLE_PLACES_KEY`, API enablement, billing, restrictions, and quota.
+3. Verify the Places API (New) request format, headers, field masks, and response parsing.
+4. Ensure the legacy fallback only runs when appropriate and does not hide the original failure.
+5. Restore restaurant search and recommendation validation while preserving the existing restaurant rating and wishlist systems.
+
+### 3. Current Diagnostic Results
+
+| Service | Status |
+|---|---|
+| Films | Working — IMDb and RT available |
+| Restaurants | Failed — Google Places lookup |
+| Games | Working — external score unavailable |
+| Books | Failed — intermittent Google Books HTTP 503 |
+
+### 4. Implementation Requirements
+
+Please have Codex review the entire existing script before making changes.
+
+- Fix the underlying provider integrations rather than adding isolated test-only patches.
+- Keep all existing Cine-File functionality intact.
+- Avoid unnecessary frontend changes.
+- Do not hard-code API keys or expose credentials in logs.
+- Preserve the existing database schemas and API response contracts.
+- Remove obsolete temporary diagnostic functions after proper testing.
+- Return the complete updated Apps Script, not just snippets.
+
+**Definition of done:** The health checks pass, users can search and select books and restaurants, and both categories support their existing rating and wishlist workflows without provider errors. Books should continue working when Google Books is temporarily unavailable.
